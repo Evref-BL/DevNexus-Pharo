@@ -1,0 +1,18 @@
+# PharoNexus exposes this supervised HTTP MCP endpoint after `pharo-nexus start`.
+
+[mcp_servers.pharo_nexus]
+type = "http"
+enabled = true
+required = true
+url = "http://127.0.0.1:7330/mcp"
+
+[mcp_servers.plexus]
+type = "http"
+enabled = true
+url = "http://127.0.0.1:7331/mcp"
+
+[mcp_servers.vibe_kanban]
+enabled = true
+command = "cmd"
+args = ["/c", "npx", "-y", "vibe-kanban@0.1.43", "--mcp"]
+default_tools_approval_mode = "approve"
