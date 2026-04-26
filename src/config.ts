@@ -39,6 +39,7 @@ export interface PharoNexusProjectRepoConfig {
   kind: PharoNexusProjectRepoKind;
   remoteUrl: string | null;
   defaultBranch: string | null;
+  sourceRoot?: string;
 }
 
 export interface PharoNexusAgentConfig {
@@ -730,11 +731,13 @@ function validateRepoConfig(value: unknown): PharoNexusProjectRepoConfig {
   if (kind !== "local" && kind !== "git") {
     throw new PharoNexusConfigError("repo.kind must be local or git");
   }
+  const sourceRoot = optionalString(record, "sourceRoot", "repo");
 
   return {
     kind,
     remoteUrl: nullableString(record, "remoteUrl", "repo"),
     defaultBranch: nullableString(record, "defaultBranch", "repo"),
+    ...(sourceRoot ? { sourceRoot } : {}),
   };
 }
 

@@ -269,15 +269,16 @@ describe("PharoNexus MCP server tools", () => {
 
   it("imports an existing repository through an MCP tool call", async () => {
     const homePath = makeTempDir("pharo-nexus-home-");
-    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "Imported");
-    fs.mkdirSync(projectRoot, { recursive: true });
+    const sourceRoot = path.join(makeTempDir("pharo-nexus-source-"), "Imported");
+    fs.mkdirSync(sourceRoot, { recursive: true });
     initPharoNexusHome({ homePath });
+    const projectRoot = path.join(homePath, "projects", "Imported");
 
     const result = await callPharoNexusMcpTool(
       "pharo_nexus_project_import",
       {
         homePath,
-        root: projectRoot,
+        root: sourceRoot,
         name: "Imported",
         syncVibeKanban: false,
       },
@@ -294,9 +295,11 @@ describe("PharoNexus MCP server tools", () => {
           kind: "git",
           remoteUrl: "https://github.com/example/imported.git",
           defaultBranch: "main",
+          sourceRoot,
         },
       },
     });
+    expect(fs.existsSync(path.join(sourceRoot, "pharo-nexus.project.json"))).toBe(false);
   });
 
   it("supports the first usable control-project scenario through remoteUrl", async () => {
@@ -306,6 +309,10 @@ describe("PharoNexus MCP server tools", () => {
     const gitRunner: GitRunner = (args: readonly string[]): GitCommandResult => {
       const argsArray = [...args];
       gitCalls.push(argsArray);
+
+      if (argsArray[0] === "init") {
+        fs.mkdirSync(path.join(argsArray[1], ".git"), { recursive: true });
+      }
 
       if (argsArray[0] === "clone") {
         fs.mkdirSync(path.join(argsArray[2], ".git"), { recursive: true });
@@ -423,6 +430,7 @@ describe("PharoNexus MCP server tools", () => {
           kind: "git",
           remoteUrl: "https://github.com/me/MyLibrary.git",
           defaultBranch: "main",
+          sourceRoot: "git",
         },
         kanban: {
           projectId: "board-my-library",
@@ -441,15 +449,17 @@ describe("PharoNexus MCP server tools", () => {
         vibeKanbanRepoId: "repo-my-library",
       },
     });
-    expect(gitCalls[0]).toEqual([
+    expect(gitCalls[0]).toEqual(["init", projectRoot]);
+    expect(gitCalls[1]).toEqual([
       "clone",
       "https://github.com/me/MyLibrary.git",
-      projectRoot,
+      path.join(projectRoot, "git"),
     ]);
     expect(fs.existsSync(path.join(projectRoot, "pharo-nexus.project.json"))).toBe(true);
     expect(fs.existsSync(path.join(projectRoot, plexusProjectConfigFileName))).toBe(true);
     expect(fs.existsSync(path.join(projectRoot, "worktrees"))).toBe(true);
     expect(fs.existsSync(path.join(projectRoot, ".git"))).toBe(true);
+    expect(fs.existsSync(path.join(projectRoot, "git", "pharo-nexus.project.json"))).toBe(false);
     expect(loadProjectConfig(projectRoot)).toMatchObject({
       id: "my-library",
       name: "MyLibrary",

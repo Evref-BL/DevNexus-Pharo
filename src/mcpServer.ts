@@ -82,12 +82,13 @@ const tools: McpTool[] = [
   },
   {
     name: "pharo_nexus_project_import",
-    description: "Import an existing local Git repository as a PharoNexus project.",
+    description: "Import an existing local Git repository as a PharoNexus project without writing PharoNexus metadata into the source checkout.",
     inputSchema: {
       type: "object",
       properties: {
         homePath: { type: "string" },
         root: { type: "string" },
+        projectRoot: { type: "string" },
         name: { type: "string" },
         vibeKanbanProjectId: { type: "string" },
         syncVibeKanban: { type: "boolean" },
@@ -344,6 +345,7 @@ export async function callPharoNexusMcpTool(
         const imported = importPharoNexusProject({
           homePath,
           root: requiredString(args, "root", "arguments"),
+          projectRoot: optionalString(args, "projectRoot", "arguments"),
           name: optionalString(args, "name", "arguments"),
           vibeKanbanProjectId: optionalString(
             args,

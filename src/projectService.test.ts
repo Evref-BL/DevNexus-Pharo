@@ -181,7 +181,7 @@ describe("PharoNexus project service", () => {
     ]);
   });
 
-  it("creates a project by cloning a remote into an explicit root", () => {
+  it("creates a managed project root and clones a remote source under it", () => {
     const homePath = makeTempDir("pharo-nexus-home-");
     initPharoNexusHome({ homePath });
     const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "RemoteProject");
@@ -195,15 +195,21 @@ describe("PharoNexus project service", () => {
       gitRunner: fakeGitRunner(gitCalls, { branch: "trunk" }),
     });
 
-    expect(gitCalls[0]).toEqual([
+    expect(gitCalls[0]).toEqual(["init", projectRoot]);
+    expect(gitCalls[1]).toEqual([
       "clone",
       "https://github.com/example/remote-project.git",
-      projectRoot,
+      path.join(projectRoot, "git"),
     ]);
+    expect(fs.existsSync(path.join(projectRoot, pharoNexusProjectConfigFileName))).toBe(true);
+    expect(fs.existsSync(path.join(projectRoot, "git", pharoNexusProjectConfigFileName))).toBe(
+      false,
+    );
     expect(result.projectConfig.repo).toEqual({
       kind: "git",
       remoteUrl: "https://github.com/example/remote-project.git",
       defaultBranch: "trunk",
+      sourceRoot: "git",
     });
     expect(loadHomeConfig(homePath).projects).toEqual([
       {
@@ -270,6 +276,7 @@ describe("PharoNexus project service", () => {
             kind: "git",
             remoteUrl: "https://github.com/example/listed.git",
             defaultBranch: "main",
+            sourceRoot: "git",
           },
           vibeKanbanProjectId: null,
           vibeKanbanRepoId: null,
@@ -544,14 +551,15 @@ describe("PharoNexus project service", () => {
 
   it("imports an existing git repository and writes missing project files", () => {
     const homePath = makeTempDir("pharo-nexus-home-");
-    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "Imported");
-    fs.mkdirSync(projectRoot, { recursive: true });
+    const sourceRoot = path.join(makeTempDir("pharo-nexus-source-"), "Imported");
+    fs.mkdirSync(sourceRoot, { recursive: true });
     initPharoNexusHome({ homePath });
+    const projectRoot = path.join(homePath, "projects", "Imported");
     const gitCalls: string[][] = [];
 
     const result = importPharoNexusProject({
       homePath,
-      root: projectRoot,
+      root: sourceRoot,
       name: "Imported",
       gitRunner: fakeGitRunner(gitCalls, {
         branch: "main",
@@ -560,9 +568,10 @@ describe("PharoNexus project service", () => {
     });
 
     expect(gitCalls).toEqual([
-      ["-C", projectRoot, "rev-parse", "--is-inside-work-tree"],
-      ["-C", projectRoot, "config", "--get", "remote.origin.url"],
-      ["-C", projectRoot, "symbolic-ref", "--short", "HEAD"],
+      ["-C", sourceRoot, "rev-parse", "--is-inside-work-tree"],
+      ["-C", sourceRoot, "config", "--get", "remote.origin.url"],
+      ["-C", sourceRoot, "symbolic-ref", "--short", "HEAD"],
+      ["init", projectRoot],
     ]);
     expect(result).toMatchObject({
       projectRoot,
@@ -573,6 +582,7 @@ describe("PharoNexus project service", () => {
           kind: "git",
           remoteUrl: "https://github.com/example/imported.git",
           defaultBranch: "main",
+          sourceRoot,
         },
       },
       git: {
@@ -584,6 +594,8 @@ describe("PharoNexus project service", () => {
     expect(fs.existsSync(path.join(projectRoot, pharoNexusProjectConfigFileName))).toBe(true);
     expect(fs.existsSync(path.join(projectRoot, plexusProjectConfigFileName))).toBe(true);
     expect(fs.existsSync(path.join(projectRoot, "worktrees"))).toBe(true);
+    expect(fs.existsSync(path.join(sourceRoot, pharoNexusProjectConfigFileName))).toBe(false);
+    expect(fs.existsSync(path.join(sourceRoot, plexusProjectConfigFileName))).toBe(false);
     expect(fs.readFileSync(path.join(projectRoot, "AGENTS.md"), "utf8")).toBe(
       defaultAgentsContent(),
     );
@@ -599,13 +611,14 @@ describe("PharoNexus project service", () => {
     ]);
   });
 
-  it("imports a repository without overwriting project-owned agent and Codex files", () => {
+  it("imports a repository without touching source-owned agent and Codex files", () => {
     const homePath = makeTempDir("pharo-nexus-home-");
-    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "ImportedOwnedFiles");
-    fs.mkdirSync(path.join(projectRoot, ".codex"), { recursive: true });
+    const sourceRoot = path.join(makeTempDir("pharo-nexus-source-"), "ImportedOwnedFiles");
+    fs.mkdirSync(path.join(sourceRoot, ".codex"), { recursive: true });
     initPharoNexusHome({ homePath });
-    const agentsPath = path.join(projectRoot, "AGENTS.md");
-    const configPath = codexConfigPath(projectRoot);
+    const projectRoot = path.join(homePath, "projects", "ImportedOwnedFiles");
+    const agentsPath = path.join(sourceRoot, "AGENTS.md");
+    const configPath = codexConfigPath(sourceRoot);
     fs.writeFileSync(agentsPath, "# Project-specific agents\n", "utf8");
     fs.writeFileSync(
       configPath,
@@ -620,19 +633,21 @@ describe("PharoNexus project service", () => {
 
     const result = importPharoNexusProject({
       homePath,
-      root: projectRoot,
+      root: sourceRoot,
       name: "ImportedOwnedFiles",
       gitRunner: fakeGitRunner([], { branch: "main" }),
     });
 
-    expect(result.agentsPath).toBe(agentsPath);
+    expect(result.agentsPath).toBe(path.join(projectRoot, "AGENTS.md"));
     expect(fs.readFileSync(agentsPath, "utf8")).toBe("# Project-specific agents\n");
-    const codexConfig = fs.readFileSync(configPath, "utf8");
-    expect(codexConfig).toContain('model = "gpt-5.3-codex"');
-    expect(codexConfig).toContain("[mcp_servers.keep]");
-    expect(codexConfig).toContain("[mcp_servers.pharo_nexus]");
-    expect(codexConfig).toContain("[mcp_servers.plexus]");
-    expect(codexConfig).toContain("[mcp_servers.vibe_kanban]");
+    const sourceCodexConfig = fs.readFileSync(configPath, "utf8");
+    expect(sourceCodexConfig).toContain('model = "gpt-5.3-codex"');
+    expect(sourceCodexConfig).toContain("[mcp_servers.keep]");
+    expect(sourceCodexConfig).not.toContain("[mcp_servers.pharo_nexus]");
+    const managedCodexConfig = fs.readFileSync(codexConfigPath(projectRoot), "utf8");
+    expect(managedCodexConfig).toContain("[mcp_servers.pharo_nexus]");
+    expect(managedCodexConfig).toContain("[mcp_servers.plexus]");
+    expect(managedCodexConfig).toContain("[mcp_servers.vibe_kanban]");
   });
 
   it("imports an existing project config without overwriting it", () => {

@@ -172,14 +172,15 @@ describe("PharoNexus focused project lifecycle contracts", () => {
 
   it("imports an existing Git repository", () => {
     const homePath = makeTempDir("pharo-nexus-home-");
-    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "Imported");
+    const sourceRoot = path.join(makeTempDir("pharo-nexus-source-"), "Imported");
     const gitCalls: string[][] = [];
-    fs.mkdirSync(projectRoot, { recursive: true });
+    fs.mkdirSync(sourceRoot, { recursive: true });
     initPharoNexusHome({ homePath });
+    const projectRoot = path.join(homePath, "projects", "Imported");
 
     const result = importPharoNexusProject({
       homePath,
-      root: projectRoot,
+      root: sourceRoot,
       name: "Imported",
       gitRunner: fakeGitRunner(gitCalls, {
         branch: "main",
@@ -188,9 +189,10 @@ describe("PharoNexus focused project lifecycle contracts", () => {
     });
 
     expect(gitCalls).toEqual([
-      ["-C", projectRoot, "rev-parse", "--is-inside-work-tree"],
-      ["-C", projectRoot, "config", "--get", "remote.origin.url"],
-      ["-C", projectRoot, "symbolic-ref", "--short", "HEAD"],
+      ["-C", sourceRoot, "rev-parse", "--is-inside-work-tree"],
+      ["-C", sourceRoot, "config", "--get", "remote.origin.url"],
+      ["-C", sourceRoot, "symbolic-ref", "--short", "HEAD"],
+      ["init", projectRoot],
     ]);
     expect(result.projectConfig).toMatchObject({
       id: "imported",
@@ -198,9 +200,11 @@ describe("PharoNexus focused project lifecycle contracts", () => {
         kind: "git",
         remoteUrl: "https://github.com/example/imported.git",
         defaultBranch: "main",
+        sourceRoot,
       },
     });
     expect(fs.existsSync(path.join(projectRoot, pharoNexusProjectConfigFileName))).toBe(true);
+    expect(fs.existsSync(path.join(sourceRoot, pharoNexusProjectConfigFileName))).toBe(false);
   });
 
   it("rejects duplicate project ids before running git", () => {
@@ -285,6 +289,7 @@ describe("PharoNexus focused project lifecycle contracts", () => {
     const importedRoot = path.join(makeTempDir("pharo-nexus-projects-"), "ImportedRegistry");
     fs.mkdirSync(importedRoot, { recursive: true });
     initPharoNexusHome({ homePath });
+    const importedProjectRoot = path.join(homePath, "projects", "ImportedRegistry");
     const created = createPharoNexusProject({
       homePath,
       name: "CreatedRegistry",
@@ -309,7 +314,7 @@ describe("PharoNexus focused project lifecycle contracts", () => {
       {
         id: "imported-registry",
         name: "ImportedRegistry",
-        plexusProjectRoot: importedRoot,
+        plexusProjectRoot: importedProjectRoot,
       },
     ]);
   });

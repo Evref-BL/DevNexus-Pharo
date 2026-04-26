@@ -227,9 +227,9 @@ resolve from the directory containing `pharo-nexus.project.json`.
 ## Project Creation
 
 `pharo-nexus project create <name>` is the project factory entrypoint used by
-agents working from the control project. `pharo-nexus project import <path>` is
-the equivalent local-repository entrypoint when the Git checkout already exists
-on disk.
+agents working from the control project. `pharo-nexus project import <path>`
+imports a local source Git checkout while keeping PharoNexus runtime metadata in
+a managed PharoNexus project root.
 
 It supports two source modes:
 
@@ -241,14 +241,26 @@ It supports two source modes:
 If `--root` is omitted, the project root is created under
 `pharo-nexus.home.json`'s `paths.projectsRoot`.
 
+For `project import`, `<path>` is the source Git checkout, not the metadata
+root. Use `--project-root <path>` only when the managed PharoNexus project root
+needs to be placed somewhere other than `paths.projectsRoot`.
+
 Creation writes:
 
 ```text
 <project-root>\
   pharo-nexus.project.json
   plexus.project.json
+  .codex\config.toml
+  AGENTS.md
   worktrees\
 ```
+
+For `project create --from`, the source repository is cloned under
+`<project-root>\git` and referenced from `repo.sourceRoot`. For `project import
+<source-checkout>`, `repo.sourceRoot` points at the existing checkout. The
+source checkout must not receive PharoNexus metadata files unless it is already a
+managed PharoNexus project.
 
 The home config `projects` registry is updated with the PharoNexus project id,
 display name, PLexus project root, and any known Vibe ids.

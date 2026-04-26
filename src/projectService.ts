@@ -62,6 +62,7 @@ export interface CreatePharoNexusProjectOptions {
 export interface ImportPharoNexusProjectOptions {
   homePath: string;
   root: string;
+  projectRoot?: string;
   name?: string;
   vibeKanbanProjectId?: string;
   gitRunner?: GitRunner;
@@ -249,6 +250,8 @@ function assertFileDoesNotExist(filePath: string): void {
   }
 }
 
+const defaultSourceCheckoutDirectoryName = "git";
+
 function packageRootPath(): string {
   return path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 }
@@ -419,6 +422,31 @@ function samePath(left: string, right: string): boolean {
   return normalizedPathForCompare(left) === normalizedPathForCompare(right);
 }
 
+function pathForProjectConfig(projectRoot: string, targetPath: string): string {
+  const relative = path.relative(projectRoot, targetPath);
+  if (
+    relative &&
+    !relative.startsWith("..") &&
+    !path.isAbsolute(relative)
+  ) {
+    return relative;
+  }
+
+  return path.resolve(targetPath);
+}
+
+function defaultImportedProjectRoot(
+  homeConfig: PharoNexusHomeConfig,
+  projectName: string,
+  sourceRoot: string,
+): string {
+  const directoryName = safeDirectoryName(projectName);
+  const candidate = path.join(homeConfig.paths.projectsRoot, directoryName);
+  return samePath(candidate, sourceRoot)
+    ? path.join(homeConfig.paths.projectsRoot, `${directoryName}-PharoNexus`)
+    : candidate;
+}
+
 function loadProjectConfigIfExists(
   projectRoot: string,
 ): PharoNexusProjectConfig | undefined {
@@ -513,6 +541,8 @@ function buildProjectConfig(
   from: string | undefined,
   defaultBranch: string | null,
   vibeKanbanProjectId: string | null = null,
+  sourceRoot?: string | null,
+  forceGit = false,
 ): PharoNexusProjectConfig {
   return {
     version: 1,
@@ -520,9 +550,10 @@ function buildProjectConfig(
     name,
     home: null,
     repo: {
-      kind: from ? "git" : "local",
+      kind: from || sourceRoot || forceGit ? "git" : "local",
       remoteUrl: from ?? null,
       defaultBranch,
+      ...(sourceRoot ? { sourceRoot } : {}),
     },
     plexusProjectConfig: plexusProjectConfigFileName,
     worktreesRoot: pharoNexusProjectWorktreesDirectoryName,
@@ -651,23 +682,29 @@ export function createPharoNexusProject(
 
   const gitRunner = options.gitRunner ?? defaultGitRunner;
   const gitCommands: GitCommandResult[] = [];
+  let sourceRoot: string | null = null;
   if (creatingFromRemote) {
-    runGitCommand(gitRunner, gitCommands, ["clone", options.from as string, projectRoot]);
-    if (!fs.existsSync(projectRoot)) {
-      fs.mkdirSync(projectRoot, { recursive: true });
-    }
+    fs.mkdirSync(projectRoot, { recursive: true });
+    runGitCommand(gitRunner, gitCommands, ["init", projectRoot]);
+    sourceRoot = path.join(projectRoot, defaultSourceCheckoutDirectoryName);
+    runGitCommand(gitRunner, gitCommands, ["clone", options.from as string, sourceRoot]);
   } else {
     fs.mkdirSync(projectRoot, { recursive: true });
     runGitCommand(gitRunner, gitCommands, ["init", projectRoot]);
   }
 
-  const defaultBranch = detectDefaultBranch(gitRunner, gitCommands, projectRoot);
+  const defaultBranch = detectDefaultBranch(
+    gitRunner,
+    gitCommands,
+    sourceRoot ?? projectRoot,
+  );
   const projectConfig = buildProjectConfig(
     options.name,
     projectId,
     options.from,
     defaultBranch,
     vibeKanbanProjectId,
+    sourceRoot ? pathForProjectConfig(projectRoot, sourceRoot) : null,
   );
   const plexusProjectConfig = buildPlexusProjectConfig(
     options.name,
@@ -726,22 +763,37 @@ export function importPharoNexusProject(
   const vibeKanbanProjectId =
     optionalNonEmptyString(options.vibeKanbanProjectId, "vibeKanbanProjectId") ??
     null;
-  const projectRoot = path.resolve(options.root);
-  if (!fs.existsSync(projectRoot) || !fs.statSync(projectRoot).isDirectory()) {
+  const sourceRoot = path.resolve(options.root);
+  if (!fs.existsSync(sourceRoot) || !fs.statSync(sourceRoot).isDirectory()) {
     throw new PharoNexusProjectError(
-      `Project root must be an existing directory: ${projectRoot}`,
+      `Project source root must be an existing directory: ${sourceRoot}`,
     );
   }
 
   const gitRunner = options.gitRunner ?? defaultGitRunner;
   const gitCommands: GitCommandResult[] = [];
-  assertGitRepository(gitRunner, gitCommands, projectRoot);
-  const remoteUrl = detectOriginUrl(gitRunner, gitCommands, projectRoot);
-  const defaultBranch = detectDefaultBranch(gitRunner, gitCommands, projectRoot);
-  const existingProjectConfig = loadProjectConfigIfExists(projectRoot);
-  const projectName = existingProjectConfig?.name ?? options.name ?? path.basename(projectRoot);
+  assertGitRepository(gitRunner, gitCommands, sourceRoot);
+  const remoteUrl = detectOriginUrl(gitRunner, gitCommands, sourceRoot);
+  const defaultBranch = detectDefaultBranch(gitRunner, gitCommands, sourceRoot);
+  const existingProjectConfig = loadProjectConfigIfExists(sourceRoot);
+  const projectName = existingProjectConfig?.name ?? options.name ?? path.basename(sourceRoot);
   const projectId = existingProjectConfig?.id ?? slugify(projectName);
+  const projectRoot = existingProjectConfig
+    ? sourceRoot
+    : path.resolve(
+        options.projectRoot ??
+          defaultImportedProjectRoot(homeConfig, projectName, sourceRoot),
+      );
   ensureUniqueProject(homeConfig, projectId, projectRoot);
+  if (!existingProjectConfig && directoryExistsAndIsNonEmpty(projectRoot)) {
+    throw new PharoNexusProjectError(
+      `Project root already exists and is not empty: ${projectRoot}`,
+    );
+  }
+  if (!existingProjectConfig) {
+    fs.mkdirSync(projectRoot, { recursive: true });
+    runGitCommand(gitRunner, gitCommands, ["init", projectRoot]);
+  }
 
   const projectConfig =
     existingProjectConfig ??
@@ -751,6 +803,8 @@ export function importPharoNexusProject(
       remoteUrl ?? undefined,
       defaultBranch,
       vibeKanbanProjectId,
+      pathForProjectConfig(projectRoot, sourceRoot),
+      true,
     );
   if (existingProjectConfig && vibeKanbanProjectId) {
     projectConfig.kanban = {

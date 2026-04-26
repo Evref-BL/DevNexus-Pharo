@@ -651,28 +651,33 @@ Create a new Pharo project from scratch:
 pharo-nexus project create MyProject --git-init
 ```
 
-Clone an existing Git repository:
+Create a PharoNexus project that references an existing Git repository URL:
 
 ```powershell
 pharo-nexus project create MyProject --from https://github.com/example/MyProject.git
 ```
 
-Import an existing local Git repository:
+Import an existing local Git repository without writing PharoNexus metadata into
+that source checkout:
 
 ```powershell
 pharo-nexus project import C:\dev\code\git\PharoNexus --name MetaPharoNexus
 ```
 
-Use `--root` to choose the exact project root. Otherwise PharoNexus creates the
-project under `paths.projectsRoot` from `pharo-nexus.home.json`.
+Use `--root` on `project create` to choose the exact managed PharoNexus project
+root. Use `--project-root` on `project import` for the same purpose. Otherwise
+PharoNexus creates the managed project under `paths.projectsRoot` from
+`pharo-nexus.home.json`.
 
 ```powershell
 pharo-nexus project create MyProject --git-init --root C:\dev\code\git\MyProject
+pharo-nexus project import C:\dev\code\git\MyProject --project-root C:\dev\code\pharo-nexus\projects\MyProject
 ```
 
 The command:
 
-- runs `git init` or `git clone`
+- runs `git init` for the managed PharoNexus project root
+- for `--from`, clones the source repository under `<project-root>\git`
 - writes `pharo-nexus.project.json`
 - writes a minimal `plexus.project.json`
 - writes or merges `.codex\config.toml` with `pharo_nexus`, `plexus`, and
@@ -681,6 +686,10 @@ The command:
   already have one
 - creates `worktrees\`
 - registers the project in `pharo-nexus.home.json`
+
+The PharoNexus project root owns runtime metadata and agent bootstrap files. The
+source checkout referenced by `project import <path>` is not modified unless it
+is already an initialized PharoNexus project containing `pharo-nexus.project.json`.
 
 If the Vibe Kanban project already exists, pass its id while creating:
 

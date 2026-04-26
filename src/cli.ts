@@ -140,6 +140,7 @@ export function usage(): string {
     "",
     "Options for project import:",
     "  --name <name>",
+    "  --project-root <path>",
     "  --vibe-project-id <id>",
     "  --sync-vibe-kanban",
     "  --vibe-host <host>",
@@ -826,6 +827,7 @@ interface ParsedProjectCreateCommand {
 interface ParsedProjectImportCommand {
   homePath: string;
   root: string;
+  projectRoot?: string;
   name?: string;
   vibeKanbanProjectId?: string;
   syncVibeKanban?: boolean;
@@ -953,6 +955,9 @@ function parseProjectImportCommand(argv: string[]): ParsedProjectImportCommand {
     switch (arg) {
       case "--name":
         parsed.name = next();
+        break;
+      case "--project-root":
+        parsed.projectRoot = next();
         break;
       case "--vibe-project-id":
         parsed.vibeKanbanProjectId = next();

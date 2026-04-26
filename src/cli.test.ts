@@ -233,21 +233,22 @@ describe("pharo-nexus cli", () => {
     "imports an existing PharoNexus project from the CLI",
     async () => {
       const homePath = path.join(makeTempDir("pharo-nexus-parent-"), "home");
-      const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "ImportedCliProject");
+      const sourceRoot = path.join(makeTempDir("pharo-nexus-source-"), "ImportedCliProject");
       initHome(homePath);
-      fs.mkdirSync(projectRoot, { recursive: true });
-      spawnSync("git", ["init", projectRoot], {
+      fs.mkdirSync(sourceRoot, { recursive: true });
+      spawnSync("git", ["init", sourceRoot], {
         encoding: "utf8",
         shell: false,
         windowsHide: true,
       });
       const log = vi.spyOn(console, "log").mockImplementation(() => {});
+      const projectRoot = path.join(homePath, "projects", "ImportedCliProject");
 
       await expect(
         main([
           "project",
           "import",
-          projectRoot,
+          sourceRoot,
           "--home",
           homePath,
           "--name",
@@ -263,6 +264,9 @@ describe("pharo-nexus cli", () => {
         projectConfig: {
           id: "imported-cli-project",
           name: "ImportedCliProject",
+          repo: {
+            sourceRoot,
+          },
         },
         git: {
           operation: "import",
@@ -275,6 +279,7 @@ describe("pharo-nexus cli", () => {
           plexusProjectRoot: projectRoot,
         },
       ]);
+      expect(fs.existsSync(path.join(sourceRoot, pharoNexusProjectConfigFileName))).toBe(false);
     },
   );
 
