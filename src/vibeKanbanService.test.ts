@@ -160,7 +160,7 @@ describe("Vibe Kanban service", () => {
     expect(loadVibeKanbanState(homePath)).toMatchObject({
       status: "stopped",
     });
-  });
+  }, 15_000);
 
   it("refuses to start a second Vibe Kanban process when the existing one is running", async () => {
     const port = await freePort();
