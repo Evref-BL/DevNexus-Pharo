@@ -1,7 +1,9 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { codexConfigPath } from "./codexConfig.js";
 import {
   initPharoNexusHome,
   loadHomeConfig,
@@ -27,6 +29,13 @@ function makeTempDir(prefix: string): string {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
   tempDirs.push(tempDir);
   return tempDir;
+}
+
+function defaultAgentsContent(): string {
+  return fs.readFileSync(
+    path.join(path.dirname(path.dirname(fileURLToPath(import.meta.url))), "AGENTS.md"),
+    "utf8",
+  );
 }
 
 afterEach(() => {
@@ -111,6 +120,8 @@ describe("PharoNexus project service", () => {
         plexusProjectConfigFileName,
       ),
       worktreesRoot: path.join(projectsRoot, "MyProject", "worktrees"),
+      agentsPath: path.join(projectsRoot, "MyProject", "AGENTS.md"),
+      codexConfigPath: path.join(projectsRoot, "MyProject", ".codex", "config.toml"),
       git: {
         operation: "init",
         remoteUrl: null,
@@ -155,6 +166,12 @@ describe("PharoNexus project service", () => {
       images: [],
     });
     expect(fs.existsSync(result.worktreesRoot)).toBe(true);
+    expect(fs.readFileSync(result.agentsPath, "utf8")).toBe(defaultAgentsContent());
+    expect(result.codexConfigPath).toBe(codexConfigPath(result.projectRoot));
+    const codexConfig = fs.readFileSync(result.codexConfigPath, "utf8");
+    expect(codexConfig).toContain("[mcp_servers.pharo_nexus]");
+    expect(codexConfig).toContain("[mcp_servers.plexus]");
+    expect(codexConfig).toContain("[mcp_servers.vibe_kanban]");
     expect(loadHomeConfig(homePath).projects).toEqual([
       {
         id: "my-project",
@@ -567,6 +584,12 @@ describe("PharoNexus project service", () => {
     expect(fs.existsSync(path.join(projectRoot, pharoNexusProjectConfigFileName))).toBe(true);
     expect(fs.existsSync(path.join(projectRoot, plexusProjectConfigFileName))).toBe(true);
     expect(fs.existsSync(path.join(projectRoot, "worktrees"))).toBe(true);
+    expect(fs.readFileSync(path.join(projectRoot, "AGENTS.md"), "utf8")).toBe(
+      defaultAgentsContent(),
+    );
+    expect(fs.readFileSync(codexConfigPath(projectRoot), "utf8")).toContain(
+      "[mcp_servers.pharo_nexus]",
+    );
     expect(loadHomeConfig(homePath).projects).toEqual([
       {
         id: "imported",
@@ -574,6 +597,42 @@ describe("PharoNexus project service", () => {
         plexusProjectRoot: projectRoot,
       },
     ]);
+  });
+
+  it("imports a repository without overwriting project-owned agent and Codex files", () => {
+    const homePath = makeTempDir("pharo-nexus-home-");
+    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "ImportedOwnedFiles");
+    fs.mkdirSync(path.join(projectRoot, ".codex"), { recursive: true });
+    initPharoNexusHome({ homePath });
+    const agentsPath = path.join(projectRoot, "AGENTS.md");
+    const configPath = codexConfigPath(projectRoot);
+    fs.writeFileSync(agentsPath, "# Project-specific agents\n", "utf8");
+    fs.writeFileSync(
+      configPath,
+      [
+        'model = "gpt-5.3-codex"',
+        "",
+        "[mcp_servers.keep]",
+        'command = "node"',
+      ].join("\n"),
+      "utf8",
+    );
+
+    const result = importPharoNexusProject({
+      homePath,
+      root: projectRoot,
+      name: "ImportedOwnedFiles",
+      gitRunner: fakeGitRunner([], { branch: "main" }),
+    });
+
+    expect(result.agentsPath).toBe(agentsPath);
+    expect(fs.readFileSync(agentsPath, "utf8")).toBe("# Project-specific agents\n");
+    const codexConfig = fs.readFileSync(configPath, "utf8");
+    expect(codexConfig).toContain('model = "gpt-5.3-codex"');
+    expect(codexConfig).toContain("[mcp_servers.keep]");
+    expect(codexConfig).toContain("[mcp_servers.pharo_nexus]");
+    expect(codexConfig).toContain("[mcp_servers.plexus]");
+    expect(codexConfig).toContain("[mcp_servers.vibe_kanban]");
   });
 
   it("imports an existing project config without overwriting it", () => {

@@ -675,6 +675,10 @@ The command:
 - runs `git init` or `git clone`
 - writes `pharo-nexus.project.json`
 - writes a minimal `plexus.project.json`
+- writes or merges `.codex\config.toml` with `pharo_nexus`, `plexus`, and
+  `vibe_kanban` MCP entries
+- writes a default `AGENTS.md` workflow contract when the project does not
+  already have one
 - creates `worktrees\`
 - registers the project in `pharo-nexus.home.json`
 

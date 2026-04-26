@@ -344,8 +344,9 @@ the agent should call `pharo_nexus_project_create` with:
 The agent should not manually create directories, hand-edit project config
 files, or call Vibe Kanban directly for this workflow. PharoNexus owns the
 transaction: Git clone or init, `pharo-nexus.project.json`,
-`plexus.project.json`, `worktrees\`, Vibe repo registration, Vibe board
-creation or linking, and the home project registry update.
+`plexus.project.json`, `.codex\config.toml`, `AGENTS.md`, `worktrees\`, Vibe
+repo registration, Vibe board creation or linking, and the home project
+registry update.
 
 ## Project Board Feature Contract
 

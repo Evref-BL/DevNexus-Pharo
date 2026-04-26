@@ -1,6 +1,11 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
+import {
+  initCodexWorkspace,
+  type InitCodexWorkspaceResult,
+} from "./codexConfig.js";
 import {
   loadHomeConfig,
   loadProjectConfig,
@@ -68,8 +73,11 @@ export interface CreatePharoNexusProjectResult {
   projectConfigPath: string;
   plexusProjectConfigPath: string;
   worktreesRoot: string;
+  agentsPath: string;
+  codexConfigPath: string;
   projectConfig: PharoNexusProjectConfig;
   plexusProjectConfig: PlexusProjectConfig;
+  codex: InitCodexWorkspaceResult;
   git: {
     operation: "clone" | "init";
     remoteUrl: string | null;
@@ -84,8 +92,11 @@ export interface ImportPharoNexusProjectResult {
   projectConfigPath: string;
   plexusProjectConfigPath: string;
   worktreesRoot: string;
+  agentsPath: string;
+  codexConfigPath: string;
   projectConfig: PharoNexusProjectConfig;
   plexusProjectConfig: PlexusProjectConfig;
+  codex: InitCodexWorkspaceResult;
   git: {
     operation: "import";
     remoteUrl: string | null;
@@ -236,6 +247,35 @@ function assertFileDoesNotExist(filePath: string): void {
   if (fs.existsSync(filePath)) {
     throw new PharoNexusProjectError(`Refusing to overwrite existing file: ${filePath}`);
   }
+}
+
+function packageRootPath(): string {
+  return path.dirname(path.dirname(fileURLToPath(import.meta.url)));
+}
+
+function defaultAgentsTemplatePath(): string {
+  return path.join(packageRootPath(), "AGENTS.md");
+}
+
+function projectAgentsPath(projectRoot: string): string {
+  return path.join(projectRoot, "AGENTS.md");
+}
+
+function installDefaultAgentsFile(projectRoot: string): string {
+  const agentsPath = projectAgentsPath(projectRoot);
+  if (fs.existsSync(agentsPath)) {
+    return agentsPath;
+  }
+
+  const templatePath = defaultAgentsTemplatePath();
+  if (!fs.existsSync(templatePath)) {
+    throw new PharoNexusProjectError(
+      `Default AGENTS.md template is missing: ${templatePath}`,
+    );
+  }
+
+  fs.copyFileSync(templatePath, agentsPath);
+  return agentsPath;
 }
 
 function defaultGitRunner(args: readonly string[], cwd?: string): GitCommandResult {
@@ -643,6 +683,12 @@ export function createPharoNexusProject(
   saveProjectConfig(projectRoot, projectConfig);
   saveJsonFile(plexusConfigPath, plexusProjectConfig);
   fs.mkdirSync(worktreesRoot, { recursive: true });
+  const codex = initCodexWorkspace({
+    homePath,
+    workspacePath: projectRoot,
+    config: homeConfig,
+  });
+  const agentsPath = installDefaultAgentsFile(projectRoot);
 
   homeConfig.projects.push({
     id: projectId,
@@ -658,8 +704,11 @@ export function createPharoNexusProject(
     projectConfigPath: pharoNexusProjectConfigPath,
     plexusProjectConfigPath: plexusConfigPath,
     worktreesRoot,
+    agentsPath,
+    codexConfigPath: codex.configPath,
     projectConfig,
     plexusProjectConfig,
+    codex,
     git: {
       operation: creatingFromRemote ? "clone" : "init",
       remoteUrl: options.from ?? null,
@@ -736,6 +785,12 @@ export function importPharoNexusProject(
 
   const worktreesRoot = projectWorktreesRootPath(projectRoot, projectConfig);
   fs.mkdirSync(worktreesRoot, { recursive: true });
+  const codex = initCodexWorkspace({
+    homePath,
+    workspacePath: projectRoot,
+    config: homeConfig,
+  });
+  const agentsPath = installDefaultAgentsFile(projectRoot);
 
   homeConfig.projects.push({
     id: projectConfig.id,
@@ -753,8 +808,11 @@ export function importPharoNexusProject(
     projectConfigPath: pharoNexusProjectConfigPath,
     plexusProjectConfigPath: plexusConfigPath,
     worktreesRoot,
+    agentsPath,
+    codexConfigPath: codex.configPath,
     projectConfig,
     plexusProjectConfig,
+    codex,
     git: {
       operation: "import",
       remoteUrl,
