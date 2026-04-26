@@ -277,12 +277,25 @@ async function postJsonRpc(
     {
       method: "POST",
       headers: {
+        accept: "application/json, text/event-stream",
         "content-type": "application/json",
       },
       body: JSON.stringify({
         jsonrpc: "2.0",
         id: 1,
         method,
+        ...(method === "initialize"
+          ? {
+              params: {
+                protocolVersion: "2024-11-05",
+                capabilities: {},
+                clientInfo: {
+                  name: "pharo-nexus-codex-doctor",
+                  version: "0.1.0",
+                },
+              },
+            }
+          : {}),
       }),
     },
     timeoutMs,
