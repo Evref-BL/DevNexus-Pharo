@@ -7,7 +7,7 @@ PharoNexus
   -> Vibe Kanban shared backend
   -> Vibe Kanban
   -> PLexus MCP
-      -> MCP-PL
+      -> pharo-launcher-mcp
           -> PharoLauncher
       -> Pharo image MCP workers
 ```
@@ -31,14 +31,14 @@ PharoNexus does not own:
 - Pharo image creation, launch, or kill semantics
 - in-image Pharo code editing or test execution
 
-Those belong to MCP-PL, PLexus, and the Pharo MCP worker respectively.
+Those belong to pharo-launcher-mcp, PLexus, and the Pharo MCP worker respectively.
 
 ## Boundary Rule
 
 Dependencies point downward:
 
 ```text
-PharoNexus -> PLexus -> MCP-PL -> PharoLauncher
+PharoNexus -> PLexus -> pharo-launcher-mcp -> PharoLauncher
 ```
 
 PLexus should not depend on PharoNexus.

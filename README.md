@@ -10,7 +10,7 @@ It owns the "start everything" experience:
 - coordinate top-level ports and generated integration config
 - register local Vibe repos and Vibe Kanban boards that map to PLexus projects
 
-PLexus remains responsible for project/workspace/runtime-target/image behavior. MCP-PL remains responsible for PharoLauncher.
+PLexus remains responsible for project/workspace/runtime-target/image behavior. pharo-launcher-mcp remains responsible for PharoLauncher.
 
 ## First-Time Setup
 

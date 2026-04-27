@@ -12,7 +12,7 @@ state or assuming a single repository layout.
   issues, workspaces, and sessions.
 - Use `pharo_launcher` for Pharo image creation and launch operations. In the
   intended architecture, this surface is provided through PLexus, which uses
-  MCP-PL underneath.
+  pharo-launcher-mcp underneath.
 - Use `pharo` tools to execute code inside images. In the intended
   architecture, this surface is reached through the PLexus gateway and backed
   by the Evref-BL/MCP Pharo project.
@@ -22,7 +22,7 @@ state or assuming a single repository layout.
 Keep the dependency direction:
 
 ```text
-PharoNexus -> PLexus -> MCP-PL -> PharoLauncher
+PharoNexus -> PLexus -> pharo-launcher-mcp -> PharoLauncher
 ```
 
 Pharo execution is a runtime capability behind PLexus. PharoNexus should not
@@ -66,7 +66,7 @@ depend on implementation details inside Pharo images.
 
 - Use the control board for instructions like "create/import/register/sync a
   project" or "start/check/fix the PharoNexus environment".
-- Use a real project board, such as `MetaPharoNexus`, `PLexus`, or `MCP-PL`,
+- Use a real project board, such as `MetaPharoNexus`, `PLexus`, or `pharo-launcher-mcp`,
   for source changes, design notes, tests, and implementation work in that
   project.
 - If a task mentions "PharoNexus" but asks for source-code changes, treat it as
