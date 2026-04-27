@@ -75,6 +75,7 @@ export interface CreatePharoNexusProjectResult {
   plexusProjectConfigPath: string;
   worktreesRoot: string;
   agentsPath: string;
+  suggestedFirstPromptPath: string;
   codexConfigPath: string;
   projectConfig: PharoNexusProjectConfig;
   plexusProjectConfig: PlexusProjectConfig;
@@ -94,6 +95,7 @@ export interface ImportPharoNexusProjectResult {
   plexusProjectConfigPath: string;
   worktreesRoot: string;
   agentsPath: string;
+  suggestedFirstPromptPath: string;
   codexConfigPath: string;
   projectConfig: PharoNexusProjectConfig;
   plexusProjectConfig: PlexusProjectConfig;
@@ -251,6 +253,7 @@ function assertFileDoesNotExist(filePath: string): void {
 }
 
 const defaultSourceCheckoutDirectoryName = "git";
+const suggestedFirstPromptFileName = "suggestedFirstPrompt.md";
 
 function packageRootPath(): string {
   return path.dirname(path.dirname(fileURLToPath(import.meta.url)));
@@ -262,6 +265,10 @@ function defaultAgentsTemplatePath(): string {
 
 function projectAgentsPath(projectRoot: string): string {
   return path.join(projectRoot, "AGENTS.md");
+}
+
+function projectSuggestedFirstPromptPath(projectRoot: string): string {
+  return path.join(projectRoot, suggestedFirstPromptFileName);
 }
 
 function installDefaultAgentsFile(projectRoot: string): string {
@@ -279,6 +286,69 @@ function installDefaultAgentsFile(projectRoot: string): string {
 
   fs.copyFileSync(templatePath, agentsPath);
   return agentsPath;
+}
+
+function resolveProjectSourceRoot(
+  projectRoot: string,
+  projectConfig: PharoNexusProjectConfig,
+): string {
+  const sourceRoot = projectConfig.repo.sourceRoot;
+  if (!sourceRoot) {
+    return path.resolve(projectRoot);
+  }
+
+  return path.isAbsolute(sourceRoot)
+    ? path.resolve(sourceRoot)
+    : path.resolve(projectRoot, sourceRoot);
+}
+
+function formatPromptValue(value: string | null | undefined): string {
+  return value && value.trim().length > 0 ? value : "(not known yet)";
+}
+
+function buildSuggestedFirstPrompt(
+  projectRoot: string,
+  projectConfig: PharoNexusProjectConfig,
+): string {
+  const sourceRoot = resolveProjectSourceRoot(projectRoot, projectConfig);
+  const kanbanProjectId = projectConfig.kanban.projectId;
+
+  return [
+    `This is a Codex and PharoNexus project for ${projectConfig.name}.`,
+    "",
+    "Use the local AGENTS.md as the workflow contract. Then make this local project yours:",
+    "",
+    `- Inspect the PharoNexus project root at ${projectRoot}.`,
+    `- Inspect the source checkout at ${sourceRoot}.`,
+    "- Check the matching Vibe Kanban board and current issues with the available PharoNexus and Vibe Kanban MCP tools.",
+    "- Record durable local context in NOTES.md, including the Kanban board id and any source/workflow details future agents should know.",
+    "- Edit AGENTS.md only when this project needs workflow guidance beyond the default PharoNexus contract.",
+    "",
+    "Known at prompt generation time:",
+    "",
+    `- PharoNexus project id: ${projectConfig.id}`,
+    `- Kanban project id: ${formatPromptValue(kanbanProjectId)}`,
+    `- Source remote: ${formatPromptValue(projectConfig.repo.remoteUrl)}`,
+    `- Default branch: ${formatPromptValue(projectConfig.repo.defaultBranch)}`,
+    "",
+  ].join("\n");
+}
+
+function installSuggestedFirstPrompt(
+  projectRoot: string,
+  projectConfig: PharoNexusProjectConfig,
+): string {
+  const suggestedFirstPromptPath = projectSuggestedFirstPromptPath(projectRoot);
+  if (fs.existsSync(suggestedFirstPromptPath)) {
+    return suggestedFirstPromptPath;
+  }
+
+  fs.writeFileSync(
+    suggestedFirstPromptPath,
+    buildSuggestedFirstPrompt(projectRoot, projectConfig),
+    "utf8",
+  );
+  return suggestedFirstPromptPath;
 }
 
 function defaultGitRunner(args: readonly string[], cwd?: string): GitCommandResult {
@@ -726,6 +796,10 @@ export function createPharoNexusProject(
     config: homeConfig,
   });
   const agentsPath = installDefaultAgentsFile(projectRoot);
+  const suggestedFirstPromptPath = installSuggestedFirstPrompt(
+    projectRoot,
+    projectConfig,
+  );
 
   homeConfig.projects.push({
     id: projectId,
@@ -742,6 +816,7 @@ export function createPharoNexusProject(
     plexusProjectConfigPath: plexusConfigPath,
     worktreesRoot,
     agentsPath,
+    suggestedFirstPromptPath,
     codexConfigPath: codex.configPath,
     projectConfig,
     plexusProjectConfig,
@@ -845,6 +920,10 @@ export function importPharoNexusProject(
     config: homeConfig,
   });
   const agentsPath = installDefaultAgentsFile(projectRoot);
+  const suggestedFirstPromptPath = installSuggestedFirstPrompt(
+    projectRoot,
+    projectConfig,
+  );
 
   homeConfig.projects.push({
     id: projectConfig.id,
@@ -863,6 +942,7 @@ export function importPharoNexusProject(
     plexusProjectConfigPath: plexusConfigPath,
     worktreesRoot,
     agentsPath,
+    suggestedFirstPromptPath,
     codexConfigPath: codex.configPath,
     projectConfig,
     plexusProjectConfig,

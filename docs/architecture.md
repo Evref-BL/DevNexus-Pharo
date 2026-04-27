@@ -253,6 +253,7 @@ Creation writes:
   plexus.project.json
   .codex\config.toml
   AGENTS.md
+  suggestedFirstPrompt.md
   worktrees\
 ```
 
@@ -261,6 +262,11 @@ For `project create --from`, the source repository is cloned under
 <source-checkout>`, `repo.sourceRoot` points at the existing checkout. The
 source checkout must not receive PharoNexus metadata files unless it is already a
 managed PharoNexus project.
+
+`suggestedFirstPrompt.md` is a generated first-session prompt for agents. It
+points at the managed project root, source checkout, known Kanban id when
+available, and asks the agent to update local notes and refine `AGENTS.md` only
+where project-specific workflow guidance is needed.
 
 The home config `projects` registry is updated with the PharoNexus project id,
 display name, PLexus project root, and any known Vibe ids.

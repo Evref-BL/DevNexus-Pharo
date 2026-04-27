@@ -684,12 +684,16 @@ The command:
   `vibe_kanban` MCP entries
 - writes a default `AGENTS.md` workflow contract when the project does not
   already have one
+- writes a `suggestedFirstPrompt.md` onboarding prompt when the project does
+  not already have one
 - creates `worktrees\`
 - registers the project in `pharo-nexus.home.json`
 
 The PharoNexus project root owns runtime metadata and agent bootstrap files. The
 source checkout referenced by `project import <path>` is not modified unless it
 is already an initialized PharoNexus project containing `pharo-nexus.project.json`.
+Projects are expected to evolve `AGENTS.md`, `NOTES.md`, and
+`suggestedFirstPrompt.md` as they accumulate local workflow knowledge.
 
 If the Vibe Kanban project already exists, pass its id while creating:
 

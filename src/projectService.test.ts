@@ -121,6 +121,11 @@ describe("PharoNexus project service", () => {
       ),
       worktreesRoot: path.join(projectsRoot, "MyProject", "worktrees"),
       agentsPath: path.join(projectsRoot, "MyProject", "AGENTS.md"),
+      suggestedFirstPromptPath: path.join(
+        projectsRoot,
+        "MyProject",
+        "suggestedFirstPrompt.md",
+      ),
       codexConfigPath: path.join(projectsRoot, "MyProject", ".codex", "config.toml"),
       git: {
         operation: "init",
@@ -172,6 +177,15 @@ describe("PharoNexus project service", () => {
     expect(codexConfig).toContain("[mcp_servers.pharo_nexus]");
     expect(codexConfig).toContain("[mcp_servers.plexus]");
     expect(codexConfig).toContain("[mcp_servers.vibe_kanban]");
+    const suggestedFirstPrompt = fs.readFileSync(
+      result.suggestedFirstPromptPath,
+      "utf8",
+    );
+    expect(suggestedFirstPrompt).toContain(
+      "This is a Codex and PharoNexus project for MyProject.",
+    );
+    expect(suggestedFirstPrompt).toContain("Kanban project id: (not known yet)");
+    expect(suggestedFirstPrompt).toContain("Record durable local context in NOTES.md");
     expect(loadHomeConfig(homePath).projects).toEqual([
       {
         id: "my-project",
@@ -235,6 +249,9 @@ describe("PharoNexus project service", () => {
     });
 
     expect(result.projectConfig.kanban.projectId).toBe("vk-project-1");
+    expect(fs.readFileSync(result.suggestedFirstPromptPath, "utf8")).toContain(
+      "Kanban project id: vk-project-1",
+    );
     expect(
       JSON.parse(fs.readFileSync(result.plexusProjectConfigPath, "utf8")),
     ).toMatchObject({
@@ -648,6 +665,12 @@ describe("PharoNexus project service", () => {
     expect(managedCodexConfig).toContain("[mcp_servers.pharo_nexus]");
     expect(managedCodexConfig).toContain("[mcp_servers.plexus]");
     expect(managedCodexConfig).toContain("[mcp_servers.vibe_kanban]");
+    const suggestedFirstPrompt = fs.readFileSync(
+      path.join(projectRoot, "suggestedFirstPrompt.md"),
+      "utf8",
+    );
+    expect(suggestedFirstPrompt).toContain(`Inspect the source checkout at ${sourceRoot}.`);
+    expect(suggestedFirstPrompt).toContain("Record durable local context in NOTES.md");
   });
 
   it("imports an existing project config without overwriting it", () => {
@@ -677,6 +700,11 @@ describe("PharoNexus project service", () => {
       `${JSON.stringify(existingConfig, null, 2)}\n`,
       "utf8",
     );
+    fs.writeFileSync(
+      path.join(projectRoot, "suggestedFirstPrompt.md"),
+      "# Existing project-owned prompt\n",
+      "utf8",
+    );
 
     const result = importPharoNexusProject({
       homePath,
@@ -686,6 +714,9 @@ describe("PharoNexus project service", () => {
     });
 
     expect(result.projectConfig).toEqual(existingConfig);
+    expect(fs.readFileSync(result.suggestedFirstPromptPath, "utf8")).toBe(
+      "# Existing project-owned prompt\n",
+    );
     expect(loadHomeConfig(homePath).projects).toEqual([
       {
         id: "existing-id",
