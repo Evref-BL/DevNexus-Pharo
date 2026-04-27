@@ -582,18 +582,30 @@ function statusForProjectPath(projectRoot: string): PharoNexusProjectStatus {
   });
 }
 
+function findProjectReferenceById(
+  config: PharoNexusHomeConfig,
+  id: string,
+): PharoNexusProjectReference | undefined {
+  return config.projects.find((project) => project.id === id);
+}
+
+function findProjectReferenceByPath(
+  config: PharoNexusHomeConfig,
+  projectPath: string,
+): PharoNexusProjectReference | undefined {
+  const projectRoot = projectRootFromInput(projectPath);
+  return config.projects.find((project) =>
+    samePath(project.plexusProjectRoot, projectRoot),
+  );
+}
+
 function findProjectReference(
   config: PharoNexusHomeConfig,
   idOrPath: string,
 ): PharoNexusProjectReference | undefined {
-  const byId = config.projects.find((project) => project.id === idOrPath);
-  if (byId) {
-    return byId;
-  }
-
-  const projectRoot = projectRootFromInput(idOrPath);
-  return config.projects.find((project) =>
-    samePath(project.plexusProjectRoot, projectRoot),
+  return (
+    findProjectReferenceById(config, idOrPath) ??
+    findProjectReferenceByPath(config, idOrPath)
   );
 }
 
@@ -976,10 +988,28 @@ export function getPharoNexusProjectStatus(
 
   const homePath = resolvePharoNexusHome(options.homePath);
   const homeConfig = loadHomeConfig(homePath);
-  const reference = findProjectReference(homeConfig, options.project);
-  const project = reference
-    ? statusForProjectReference(reference)
-    : statusForProjectPath(projectRootFromInput(options.project));
+  const projectSelector = options.project.trim();
+  const reference =
+    findProjectReferenceById(homeConfig, projectSelector) ??
+    findProjectReferenceByPath(homeConfig, projectSelector);
+  let project: PharoNexusProjectStatus;
+  if (reference) {
+    project = statusForProjectReference(reference);
+  } else {
+    const projectRoot = projectRootFromInput(projectSelector);
+    try {
+      project = statusForProjectPath(projectRoot);
+    } catch (error) {
+      if (error instanceof PharoNexusProjectError) {
+        throw new PharoNexusProjectError(
+          `No registered project matched "${projectSelector}". ` +
+            `Path fallback checked "${projectRoot}" and failed: ${error.message}`,
+        );
+      }
+
+      throw error;
+    }
+  }
 
   return {
     homePath,

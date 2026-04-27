@@ -352,6 +352,49 @@ describe("PharoNexus project service", () => {
     });
   });
 
+  it("resolves a registered project id before path fallback", () => {
+    const homePath = makeTempDir("pharo-nexus-home-");
+    initPharoNexusHome({ homePath });
+    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "Launcher");
+    createPharoNexusProject({
+      homePath,
+      name: "Pharo Launcher MCP",
+      root: projectRoot,
+      gitRunner: fakeGitRunner([], { branch: "main" }),
+    });
+
+    expect(projectRoot.startsWith(process.cwd())).toBe(false);
+    const result = getPharoNexusProjectStatus({
+      homePath,
+      project: "pharo-launcher-mcp",
+    });
+
+    expect(result.project).toMatchObject({
+      id: "pharo-launcher-mcp",
+      name: "Pharo Launcher MCP",
+      projectRoot,
+    });
+  });
+
+  it("reports unmatched id/path clearly before path initialization failure details", () => {
+    const homePath = makeTempDir("pharo-nexus-home-");
+    initPharoNexusHome({ homePath });
+
+    expect(() =>
+      getPharoNexusProjectStatus({
+        homePath,
+        project: "pharo-launcher-mcp",
+      }),
+    ).toThrow(
+      `No registered project matched "pharo-launcher-mcp". ` +
+        `Path fallback checked "${path.resolve("pharo-launcher-mcp")}" and failed: ` +
+        `PharoNexus project is not initialized: ${path.join(
+          path.resolve("pharo-launcher-mcp"),
+          pharoNexusProjectConfigFileName,
+        )}`,
+    );
+  });
+
   it("links an existing PharoNexus project to a Vibe Kanban project id", () => {
     const homePath = makeTempDir("pharo-nexus-home-");
     initPharoNexusHome({ homePath });
