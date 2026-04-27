@@ -177,6 +177,7 @@ describe("PharoNexus project service", () => {
     expect(codexConfig).toContain("[mcp_servers.pharo_nexus]");
     expect(codexConfig).toContain("[mcp_servers.plexus]");
     expect(codexConfig).toContain("[mcp_servers.vibe_kanban]");
+    expect(codexConfig.match(/default_tools_approval_mode = "approve"/gu)).toHaveLength(3);
     const suggestedFirstPrompt = fs.readFileSync(
       result.suggestedFirstPromptPath,
       "utf8",
@@ -668,6 +669,7 @@ describe("PharoNexus project service", () => {
     expect(managedCodexConfig).toContain("[mcp_servers.pharo_nexus]");
     expect(managedCodexConfig).toContain("[mcp_servers.plexus]");
     expect(managedCodexConfig).toContain("[mcp_servers.vibe_kanban]");
+    expect(managedCodexConfig.match(/default_tools_approval_mode = "approve"/gu)).toHaveLength(3);
     const suggestedFirstPrompt = fs.readFileSync(
       path.join(projectRoot, "suggestedFirstPrompt.md"),
       "utf8",

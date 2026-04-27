@@ -141,6 +141,24 @@ describe("Codex config", () => {
     ).toMatchObject({
       command: expected.command,
       args: expected.args,
+      defaultToolsApprovalMode: "approve",
+    });
+  });
+
+  it("auto-approves PharoNexus-managed MCP tools by default", () => {
+    const homePath = makeTempDir("pharo-nexus-home-");
+    const config = createDefaultHomeConfig(homePath);
+
+    expect(buildCodexMcpServers(homePath, config)).toMatchObject({
+      pharo_nexus: {
+        defaultToolsApprovalMode: "approve",
+      },
+      plexus: {
+        defaultToolsApprovalMode: "approve",
+      },
+      vibe_kanban: {
+        defaultToolsApprovalMode: "approve",
+      },
     });
   });
 
@@ -229,6 +247,7 @@ describe("Codex config", () => {
     expect(content).toContain("[mcp_servers.plexus]");
     expect(content).toContain('url = "http://127.0.0.1:7331/mcp"');
     expect(content).toContain("[mcp_servers.vibe_kanban]");
+    expect(content.match(/default_tools_approval_mode = "approve"/gu)).toHaveLength(3);
     expect(content).toContain('"--mcp"');
   });
 

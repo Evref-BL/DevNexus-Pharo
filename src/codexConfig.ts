@@ -194,11 +194,13 @@ export function buildCodexMcpServers(
       enabled: true,
       required: true,
       url: `http://${host}:${config.ports.pharoNexusMcp}/mcp`,
+      defaultToolsApprovalMode: "approve",
     },
     [plexusServerName]: {
       type: "http",
       enabled: true,
       url: `http://${host}:${config.ports.plexusMcp}/mcp`,
+      defaultToolsApprovalMode: "approve",
     },
     [defaultVibeKanbanCodexMcpServerName]: {
       enabled: true,
