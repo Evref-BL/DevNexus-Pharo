@@ -323,6 +323,7 @@ function buildSuggestedFirstPrompt(
     "- Check the matching Vibe Kanban board and current issues with the available PharoNexus and Vibe Kanban MCP tools.",
     "- Record durable local context in NOTES.md, including the Kanban board id and any source/workflow details future agents should know.",
     "- Edit AGENTS.md only when this project needs workflow guidance beyond the default PharoNexus contract.",
+    "- When changes are complete and verified, commit them in the relevant source repository unless the user explicitly asks not to. Push only when requested or when project instructions say to publish.",
     "",
     "Known at prompt generation time:",
     "",

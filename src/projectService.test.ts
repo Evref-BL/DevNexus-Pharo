@@ -186,6 +186,9 @@ describe("PharoNexus project service", () => {
     );
     expect(suggestedFirstPrompt).toContain("Kanban project id: (not known yet)");
     expect(suggestedFirstPrompt).toContain("Record durable local context in NOTES.md");
+    expect(suggestedFirstPrompt).toContain(
+      "commit them in the relevant source repository",
+    );
     expect(loadHomeConfig(homePath).projects).toEqual([
       {
         id: "my-project",

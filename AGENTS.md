@@ -48,6 +48,20 @@ depend on implementation details inside Pharo images.
   image operations. Manual edits to PharoNexus/PLexus config files are for
   implementation or repair work only.
 
+## Git Workflow
+
+- Before changing files, inspect the relevant Git working tree and distinguish
+  user changes from your own.
+- Keep commits focused on the completed prompt or issue. Do not include
+  unrelated user edits.
+- After code or documentation changes are complete and verified, commit the
+  work in the relevant source repository unless the user explicitly asked not to
+  commit.
+- Push only when the user asked for it, the project instructions say pushing is
+  expected, or the current task clearly requires publishing the commit.
+- Keep the Kanban issue or project notes aligned with commits, verification,
+  and remaining risks.
+
 ## Board Choice
 
 - Use the control board for instructions like "create/import/register/sync a
