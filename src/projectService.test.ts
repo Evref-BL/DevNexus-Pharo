@@ -445,7 +445,7 @@ describe("PharoNexus project service", () => {
     ).toThrow(
       `No registered project matched "pharo-launcher-mcp". ` +
         `Path fallback checked "${path.resolve("pharo-launcher-mcp")}" and failed: ` +
-        `PharoNexus project is not initialized: ${path.join(
+        `DevNexus project is not initialized: ${path.join(
           path.resolve("pharo-launcher-mcp"),
           devNexusProjectConfigFileName,
         )}`,

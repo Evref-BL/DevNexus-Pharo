@@ -4,6 +4,8 @@ import {
   assertFileDoesNotExist,
   assertGitRepository,
   assertNonEmptyString,
+  buildNexusProjectStatus,
+  buildNexusProjectStatusForPath,
   defaultImportedProjectRoot,
   defaultProjectGitRunner,
   defaultSourceCheckoutDirectoryName,
@@ -11,16 +13,21 @@ import {
   detectOriginUrl,
   directoryExistsAndIsNonEmpty,
   ensureUniqueProject,
+  findNexusProjectReference,
+  findNexusProjectReferenceById,
+  findNexusProjectReferenceByPath,
   loadProjectConfigIfExists,
   NexusProjectError,
   optionalNonEmptyString,
   pathForProjectConfig,
+  projectRootFromInput,
   resolveProjectSourceRoot,
   runProjectGitCommand,
   safeProjectDirectoryName,
   samePath,
   scaffoldNexusProject,
   slugify,
+  upsertNexusProjectReference,
   type NexusExtension,
   type ProjectGitCommandResult,
   type ProjectGitRunner,
@@ -29,7 +36,6 @@ import {
 import {
   loadHomeConfig,
   loadProjectConfig,
-  devNexusProjectConfigFileName,
   nexusProjectWorktreesDirectoryName,
   projectConfigPath,
   projectWorktreesRootPath,
@@ -53,6 +59,8 @@ export {
   assertFileDoesNotExist,
   assertGitRepository,
   assertNonEmptyString,
+  buildNexusProjectStatus,
+  buildNexusProjectStatusForPath,
   defaultImportedProjectRoot,
   defaultGitRunner,
   defaultSourceCheckoutDirectoryName,
@@ -60,15 +68,20 @@ export {
   detectOriginUrl,
   directoryExistsAndIsNonEmpty,
   ensureUniqueProject,
+  findNexusProjectReference,
+  findNexusProjectReferenceById,
+  findNexusProjectReferenceByPath,
   loadProjectConfigIfExists,
   NexusProjectError,
   optionalNonEmptyString,
   pathForProjectConfig,
+  projectRootFromInput,
   resolveProjectSourceRoot,
   runGitCommand,
   safeDirectoryName,
   samePath,
   slugify,
+  upsertNexusProjectReference,
 };
 
 export interface CreateNexusProjectOptions {
@@ -235,13 +248,6 @@ export function registeredNexusProjectExtensions(): readonly NexusProjectService
   return nexusProjectServiceExtensions;
 }
 
-function projectRootFromInput(input: string): string {
-  const resolved = path.resolve(input);
-  return path.basename(resolved) === devNexusProjectConfigFileName
-    ? path.dirname(resolved)
-    : resolved;
-}
-
 function projectStatusExtensionContribution(
   projectRoot: string,
   projectConfig: NexusProjectConfig | undefined,
@@ -310,80 +316,34 @@ export function statusForProjectReference(
 ): NexusProjectStatus {
   const projectRoot = path.resolve(reference.projectRoot);
   const config = loadProjectConfigIfExists(projectRoot);
-  const resolvedProjectConfigPath = projectConfigPath(projectRoot);
+  const baseStatus = buildNexusProjectStatus(reference, {
+    projectConfig: config,
+  });
   const statusContribution = projectStatusExtensionContribution(
     projectRoot,
     config,
   );
-  const resolvedWorktreesRoot = projectWorktreesRootPath(projectRoot, config);
 
   return {
-    id: config?.id ?? reference.id,
-    name: config?.name ?? reference.name,
-    projectRoot,
-    repo: config?.repo ?? null,
-    workTracking: config?.workTracking ?? null,
-    vibeKanbanProjectId:
-      config?.kanban.projectId ?? reference.vibeKanbanProjectId ?? null,
-    vibeKanbanRepoId: reference.vibeKanbanRepoId ?? null,
-    projectConfigPath: resolvedProjectConfigPath,
-    projectConfigExists: Boolean(config),
+    ...baseStatus,
     plexusProjectConfigPath: statusContribution.plexusProjectConfigPath,
     plexusProjectConfigExists: statusContribution.plexusProjectConfigExists,
-    worktreesRoot: resolvedWorktreesRoot,
-    worktreesRootExists: fs.existsSync(resolvedWorktreesRoot),
   };
 }
 
 function statusForProjectPath(projectRoot: string): NexusProjectStatus {
-  const config = loadProjectConfigIfExists(projectRoot);
-  if (!config) {
-    throw new NexusProjectError(
-      `PharoNexus project is not initialized: ${projectConfigPath(projectRoot)}`,
-    );
-  }
-
+  const baseStatus = buildNexusProjectStatusForPath(projectRoot);
   return statusForProjectReference({
-    id: config.id,
-    name: config.name,
-    projectRoot: projectRoot,
-    ...(config.kanban.projectId
-      ? { vibeKanbanProjectId: config.kanban.projectId }
+    id: baseStatus.id,
+    name: baseStatus.name,
+    projectRoot: baseStatus.projectRoot,
+    ...(baseStatus.vibeKanbanProjectId
+      ? { vibeKanbanProjectId: baseStatus.vibeKanbanProjectId }
+      : {}),
+    ...(baseStatus.vibeKanbanRepoId
+      ? { vibeKanbanRepoId: baseStatus.vibeKanbanRepoId }
       : {}),
   });
-}
-
-function findProjectReferenceById(
-  config: NexusHomeConfig,
-  id: string,
-): NexusProjectReference | undefined {
-  return (
-    config.projects.find((project) => project.id === id) ??
-    config.projects.find(
-      (project) =>
-        loadProjectConfigIfExists(path.resolve(project.projectRoot))?.id === id,
-    )
-  );
-}
-
-function findProjectReferenceByPath(
-  config: NexusHomeConfig,
-  projectPath: string,
-): NexusProjectReference | undefined {
-  const projectRoot = projectRootFromInput(projectPath);
-  return config.projects.find((project) =>
-    samePath(project.projectRoot, projectRoot),
-  );
-}
-
-function findProjectReference(
-  config: NexusHomeConfig,
-  idOrPath: string,
-): NexusProjectReference | undefined {
-  return (
-    findProjectReferenceById(config, idOrPath) ??
-    findProjectReferenceByPath(config, idOrPath)
-  );
 }
 
 export function buildProjectConfig(
@@ -508,44 +468,10 @@ export function upsertProjectReference(
   vibeKanbanProjectId: string | null,
   vibeKanbanRepoId?: string | null,
 ): NexusProjectReference {
-  const existingIndex = config.projects.findIndex((project) =>
-    samePath(project.projectRoot, projectRoot),
-  );
-  const existing =
-    existingIndex >= 0 ? config.projects[existingIndex] : undefined;
-  const resolvedVibeKanbanProjectId =
-    vibeKanbanProjectId ?? projectConfig.kanban.projectId ?? existing?.vibeKanbanProjectId ?? null;
-  const resolvedVibeKanbanRepoId =
-    vibeKanbanRepoId ?? existing?.vibeKanbanRepoId ?? null;
-  const reference: NexusProjectReference = {
-    id: projectConfig.id,
-    name: projectConfig.name,
-    projectRoot: projectRoot,
-    ...(resolvedVibeKanbanProjectId
-      ? { vibeKanbanProjectId: resolvedVibeKanbanProjectId }
-      : {}),
-    ...(resolvedVibeKanbanRepoId
-      ? { vibeKanbanRepoId: resolvedVibeKanbanRepoId }
-      : {}),
-  };
-
-  if (existingIndex >= 0) {
-    config.projects[existingIndex] = reference;
-    return reference;
-  }
-
-  const duplicateId = config.projects.find(
-    (project) => project.id === projectConfig.id,
-  );
-  if (duplicateId) {
-    throw new NexusProjectError(
-      `Project id is already registered at another root: ${duplicateId.id}`,
-    );
-  }
-
-  ensureUniqueProject(config, projectConfig.id, projectRoot);
-  config.projects.push(reference);
-  return reference;
+  return upsertNexusProjectReference(config, projectRoot, projectConfig, {
+    vibeKanbanProjectId,
+    vibeKanbanRepoId,
+  });
 }
 
 export function createNexusProject(
@@ -753,8 +679,8 @@ export function getNexusProjectStatus(
   const homeConfig = loadHomeConfig(homePath);
   const projectSelector = options.project.trim();
   const reference =
-    findProjectReferenceById(homeConfig, projectSelector) ??
-    findProjectReferenceByPath(homeConfig, projectSelector);
+    findNexusProjectReferenceById(homeConfig, projectSelector) ??
+    findNexusProjectReferenceByPath(homeConfig, projectSelector);
   let project: NexusProjectStatus;
   if (reference) {
     project = statusForProjectReference(reference);
@@ -794,7 +720,7 @@ export function linkNexusProjectTracker(
 
   const homePath = resolveNexusHome(options.homePath);
   const homeConfig = loadHomeConfig(homePath);
-  const existingReference = findProjectReference(homeConfig, options.project);
+  const existingReference = findNexusProjectReference(homeConfig, options.project);
   const projectRoot = existingReference
     ? path.resolve(existingReference.projectRoot)
     : projectRootFromInput(options.project);
@@ -840,7 +766,7 @@ export function configureNexusProjectTracker(
 
   const homePath = resolveNexusHome(options.homePath);
   const homeConfig = loadHomeConfig(homePath);
-  const existingReference = findProjectReference(homeConfig, options.project);
+  const existingReference = findNexusProjectReference(homeConfig, options.project);
   const projectRoot = existingReference
     ? path.resolve(existingReference.projectRoot)
     : projectRootFromInput(options.project);
