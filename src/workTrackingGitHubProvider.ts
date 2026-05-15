@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import type {
   CreateWorkItemInput,
   ExternalRef,
@@ -35,7 +36,27 @@ export interface GitHubWorkTrackerProviderOptions {
   apiBaseUrl?: string | null;
   apiVersion?: string | null;
   env?: Record<string, string | undefined>;
+  credentialRunner?: GitCredentialRunner | false;
+  credentialInteractive?: boolean;
 }
+
+export interface GitCredentialCommandResult {
+  status: number | null;
+  stdout: string;
+  stderr: string;
+  error?: Error;
+}
+
+export interface GitCredentialRequest {
+  protocol: "https";
+  host: string;
+  path?: string;
+}
+
+export type GitCredentialRunner = (
+  request: GitCredentialRequest,
+  options: { interactive: boolean },
+) => GitCredentialCommandResult;
 
 interface GitHubIssue {
   id: number;
@@ -106,7 +127,10 @@ export class GitHubWorkTrackerProvider implements WorkTrackerProvider {
   private readonly fetchFn: typeof fetch;
   private readonly apiBaseUrl: string;
   private readonly apiVersion: string;
-  private readonly token?: string;
+  private readonly staticAuthorizationHeader?: string;
+  private readonly credentialRunner?: GitCredentialRunner;
+  private readonly credentialInteractive: boolean;
+  private credentialAuthorizationHeader: string | null | undefined;
 
   constructor(options: GitHubWorkTrackerProviderOptions) {
     this.config = options.config;
@@ -118,13 +142,19 @@ export class GitHubWorkTrackerProvider implements WorkTrackerProvider {
       options.apiVersion ?? defaultGitHubApiVersion,
       "apiVersion",
     );
-    this.token =
+    const token =
       optionalNonEmptyString(options.token, "token") ??
       optionalNonEmptyString(
         (options.env ?? process.env).GITHUB_TOKEN,
         "GITHUB_TOKEN",
       ) ??
       optionalNonEmptyString((options.env ?? process.env).GH_TOKEN, "GH_TOKEN");
+    this.staticAuthorizationHeader = token ? `Bearer ${token}` : undefined;
+    this.credentialRunner =
+      options.credentialRunner === false
+        ? undefined
+        : options.credentialRunner ?? defaultGitCredentialRunner;
+    this.credentialInteractive = options.credentialInteractive ?? false;
   }
 
   async createWorkItem(input: CreateWorkItemInput): Promise<WorkItem> {
@@ -271,8 +301,9 @@ export class GitHubWorkTrackerProvider implements WorkTrackerProvider {
     if (body !== undefined) {
       headers["Content-Type"] = "application/json";
     }
-    if (this.token) {
-      headers.Authorization = `Bearer ${this.token}`;
+    const authorizationHeader = this.authorizationHeader();
+    if (authorizationHeader) {
+      headers.Authorization = authorizationHeader;
     }
 
     const response = await this.fetchFn(url, {
@@ -343,6 +374,30 @@ export class GitHubWorkTrackerProvider implements WorkTrackerProvider {
       webUrl: issue.html_url ?? null,
     };
   }
+
+  private authorizationHeader(): string | undefined {
+    if (this.staticAuthorizationHeader) {
+      return this.staticAuthorizationHeader;
+    }
+    if (this.credentialAuthorizationHeader !== undefined) {
+      return this.credentialAuthorizationHeader ?? undefined;
+    }
+
+    if (!this.credentialRunner) {
+      this.credentialAuthorizationHeader = null;
+      return undefined;
+    }
+
+    const credential = fillGitCredential(
+      this.credentialRunner,
+      githubCredentialRequest(this.config),
+      { interactive: this.credentialInteractive },
+    );
+    this.credentialAuthorizationHeader = credential
+      ? authorizationHeaderFromCredential(credential)
+      : null;
+    return this.credentialAuthorizationHeader ?? undefined;
+  }
 }
 
 export function normalizeGitHubApiBaseUrl(hostOrApiBaseUrl?: string | null): string {
@@ -358,6 +413,117 @@ export function normalizeGitHubApiBaseUrl(hostOrApiBaseUrl?: string | null): str
   }
 
   return `https://${value.replace(/\/+$/, "")}/api/v3`;
+}
+
+export function githubCredentialRequest(
+  config: Pick<GitHubWorkTrackingConfig, "host" | "repository">,
+): GitCredentialRequest {
+  const host = normalizeGitHubCredentialHost(config.host);
+  return {
+    protocol: "https",
+    host,
+    path: `${config.repository.owner}/${config.repository.name}.git`,
+  };
+}
+
+export function normalizeGitHubCredentialHost(hostOrApiBaseUrl?: string | null): string {
+  const value = hostOrApiBaseUrl?.trim();
+  if (!value || value === "github.com" || value === "https://github.com") {
+    return "github.com";
+  }
+  if (value === "api.github.com" || value === "https://api.github.com") {
+    return "github.com";
+  }
+
+  const url = value.startsWith("http://") || value.startsWith("https://")
+    ? new URL(value)
+    : new URL(`https://${value}`);
+  return url.host;
+}
+
+export function defaultGitCredentialRunner(
+  request: GitCredentialRequest,
+  options: { interactive: boolean },
+): GitCredentialCommandResult {
+  const result = spawnSync("git", ["credential", "fill"], {
+    input: gitCredentialInput(request),
+    encoding: "utf8",
+    env: {
+      ...process.env,
+      ...(options.interactive
+        ? {}
+        : {
+            GCM_INTERACTIVE: "0",
+            GIT_TERMINAL_PROMPT: "0",
+          }),
+    },
+  });
+
+  return {
+    status: result.status,
+    stdout: result.stdout ?? "",
+    stderr: result.stderr ?? "",
+    ...(result.error ? { error: result.error } : {}),
+  };
+}
+
+function fillGitCredential(
+  runner: GitCredentialRunner,
+  request: GitCredentialRequest,
+  options: { interactive: boolean },
+): Record<string, string> | undefined {
+  const result = runner(request, options);
+  if (result.status !== 0 || result.error) {
+    return undefined;
+  }
+
+  const credential = parseGitCredentialOutput(result.stdout);
+  return credential.password || (credential.authtype && credential.credential)
+    ? credential
+    : undefined;
+}
+
+function authorizationHeaderFromCredential(
+  credential: Record<string, string>,
+): string | undefined {
+  const authtype = optionalNonEmptyString(credential.authtype, "authtype");
+  const encodedCredential = optionalNonEmptyString(
+    credential.credential,
+    "credential",
+  );
+  if (authtype && encodedCredential) {
+    return `${authtype} ${encodedCredential}`;
+  }
+
+  const password = optionalNonEmptyString(credential.password, "password");
+  return password ? `Bearer ${password}` : undefined;
+}
+
+function gitCredentialInput(request: GitCredentialRequest): string {
+  return [
+    `protocol=${request.protocol}`,
+    `host=${request.host}`,
+    ...(request.path ? [`path=${request.path}`] : []),
+    "",
+  ].join("\n");
+}
+
+function parseGitCredentialOutput(output: string): Record<string, string> {
+  const credential: Record<string, string> = {};
+  for (const line of output.split(/\r?\n/)) {
+    if (line.length === 0) {
+      continue;
+    }
+
+    const separator = line.indexOf("=");
+    if (separator <= 0) {
+      continue;
+    }
+
+    credential[line.slice(0, separator)] = line.slice(separator + 1);
+  }
+
+  return credential;
 }
 
 function workStatusFromIssue(issue: GitHubIssue): WorkStatus {

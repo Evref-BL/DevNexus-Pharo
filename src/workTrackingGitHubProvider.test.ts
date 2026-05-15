@@ -3,6 +3,7 @@ import {
   createGitHubWorkTrackerProvider,
   defaultGitHubApiBaseUrl,
   defaultGitHubApiVersion,
+  githubCredentialRequest,
   normalizeGitHubApiBaseUrl,
 } from "./workTrackingGitHubProvider.js";
 import type { GitHubWorkTrackingConfig } from "./workTrackingTypes.js";
@@ -175,6 +176,7 @@ describe("GitHub work tracker provider", () => {
       config: githubConfig(),
       fetch: fake.fetch,
       env: {},
+      credentialRunner: false,
     });
 
     const items = await provider.listWorkItems({
@@ -232,6 +234,7 @@ describe("GitHub work tracker provider", () => {
       config: githubConfig(),
       fetch: fake.fetch,
       env: {},
+      credentialRunner: false,
     });
 
     await expect(provider.setStatus({ id: "github-7" }, "blocked")).resolves.toMatchObject({
@@ -296,6 +299,7 @@ describe("GitHub work tracker provider", () => {
       config: githubConfig(),
       fetch: fake.fetch,
       env: {},
+      credentialRunner: false,
     });
 
     await expect(
@@ -342,6 +346,7 @@ describe("GitHub work tracker provider", () => {
       config: githubConfig({ host: "github.enterprise.test" }),
       fetch: fake.fetch,
       env: {},
+      credentialRunner: false,
     });
 
     await provider.getWorkItem({ id: "github-7" });
@@ -349,5 +354,78 @@ describe("GitHub work tracker provider", () => {
     expect(fake.calls[0]?.url).toBe(
       "https://github.enterprise.test/api/v3/repos/example/project/issues/7",
     );
+  });
+
+  it("falls back to Git credential helpers without prompting when no token is configured", async () => {
+    const fake = queuedFetch([{ body: issue() }, { body: issue() }]);
+    const credentialCalls: Array<{
+      request: ReturnType<typeof githubCredentialRequest>;
+      interactive: boolean;
+    }> = [];
+    const provider = createGitHubWorkTrackerProvider({
+      config: githubConfig(),
+      fetch: fake.fetch,
+      env: {},
+      credentialRunner: (request, options) => {
+        credentialCalls.push({
+          request,
+          interactive: options.interactive,
+        });
+        return {
+          status: 0,
+          stdout: [
+            "protocol=https",
+            "host=github.com",
+            "username=octocat",
+            "password=gcm-token",
+            "",
+          ].join("\n"),
+          stderr: "",
+        };
+      },
+    });
+
+    await provider.getWorkItem({ id: "github-7" });
+    await provider.getWorkItem({ id: "github-7" });
+
+    expect(credentialCalls).toEqual([
+      {
+        request: {
+          protocol: "https",
+          host: "github.com",
+          path: "example/project.git",
+        },
+        interactive: false,
+      },
+    ]);
+    expect(fake.calls).toHaveLength(2);
+    expect(fake.calls[0]?.headers.Authorization).toBe("Bearer gcm-token");
+    expect(fake.calls[1]?.headers.Authorization).toBe("Bearer gcm-token");
+  });
+
+  it("uses Git credential authtype credentials when a helper returns them", async () => {
+    const fake = queuedFetch([{ body: issue() }]);
+    const provider = createGitHubWorkTrackerProvider({
+      config: githubConfig({ host: "https://github.enterprise.test/api/v3" }),
+      fetch: fake.fetch,
+      env: {},
+      credentialRunner: (request, options) => {
+        expect(request).toEqual({
+          protocol: "https",
+          host: "github.enterprise.test",
+          path: "example/project.git",
+        });
+        expect(options.interactive).toBe(false);
+        return {
+          status: 0,
+          stdout: ["authtype=bearer", "credential=encoded-token", ""].join("\n"),
+          stderr: "",
+        };
+      },
+    });
+
+    await provider.getWorkItem({ id: "github-7" });
+
+    expect(fake.calls[0]?.headers.Authorization).toBe("bearer encoded-token");
   });
 });
