@@ -44,6 +44,7 @@ describe("pharo-nexus cli", () => {
     expect(usage()).toContain("pharo-nexus codex worktree list");
     expect(usage()).toContain("pharo-nexus codex worktree status <id>");
     expect(usage()).toContain("pharo-nexus codex worktree prepare <project>");
+    expect(usage()).toContain("pharo-nexus codex worktree record <id>");
     expect(usage()).toContain("pharo-nexus codex worktree archive <id>");
     expect(usage()).toContain("pharo-nexus project create <name>");
     expect(usage()).toContain("pharo-nexus project link-tracker <id-or-path>");
@@ -62,6 +63,8 @@ describe("pharo-nexus cli", () => {
     expect(usage()).toContain("--state <active|archived>");
     expect(usage()).toContain("--work-item-id");
     expect(usage()).toContain("--comment-work-item");
+    expect(usage()).toContain("--commit-id");
+    expect(usage()).toContain("--publication-decision");
     expect(usage()).toContain("--remove-worktree");
     expect(usage()).toContain("--json");
   });
@@ -321,6 +324,56 @@ describe("pharo-nexus cli", () => {
         [
           "codex",
           "worktree",
+          "record",
+          "prepared:codex/fcd-900",
+          "--home",
+          homePath,
+          "--commit-id",
+          "abc123",
+          "--verification-command",
+          "npm test",
+          "--verification-status",
+          "passed",
+          "--verification-summary",
+          "164 tests passed",
+          "--publication-decision",
+          "review_handoff",
+          "--pr-url",
+          "https://example.test/pr/1",
+          "--reason",
+          "Ready for review",
+          "--json",
+        ],
+        context,
+      ),
+    ).resolves.toBe(0);
+    expect(JSON.parse(String(log.mock.calls[3]?.[0]))).toMatchObject({
+      ok: true,
+      metadataRecord: {
+        id: "prepared:codex/fcd-900",
+        execution: {
+          commitIds: ["abc123"],
+          verification: [
+            {
+              command: "npm test",
+              status: "passed",
+              summary: "164 tests passed",
+            },
+          ],
+          publicationDecision: {
+            type: "review_handoff",
+            prUrl: "https://example.test/pr/1",
+            reason: "Ready for review",
+          },
+        },
+      },
+    });
+
+    await expect(
+      main(
+        [
+          "codex",
+          "worktree",
           "archive",
           "prepared:codex/fcd-900",
           "--home",
@@ -333,19 +386,22 @@ describe("pharo-nexus cli", () => {
       ),
     ).resolves.toBe(0);
 
-    expect(JSON.parse(String(log.mock.calls[3]?.[0]))).toMatchObject({
+    expect(JSON.parse(String(log.mock.calls[4]?.[0]))).toMatchObject({
       ok: true,
       removedWorktree: true,
       metadataRecord: {
         id: "prepared:codex/fcd-900",
         state: "archived",
+        execution: {
+          commitIds: ["abc123"],
+        },
       },
       trackerComment: {
         id: "local-comment-2",
         body: expect.stringContaining("Codex worktree archived."),
       },
     });
-    expect(JSON.parse(String(log.mock.calls[3]?.[0])).trackerComment.body).toContain(
+    expect(JSON.parse(String(log.mock.calls[4]?.[0])).trackerComment.body).toContain(
       "Removed worktree: yes",
     );
     expect(fs.existsSync(worktreePath)).toBe(false);

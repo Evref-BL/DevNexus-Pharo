@@ -6,7 +6,10 @@ import {
   getCodexWorktreeStatus,
   listCodexWorktrees,
   prepareCodexWorktree,
+  recordCodexWorktreeExecution,
+  type CodexWorktreePublicationDecisionType,
   type CodexWorktreeState,
+  type CodexWorktreeVerificationStatus,
 } from "./codexWorktreeService.js";
 import { commentCodexWorktreeHandoff } from "./codexWorktreeTrackerHandoff.js";
 import { defaultPharoNexusHomePath, loadProjectConfig } from "./config.js";
@@ -206,6 +209,47 @@ const tools: McpTool[] = [
       properties: {
         homePath: { type: "string" },
         id: { type: "string" },
+      },
+      required: ["id"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "codex_worktree_record_execution",
+    description: "Record commit ids, verification, and publication decisions for a local Codex worktree metadata record.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        homePath: { type: "string" },
+        id: { type: "string" },
+        commitIds: { type: "array", items: { type: "string" } },
+        verificationCommand: { type: "string" },
+        verificationStatus: {
+          type: "string",
+          enum: ["passed", "failed", "not_run"],
+        },
+        verificationSummary: { type: "string" },
+        publicationDecision: {
+          type: "object",
+          properties: {
+            type: {
+              type: "string",
+              enum: [
+                "not_decided",
+                "local_only",
+                "direct_integration",
+                "review_handoff",
+                "blocked",
+              ],
+            },
+            targetBranch: { type: ["string", "null"] },
+            remote: { type: ["string", "null"] },
+            prUrl: { type: ["string", "null"] },
+            reason: { type: ["string", "null"] },
+          },
+          required: ["type"],
+          additionalProperties: false,
+        },
       },
       required: ["id"],
       additionalProperties: false,
@@ -529,6 +573,41 @@ function optionalCodexWorktreeState(
   }
 
   return value;
+}
+
+function optionalCodexVerificationStatus(
+  record: Record<string, unknown>,
+  key: string,
+  pathName: string,
+): CodexWorktreeVerificationStatus | undefined {
+  const value = optionalString(record, key, pathName);
+  if (value === undefined) {
+    return undefined;
+  }
+  if (value !== "passed" && value !== "failed" && value !== "not_run") {
+    throw new Error(`${pathName}.${key} must be passed, failed, or not_run`);
+  }
+
+  return value;
+}
+
+function codexPublicationDecisionType(
+  value: string,
+  pathName: string,
+): CodexWorktreePublicationDecisionType {
+  if (
+    value === "not_decided" ||
+    value === "local_only" ||
+    value === "direct_integration" ||
+    value === "review_handoff" ||
+    value === "blocked"
+  ) {
+    return value;
+  }
+
+  throw new Error(
+    `${pathName} must be not_decided, local_only, direct_integration, review_handoff, or blocked`,
+  );
 }
 
 function homePathFromArgs(args: Record<string, unknown>): string {
@@ -882,6 +961,81 @@ export async function callPharoNexusMcpTool(
             id: requiredString(args, "id", "arguments"),
           }),
         });
+      case "codex_worktree_record_execution": {
+        const publicationValue = args.publicationDecision;
+        const publication = publicationValue === undefined || publicationValue === null
+          ? undefined
+          : asRecord(publicationValue, "arguments.publicationDecision");
+        const verificationCommand = optionalString(
+          args,
+          "verificationCommand",
+          "arguments",
+        );
+        if (
+          !verificationCommand &&
+          (args.verificationStatus !== undefined ||
+            args.verificationSummary !== undefined)
+        ) {
+          throw new Error(
+            "arguments.verificationStatus and arguments.verificationSummary require arguments.verificationCommand",
+          );
+        }
+        return toolResult({
+          ok: true,
+          ...recordCodexWorktreeExecution({
+            homePath: homePathFromArgs(args),
+            id: requiredString(args, "id", "arguments"),
+            commitIds: optionalStringArray(args, "commitIds", "arguments"),
+            verification: verificationCommand
+              ? {
+                  command: verificationCommand,
+                  status: optionalCodexVerificationStatus(
+                    args,
+                    "verificationStatus",
+                    "arguments",
+                  ),
+                  summary: optionalString(
+                    args,
+                    "verificationSummary",
+                    "arguments",
+                  ),
+                }
+              : undefined,
+            publicationDecision: publication
+              ? {
+                  type: codexPublicationDecisionType(
+                    requiredString(
+                      publication,
+                      "type",
+                      "arguments.publicationDecision",
+                    ),
+                    "arguments.publicationDecision.type",
+                  ),
+                  targetBranch: optionalNullableString(
+                    publication,
+                    "targetBranch",
+                    "arguments.publicationDecision",
+                  ),
+                  remote: optionalNullableString(
+                    publication,
+                    "remote",
+                    "arguments.publicationDecision",
+                  ),
+                  prUrl: optionalNullableString(
+                    publication,
+                    "prUrl",
+                    "arguments.publicationDecision",
+                  ),
+                  reason: optionalNullableString(
+                    publication,
+                    "reason",
+                    "arguments.publicationDecision",
+                  ),
+                }
+              : undefined,
+          }),
+        });
+      }
       case "codex_worktree_archive": {
         const homePath = homePathFromArgs(args);
         const archived = archiveCodexWorktree({

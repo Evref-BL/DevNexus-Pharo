@@ -16,11 +16,15 @@ import {
   getCodexWorktreeStatus,
   listCodexWorktrees,
   prepareCodexWorktree,
+  recordCodexWorktreeExecution,
   type ArchiveCodexWorktreeResult,
+  type CodexWorktreePublicationDecisionType,
   type CodexWorktreeState,
+  type CodexWorktreeVerificationStatus,
   type GetCodexWorktreeStatusResult,
   type ListCodexWorktreesResult,
   type PrepareCodexWorktreeResult,
+  type RecordCodexWorktreeExecutionResult,
 } from "./codexWorktreeService.js";
 import { commentCodexWorktreeHandoff } from "./codexWorktreeTrackerHandoff.js";
 import {
@@ -89,6 +93,7 @@ export function usage(): string {
     "  pharo-nexus codex worktree list [options]",
     "  pharo-nexus codex worktree status <id> [options]",
     "  pharo-nexus codex worktree prepare <project> [options]",
+    "  pharo-nexus codex worktree record <id> [options]",
     "  pharo-nexus codex worktree archive <id> [options]",
     "  pharo-nexus project create <name> [--from <git-url> | --git-init] [options]",
     "  pharo-nexus project import <path> [--name <name>] [options]",
@@ -162,6 +167,19 @@ export function usage(): string {
     "  --base-ref <ref>",
     "  --work-item-id <id>",
     "  --comment-work-item",
+    "  --json",
+    "",
+    "Options for codex worktree record:",
+    "  --home <path>",
+    "  --commit-id <sha>",
+    "  --verification-command <command>",
+    "  --verification-status <passed|failed|not_run>",
+    "  --verification-summary <text>",
+    "  --publication-decision <not_decided|local_only|direct_integration|review_handoff|blocked>",
+    "  --target-branch <branch>",
+    "  --remote <name>",
+    "  --pr-url <url>",
+    "  --reason <text>",
     "  --json",
     "",
     "Options for codex worktree archive:",
@@ -525,12 +543,29 @@ interface ParsedCodexWorktreeStatusCommand {
   json?: boolean;
 }
 
+interface ParsedCodexWorktreeRecordCommand {
+  command: "worktree_record";
+  id: string;
+  homePath: string;
+  commitIds: string[];
+  verificationCommand?: string;
+  verificationStatus?: CodexWorktreeVerificationStatus;
+  verificationSummary?: string;
+  publicationDecisionType?: CodexWorktreePublicationDecisionType;
+  targetBranch?: string;
+  remote?: string;
+  prUrl?: string;
+  reason?: string;
+  json?: boolean;
+}
+
 type ParsedCodexCommand =
   | ParsedCodexWorkspaceCommand
   | ParsedCodexWorktreePrepareCommand
   | ParsedCodexWorktreeArchiveCommand
   | ParsedCodexWorktreeListCommand
-  | ParsedCodexWorktreeStatusCommand;
+  | ParsedCodexWorktreeStatusCommand
+  | ParsedCodexWorktreeRecordCommand;
 
 function parseCodexCommand(argv: string[]): ParsedCodexCommand {
   const [, command, workspacePath, ...rest] = argv;
@@ -595,9 +630,10 @@ function parseCodexWorktreeCommand(argv: string[]): ParsedCodexCommand {
     action !== "prepare" &&
     action !== "archive" &&
     action !== "list" &&
-    action !== "status"
+    action !== "status" &&
+    action !== "record"
   ) {
-    throw new Error("codex worktree requires list, status, prepare, or archive");
+    throw new Error("codex worktree requires list, status, prepare, record, or archive");
   }
 
   const remaining = argv.slice(3);
@@ -615,7 +651,8 @@ function parseCodexWorktreeCommand(argv: string[]): ParsedCodexCommand {
     | Partial<ParsedCodexWorktreePrepareCommand>
     | Partial<ParsedCodexWorktreeArchiveCommand>
     | Partial<ParsedCodexWorktreeListCommand>
-    | Partial<ParsedCodexWorktreeStatusCommand> =
+    | Partial<ParsedCodexWorktreeStatusCommand>
+    | Partial<ParsedCodexWorktreeRecordCommand> =
     action === "prepare"
       ? {
           command: "worktree_prepare",
@@ -634,10 +671,17 @@ function parseCodexWorktreeCommand(argv: string[]): ParsedCodexCommand {
               id: targetValue,
               homePath: defaultHomePath(),
             }
-          : {
-              command: "worktree_list",
-              homePath: defaultHomePath(),
-            };
+          : action === "record"
+            ? {
+                command: "worktree_record",
+                id: targetValue,
+                homePath: defaultHomePath(),
+                commitIds: [],
+              }
+            : {
+                command: "worktree_list",
+                homePath: defaultHomePath(),
+              };
 
   for (let index = 0; index < rest.length; index += 1) {
     const arg = rest[index];
@@ -701,6 +745,62 @@ function parseCodexWorktreeCommand(argv: string[]): ParsedCodexCommand {
             | Partial<ParsedCodexWorktreeArchiveCommand>
         ).commentWorkItem = true;
         break;
+      case "--commit-id":
+        if (action !== "record") {
+          throw new Error("--commit-id is only supported for codex worktree record");
+        }
+        (parsed as Partial<ParsedCodexWorktreeRecordCommand>).commitIds?.push(next());
+        break;
+      case "--verification-command":
+        if (action !== "record") {
+          throw new Error("--verification-command is only supported for codex worktree record");
+        }
+        (parsed as Partial<ParsedCodexWorktreeRecordCommand>).verificationCommand = next();
+        break;
+      case "--verification-status":
+        if (action !== "record") {
+          throw new Error("--verification-status is only supported for codex worktree record");
+        }
+        (parsed as Partial<ParsedCodexWorktreeRecordCommand>).verificationStatus =
+          parseCodexWorktreeVerificationStatus(next(), arg);
+        break;
+      case "--verification-summary":
+        if (action !== "record") {
+          throw new Error("--verification-summary is only supported for codex worktree record");
+        }
+        (parsed as Partial<ParsedCodexWorktreeRecordCommand>).verificationSummary = next();
+        break;
+      case "--publication-decision":
+        if (action !== "record") {
+          throw new Error("--publication-decision is only supported for codex worktree record");
+        }
+        (parsed as Partial<ParsedCodexWorktreeRecordCommand>).publicationDecisionType =
+          parseCodexWorktreePublicationDecisionType(next(), arg);
+        break;
+      case "--target-branch":
+        if (action !== "record") {
+          throw new Error("--target-branch is only supported for codex worktree record");
+        }
+        (parsed as Partial<ParsedCodexWorktreeRecordCommand>).targetBranch = next();
+        break;
+      case "--remote":
+        if (action !== "record") {
+          throw new Error("--remote is only supported for codex worktree record");
+        }
+        (parsed as Partial<ParsedCodexWorktreeRecordCommand>).remote = next();
+        break;
+      case "--pr-url":
+        if (action !== "record") {
+          throw new Error("--pr-url is only supported for codex worktree record");
+        }
+        (parsed as Partial<ParsedCodexWorktreeRecordCommand>).prUrl = next();
+        break;
+      case "--reason":
+        if (action !== "record") {
+          throw new Error("--reason is only supported for codex worktree record");
+        }
+        (parsed as Partial<ParsedCodexWorktreeRecordCommand>).reason = next();
+        break;
       case "--remove-worktree":
         if (action !== "archive") {
           throw new Error("--remove-worktree is only supported for codex worktree archive");
@@ -715,6 +815,10 @@ function parseCodexWorktreeCommand(argv: string[]): ParsedCodexCommand {
     }
   }
 
+  if (action === "record") {
+    validateParsedCodexWorktreeRecord(parsed as ParsedCodexWorktreeRecordCommand);
+  }
+
   return parsed as ParsedCodexCommand;
 }
 
@@ -727,6 +831,57 @@ function parseCodexWorktreeState(
   }
 
   throw new Error(`${optionName} must be active or archived`);
+}
+
+function parseCodexWorktreeVerificationStatus(
+  value: string,
+  optionName: string,
+): CodexWorktreeVerificationStatus {
+  if (value === "passed" || value === "failed" || value === "not_run") {
+    return value;
+  }
+
+  throw new Error(`${optionName} must be passed, failed, or not_run`);
+}
+
+function parseCodexWorktreePublicationDecisionType(
+  value: string,
+  optionName: string,
+): CodexWorktreePublicationDecisionType {
+  if (
+    value === "not_decided" ||
+    value === "local_only" ||
+    value === "direct_integration" ||
+    value === "review_handoff" ||
+    value === "blocked"
+  ) {
+    return value;
+  }
+
+  throw new Error(
+    `${optionName} must be not_decided, local_only, direct_integration, review_handoff, or blocked`,
+  );
+}
+
+function validateParsedCodexWorktreeRecord(
+  parsed: ParsedCodexWorktreeRecordCommand,
+): void {
+  if (
+    (parsed.verificationStatus || parsed.verificationSummary) &&
+    !parsed.verificationCommand
+  ) {
+    throw new Error(
+      "--verification-status and --verification-summary require --verification-command",
+    );
+  }
+  if (
+    (parsed.targetBranch || parsed.remote || parsed.prUrl || parsed.reason) &&
+    !parsed.publicationDecisionType
+  ) {
+    throw new Error(
+      "publication detail options require --publication-decision",
+    );
+  }
 }
 
 function printCodexInitResult(
@@ -852,6 +1007,27 @@ function printCodexWorktreeStatusResult(
   console.log(`  Metadata: ${result.metadataPath}`);
 }
 
+function printCodexWorktreeRecordResult(
+  result: RecordCodexWorktreeExecutionResult,
+  json: boolean | undefined,
+): void {
+  const payload = { ok: true, ...result };
+  if (json) {
+    console.log(JSON.stringify(payload, null, 2));
+    return;
+  }
+
+  const execution = result.metadataRecord.execution;
+  console.log("Codex worktree execution recorded.");
+  console.log(`  Record: ${result.metadataRecord.id}`);
+  console.log(`  Commits: ${execution.commitIds.length}`);
+  console.log(`  Verification records: ${execution.verification.length}`);
+  console.log(
+    `  Publication decision: ${execution.publicationDecision?.type ?? "none"}`,
+  );
+  console.log(`  Metadata: ${result.metadataPath}`);
+}
+
 export interface CliContext {
   gitRunner?: GitRunner;
 }
@@ -929,6 +1105,32 @@ async function handleCodexCommand(
       id: parsed.id,
     });
     printCodexWorktreeStatusResult(result, parsed.json);
+    return 0;
+  }
+
+  if (parsed.command === "worktree_record") {
+    const result = recordCodexWorktreeExecution({
+      homePath: parsed.homePath,
+      id: parsed.id,
+      commitIds: parsed.commitIds,
+      verification: parsed.verificationCommand
+        ? {
+            command: parsed.verificationCommand,
+            status: parsed.verificationStatus,
+            summary: parsed.verificationSummary,
+          }
+        : undefined,
+      publicationDecision: parsed.publicationDecisionType
+        ? {
+            type: parsed.publicationDecisionType,
+            targetBranch: parsed.targetBranch,
+            remote: parsed.remote,
+            prUrl: parsed.prUrl,
+            reason: parsed.reason,
+          }
+        : undefined,
+    });
+    printCodexWorktreeRecordResult(result, parsed.json);
     return 0;
   }
 

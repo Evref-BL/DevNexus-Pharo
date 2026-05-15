@@ -17,6 +17,7 @@ import {
   getCodexWorktreeStatus,
   listCodexWorktrees,
   prepareCodexWorktree,
+  recordCodexWorktreeExecution,
 } from "./codexWorktreeService.js";
 
 const tempDirs: string[] = [];
@@ -157,6 +158,12 @@ describe("Codex worktree service", () => {
           branchName: "codex/fcd-123",
           worktreePath: expectedWorktreePath,
           excludedEntries: ["AGENTS.md", ".codex/"],
+          execution: {
+            commitIds: [],
+            verification: [],
+            publicationDecision: null,
+            updatedAt: null,
+          },
         },
       ],
     });
@@ -411,6 +418,87 @@ describe("Codex worktree service", () => {
           removedAt: "2026-05-15T11:00:00.000Z",
         },
         worktreeExists: false,
+      },
+    });
+  });
+
+  it("records execution metadata against a Codex worktree", () => {
+    const homePath = makeTempDir("pharo-nexus-home-");
+    initPharoNexusHome({ homePath });
+    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "Executed");
+    createPharoNexusProject({
+      homePath,
+      name: "Executed",
+      root: projectRoot,
+      gitInit: true,
+      gitRunner: fakeProjectGitRunner(),
+    });
+    const calls: Array<{ args: string[]; cwd?: string }> = [];
+    const prepared = prepareCodexWorktree({
+      homePath,
+      project: "executed",
+      branchName: "codex/execution",
+      gitRunner: fakeWorktreeGitRunner(calls),
+    });
+
+    const recorded = recordCodexWorktreeExecution({
+      homePath,
+      id: prepared.metadataRecord.id,
+      commitIds: ["abc123", "def456", "abc123"],
+      verification: {
+        command: "npm test",
+        status: "passed",
+        summary: "164 tests passed",
+      },
+      publicationDecision: {
+        type: "review_handoff",
+        prUrl: "https://example.test/pr/1",
+        reason: "Needs review before integration",
+      },
+      now: () => "2026-05-15T11:20:00.000Z",
+    });
+
+    expect(recorded).toMatchObject({
+      metadataRecord: {
+        id: "executed:codex/execution",
+        execution: {
+          commitIds: ["abc123", "def456"],
+          verification: [
+            {
+              command: "npm test",
+              status: "passed",
+              summary: "164 tests passed",
+              recordedAt: "2026-05-15T11:20:00.000Z",
+            },
+          ],
+          publicationDecision: {
+            type: "review_handoff",
+            prUrl: "https://example.test/pr/1",
+            reason: "Needs review before integration",
+            decidedAt: "2026-05-15T11:20:00.000Z",
+          },
+          updatedAt: "2026-05-15T11:20:00.000Z",
+        },
+      },
+    });
+    expect(getCodexWorktreeStatus({
+      homePath,
+      id: prepared.metadataRecord.id,
+    })).toMatchObject({
+      worktree: {
+        metadataRecord: {
+          execution: {
+            commitIds: ["abc123", "def456"],
+            verification: [
+              {
+                command: "npm test",
+              },
+            ],
+            publicationDecision: {
+              type: "review_handoff",
+            },
+          },
+        },
       },
     });
   });

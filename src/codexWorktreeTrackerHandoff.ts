@@ -60,6 +60,7 @@ export function formatCodexWorktreeHandoffComment(
     `Worktree path: ${record.worktreePath}`,
     `Source root: ${record.sourceRoot}`,
     `Metadata: ${options.metadataPath}`,
+    `Execution record: ${options.metadataPath}#${record.id}`,
   ];
 
   if (record.baseRef) {

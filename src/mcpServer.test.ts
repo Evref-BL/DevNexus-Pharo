@@ -215,6 +215,7 @@ describe("PharoNexus MCP server tools", () => {
       "codex_worktree_prepare",
       "codex_worktree_list",
       "codex_worktree_status",
+      "codex_worktree_record_execution",
       "codex_worktree_archive",
       "work_item_create",
       "work_item_list",
@@ -859,6 +860,45 @@ describe("PharoNexus MCP server tools", () => {
           branchName: "codex/fcd-900",
         },
         worktreeExists: true,
+      },
+    });
+
+    const recordPayload = parseToolText(
+      await callPharoNexusMcpTool(
+        "codex_worktree_record_execution",
+        {
+          homePath,
+          id: "codex-mcp:codex/fcd-900",
+          commitIds: ["abc123"],
+          verificationCommand: "npm test",
+          verificationStatus: "passed",
+          verificationSummary: "164 tests passed",
+          publicationDecision: {
+            type: "review_handoff",
+            prUrl: "https://example.test/pr/1",
+          },
+        },
+        { gitRunner },
+      ),
+    );
+    expect(recordPayload).toMatchObject({
+      ok: true,
+      metadataRecord: {
+        id: "codex-mcp:codex/fcd-900",
+        execution: {
+          commitIds: ["abc123"],
+          verification: [
+            {
+              command: "npm test",
+              status: "passed",
+              summary: "164 tests passed",
+            },
+          ],
+          publicationDecision: {
+            type: "review_handoff",
+            prUrl: "https://example.test/pr/1",
+          },
+        },
       },
     });
 
