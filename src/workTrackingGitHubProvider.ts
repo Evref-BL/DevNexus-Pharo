@@ -34,6 +34,7 @@ export interface GitHubWorkTrackerProviderOptions {
   token?: string | null;
   fetch?: typeof fetch;
   apiBaseUrl?: string | null;
+  graphqlApiUrl?: string | null;
   apiVersion?: string | null;
   env?: Record<string, string | undefined>;
   credentialRunner?: GitCredentialRunner | false;
@@ -91,6 +92,12 @@ interface GitHubErrorBody {
   documentation_url?: string;
 }
 
+interface GitHubProjectV2BoardConfig {
+  projectId: string;
+  statusFieldId?: string;
+  statusOptions?: Record<string, string>;
+}
+
 export class GitHubWorkTrackerProviderError extends Error {
   constructor(message: string) {
     super(message);
@@ -113,6 +120,20 @@ export const githubWorkTrackerCapabilities: TrackerCapabilities = {
   webhooks: false,
 };
 
+export function githubWorkTrackerCapabilitiesForConfig(
+  config: Pick<GitHubWorkTrackingConfig, "board">,
+): TrackerCapabilities {
+  const board = githubProjectV2BoardConfig(config);
+  const statusOptions = board?.statusOptions ?? {};
+  return {
+    ...githubWorkTrackerCapabilities,
+    board: Boolean(board),
+    boardStatus: Boolean(
+      board?.statusFieldId && Object.keys(statusOptions).length > 0,
+    ),
+  };
+}
+
 export function createGitHubWorkTrackerProvider(
   options: GitHubWorkTrackerProviderOptions,
 ): GitHubWorkTrackerProvider {
@@ -121,11 +142,12 @@ export function createGitHubWorkTrackerProvider(
 
 export class GitHubWorkTrackerProvider implements WorkTrackerProvider {
   readonly provider = "github";
-  readonly capabilities = githubWorkTrackerCapabilities;
+  readonly capabilities: TrackerCapabilities;
 
   private readonly config: GitHubWorkTrackingConfig;
   private readonly fetchFn: typeof fetch;
   private readonly apiBaseUrl: string;
+  private readonly graphqlApiUrl: string;
   private readonly apiVersion: string;
   private readonly staticAuthorizationHeader?: string;
   private readonly credentialRunner?: GitCredentialRunner;
@@ -138,10 +160,14 @@ export class GitHubWorkTrackerProvider implements WorkTrackerProvider {
     this.apiBaseUrl = normalizeGitHubApiBaseUrl(
       options.apiBaseUrl ?? options.config.host,
     );
+    this.graphqlApiUrl = normalizeGitHubGraphQLApiUrl(
+      options.graphqlApiUrl ?? options.config.host,
+    );
     this.apiVersion = requiredNonEmptyString(
       options.apiVersion ?? defaultGitHubApiVersion,
       "apiVersion",
     );
+    this.capabilities = githubWorkTrackerCapabilitiesForConfig(options.config);
     const token =
       optionalNonEmptyString(options.token, "token") ??
       optionalNonEmptyString(
@@ -173,6 +199,7 @@ export class GitHubWorkTrackerProvider implements WorkTrackerProvider {
       return this.updateWorkItem({ id: String(created.number) }, { status });
     }
 
+    await this.addIssueToConfiguredProject(created, status);
     return this.issueToWorkItem(created);
   }
 
@@ -247,13 +274,16 @@ export class GitHubWorkTrackerProvider implements WorkTrackerProvider {
       body.labels = labelsWithStatus(baseLabels, patch.status);
     }
 
-    return this.issueToWorkItem(
-      await this.requestJson<GitHubIssue>(
-        "PATCH",
-        `${this.issuePath()}/${issueNumber}`,
-        body,
-      ),
+    const updated = await this.requestJson<GitHubIssue>(
+      "PATCH",
+      `${this.issuePath()}/${issueNumber}`,
+      body,
     );
+    if (patch.status !== undefined) {
+      await this.addIssueToConfiguredProject(updated, patch.status);
+    }
+
+    return this.issueToWorkItem(updated);
   }
 
   async addComment(ref: WorkItemRef, body: string): Promise<WorkComment> {
@@ -279,6 +309,72 @@ export class GitHubWorkTrackerProvider implements WorkTrackerProvider {
       "GET",
       `${this.issuePath()}/${issueNumber}`,
     );
+  }
+
+  private async addIssueToConfiguredProject(
+    issue: GitHubIssue,
+    status?: WorkStatus,
+  ): Promise<string | undefined> {
+    const board = githubProjectV2BoardConfig(this.config);
+    if (!board) {
+      return undefined;
+    }
+
+    const contentId = requiredNonEmptyString(issue.node_id, "issue.node_id");
+    const addResult = await this.graphql<{
+      addProjectV2ItemById: { item: { id: string } };
+    }>(
+      `mutation AddIssueToProject($projectId: ID!, $contentId: ID!) {
+        addProjectV2ItemById(input: {projectId: $projectId, contentId: $contentId}) {
+          item {
+            id
+          }
+        }
+      }`,
+      {
+        projectId: board.projectId,
+        contentId,
+      },
+    );
+    const itemId = requiredNonEmptyString(
+      addResult.addProjectV2ItemById.item.id,
+      "addProjectV2ItemById.item.id",
+    );
+
+    const statusOptionId = status ? board.statusOptions?.[status] : undefined;
+    if (board.statusFieldId && statusOptionId) {
+      await this.graphql<{
+        updateProjectV2ItemFieldValue: { projectV2Item: { id: string } };
+      }>(
+        `mutation UpdateProjectItemStatus(
+          $projectId: ID!
+          $itemId: ID!
+          $fieldId: ID!
+          $optionId: String!
+        ) {
+          updateProjectV2ItemFieldValue(
+            input: {
+              projectId: $projectId
+              itemId: $itemId
+              fieldId: $fieldId
+              value: { singleSelectOptionId: $optionId }
+            }
+          ) {
+            projectV2Item {
+              id
+            }
+          }
+        }`,
+        {
+          projectId: board.projectId,
+          itemId,
+          fieldId: board.statusFieldId,
+          optionId: statusOptionId,
+        },
+      );
+    }
+
+    return itemId;
   }
 
   private issuePath(): string {
@@ -319,6 +415,53 @@ export class GitHubWorkTrackerProvider implements WorkTrackerProvider {
     }
 
     return (await response.json()) as T;
+  }
+
+  private async graphql<T>(
+    query: string,
+    variables: Record<string, unknown>,
+  ): Promise<T> {
+    const headers: Record<string, string> = {
+      Accept: "application/vnd.github+json",
+      "Content-Type": "application/json",
+      "User-Agent": "pharo-nexus",
+      "X-GitHub-Api-Version": this.apiVersion,
+    };
+    const authorizationHeader = this.authorizationHeader();
+    if (authorizationHeader) {
+      headers.Authorization = authorizationHeader;
+    }
+
+    const response = await this.fetchFn(this.graphqlApiUrl, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ query, variables }),
+    });
+
+    if (!response.ok) {
+      throw new GitHubWorkTrackerProviderError(
+        await githubErrorMessage(response, "POST", new URL(this.graphqlApiUrl)),
+      );
+    }
+
+    const payload = (await response.json()) as {
+      data?: T;
+      errors?: Array<{ message?: string }>;
+    };
+    if (payload.errors?.length) {
+      throw new GitHubWorkTrackerProviderError(
+        `GitHub GraphQL request failed: ${payload.errors
+          .map((error) => error.message ?? "unknown error")
+          .join("; ")}`,
+      );
+    }
+    if (!payload.data) {
+      throw new GitHubWorkTrackerProviderError(
+        "GitHub GraphQL response did not include data",
+      );
+    }
+
+    return payload.data;
   }
 
   private issueToWorkItem(issue: GitHubIssue): WorkItem {
@@ -415,6 +558,33 @@ export function normalizeGitHubApiBaseUrl(hostOrApiBaseUrl?: string | null): str
   return `https://${value.replace(/\/+$/, "")}/api/v3`;
 }
 
+export function normalizeGitHubGraphQLApiUrl(
+  hostOrApiBaseUrl?: string | null,
+): string {
+  const value = hostOrApiBaseUrl?.trim();
+  if (
+    !value ||
+    value === "github.com" ||
+    value === "https://github.com" ||
+    value === "api.github.com" ||
+    value === "https://api.github.com"
+  ) {
+    return "https://api.github.com/graphql";
+  }
+
+  const url = value.startsWith("http://") || value.startsWith("https://")
+    ? new URL(value)
+    : new URL(`https://${value}`);
+  if (url.hostname === "api.github.com") {
+    return "https://api.github.com/graphql";
+  }
+  if (url.pathname.endsWith("/api/graphql") || url.pathname.endsWith("/graphql")) {
+    return url.toString().replace(/\/+$/, "");
+  }
+
+  return `${url.protocol}//${url.host}/api/graphql`;
+}
+
 export function githubCredentialRequest(
   config: Pick<GitHubWorkTrackingConfig, "host" | "repository">,
 ): GitCredentialRequest {
@@ -439,6 +609,32 @@ export function normalizeGitHubCredentialHost(hostOrApiBaseUrl?: string | null):
     ? new URL(value)
     : new URL(`https://${value}`);
   return url.host;
+}
+
+function githubProjectV2BoardConfig(
+  config: Pick<GitHubWorkTrackingConfig, "board">,
+): GitHubProjectV2BoardConfig | undefined {
+  const board = config.board;
+  if (!board || board.kind !== "github-project-v2") {
+    return undefined;
+  }
+
+  const projectId = optionalNonEmptyString(
+    board.projectId ?? board.id,
+    "board.projectId",
+  );
+  if (!projectId) {
+    return undefined;
+  }
+
+  const statusFieldId =
+    optionalNonEmptyString(board.statusFieldId, "board.statusFieldId") ??
+    undefined;
+  return {
+    projectId,
+    ...(statusFieldId ? { statusFieldId } : {}),
+    ...(board.statusOptions ? { statusOptions: board.statusOptions } : {}),
+  };
 }
 
 export function defaultGitCredentialRunner(

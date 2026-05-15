@@ -179,6 +179,39 @@ credential lookup by default with `GCM_INTERACTIVE=0` and
 `GIT_TERMINAL_PROMPT=0`, so they fail instead of hanging if no cached credential
 exists.
 
+GitHub Projects v2 is optional. If the project config includes a
+`workTracking.board` with `kind: "github-project-v2"` and a project node id,
+new and status-updated GitHub issues are added to that project through
+GitHub's GraphQL API. To map PharoNexus statuses to a Projects v2 single-select
+Status field, configure the field node id and option ids:
+
+```json
+{
+  "workTracking": {
+    "provider": "github",
+    "repository": {
+      "owner": "example",
+      "name": "MyProject"
+    },
+    "board": {
+      "kind": "github-project-v2",
+      "projectId": "PVT_project_node_id",
+      "statusFieldId": "PVTSSF_status_field_id",
+      "statusOptions": {
+        "ready": "status_option_id",
+        "in_progress": "status_option_id",
+        "blocked": "status_option_id",
+        "done": "status_option_id"
+      }
+    }
+  }
+}
+```
+
+GitHub requires those Project v2 project, field, and option node ids for GraphQL
+updates. If `statusOptions` does not include a status, PharoNexus still adds
+the issue to the project but skips the status-field update for that status.
+
 Existing local Vibe Kanban installations can still be used as a tracker
 provider for board/repo registration:
 

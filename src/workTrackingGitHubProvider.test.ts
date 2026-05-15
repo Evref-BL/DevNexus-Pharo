@@ -4,7 +4,9 @@ import {
   defaultGitHubApiBaseUrl,
   defaultGitHubApiVersion,
   githubCredentialRequest,
+  githubWorkTrackerCapabilitiesForConfig,
   normalizeGitHubApiBaseUrl,
+  normalizeGitHubGraphQLApiUrl,
 } from "./workTrackingGitHubProvider.js";
 import type { GitHubWorkTrackingConfig } from "./workTrackingTypes.js";
 
@@ -31,6 +33,23 @@ function githubConfig(
     },
     ...overrides,
   };
+}
+
+function githubProjectConfig(
+  overrides: Partial<GitHubWorkTrackingConfig> = {},
+): GitHubWorkTrackingConfig {
+  return githubConfig({
+    board: {
+      kind: "github-project-v2",
+      projectId: "PVT_project",
+      statusFieldId: "PVTSSF_status",
+      statusOptions: {
+        blocked: "opt-blocked",
+        done: "opt-done",
+      },
+    },
+    ...overrides,
+  });
 }
 
 function issue(overrides: Record<string, unknown> = {}): Record<string, unknown> {
@@ -87,6 +106,119 @@ function queuedFetch(responses: QueuedResponse[]): {
 }
 
 describe("GitHub work tracker provider", () => {
+  it("adds created issues to a configured GitHub Project v2 and sets mapped status", async () => {
+    const fake = queuedFetch([
+      {
+        status: 201,
+        body: issue({
+          labels: [{ name: "bug" }, { name: "status:blocked" }],
+        }),
+      },
+      {
+        body: {
+          data: {
+            addProjectV2ItemById: {
+              item: {
+                id: "PVTI_item",
+              },
+            },
+          },
+        },
+      },
+      {
+        body: {
+          data: {
+            updateProjectV2ItemFieldValue: {
+              projectV2Item: {
+                id: "PVTI_item",
+              },
+            },
+          },
+        },
+      },
+    ]);
+    const provider = createGitHubWorkTrackerProvider({
+      config: githubProjectConfig(),
+      token: "github-token",
+      fetch: fake.fetch,
+      env: {},
+    });
+
+    await expect(
+      provider.createWorkItem({
+        title: "Tracked project item",
+        status: "blocked",
+        labels: ["bug"],
+      }),
+    ).resolves.toMatchObject({
+      id: "github-7",
+      status: "blocked",
+    });
+
+    expect(provider.capabilities).toEqual(
+      githubWorkTrackerCapabilitiesForConfig(githubProjectConfig()),
+    );
+    expect(provider.capabilities.board).toBe(true);
+    expect(provider.capabilities.boardStatus).toBe(true);
+    expect(fake.calls[1]).toMatchObject({
+      url: "https://api.github.com/graphql",
+      method: "POST",
+      headers: {
+        "X-GitHub-Api-Version": defaultGitHubApiVersion,
+      },
+      body: {
+        variables: {
+          projectId: "PVT_project",
+          contentId: "I_node",
+        },
+      },
+    });
+    expect(String((fake.calls[1]?.body as { query?: string }).query)).toContain(
+      "addProjectV2ItemById",
+    );
+    expect(fake.calls[2]).toMatchObject({
+      url: "https://api.github.com/graphql",
+      method: "POST",
+      body: {
+        variables: {
+          projectId: "PVT_project",
+          itemId: "PVTI_item",
+          fieldId: "PVTSSF_status",
+          optionId: "opt-blocked",
+        },
+      },
+    });
+    expect(String((fake.calls[2]?.body as { query?: string }).query)).toContain(
+      "updateProjectV2ItemFieldValue",
+    );
+  });
+
+  it("advertises Project v2 board status only when status options are configured", () => {
+    expect(
+      githubWorkTrackerCapabilitiesForConfig(
+        githubProjectConfig({ board: { kind: "github-project-v2", id: "PVT" } }),
+      ),
+    ).toMatchObject({
+      board: true,
+      boardStatus: false,
+    });
+    expect(
+      githubWorkTrackerCapabilitiesForConfig(
+        githubProjectConfig({
+          board: {
+            kind: "github-project-v2",
+            projectId: "PVT",
+            statusFieldId: "PVTSSF",
+            statusOptions: {},
+          },
+        }),
+      ),
+    ).toMatchObject({
+      board: true,
+      boardStatus: false,
+    });
+  });
+
   it("creates GitHub issues and maps status labels, refs, and headers", async () => {
     const fake = queuedFetch([
       {
@@ -276,6 +408,79 @@ describe("GitHub work tracker provider", () => {
     });
   });
 
+  it("syncs configured Project v2 status when issue status changes", async () => {
+    const fake = queuedFetch([
+      {
+        body: issue({
+          labels: [{ name: "bug" }, { name: "status:blocked" }],
+        }),
+      },
+      {
+        body: issue({
+          state: "closed",
+          state_reason: "completed",
+          labels: [{ name: "bug" }],
+          closed_at: "2026-05-15T10:10:00Z",
+        }),
+      },
+      {
+        body: {
+          data: {
+            addProjectV2ItemById: {
+              item: {
+                id: "PVTI_existing",
+              },
+            },
+          },
+        },
+      },
+      {
+        body: {
+          data: {
+            updateProjectV2ItemFieldValue: {
+              projectV2Item: {
+                id: "PVTI_existing",
+              },
+            },
+          },
+        },
+      },
+    ]);
+    const provider = createGitHubWorkTrackerProvider({
+      config: githubProjectConfig(),
+      fetch: fake.fetch,
+      env: {},
+      credentialRunner: false,
+    });
+
+    await expect(provider.setStatus({ id: "github-7" }, "done")).resolves.toMatchObject({
+      id: "github-7",
+      status: "done",
+      labels: ["bug"],
+    });
+
+    expect(fake.calls[2]).toMatchObject({
+      url: "https://api.github.com/graphql",
+      body: {
+        variables: {
+          projectId: "PVT_project",
+          contentId: "I_node",
+        },
+      },
+    });
+    expect(fake.calls[3]).toMatchObject({
+      url: "https://api.github.com/graphql",
+      body: {
+        variables: {
+          projectId: "PVT_project",
+          itemId: "PVTI_existing",
+          fieldId: "PVTSSF_status",
+          optionId: "opt-done",
+        },
+      },
+    });
+  });
+
   it("adds comments and reports GitHub API errors with context", async () => {
     const fake = queuedFetch([
       {
@@ -338,6 +543,15 @@ describe("GitHub work tracker provider", () => {
     expect(normalizeGitHubApiBaseUrl("https://github.enterprise.test/api/v3/")).toBe(
       "https://github.enterprise.test/api/v3",
     );
+    expect(normalizeGitHubGraphQLApiUrl(undefined)).toBe(
+      "https://api.github.com/graphql",
+    );
+    expect(normalizeGitHubGraphQLApiUrl("github.enterprise.test")).toBe(
+      "https://github.enterprise.test/api/graphql",
+    );
+    expect(
+      normalizeGitHubGraphQLApiUrl("https://github.enterprise.test/api/v3"),
+    ).toBe("https://github.enterprise.test/api/graphql");
   });
 
   it("preserves GitHub Enterprise API base paths when building requests", async () => {
