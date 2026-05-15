@@ -141,6 +141,13 @@ into that checkout:
 pharo-nexus project import C:\dev\code\git\ExistingProject --name ExistingProject
 ```
 
+Inspect or refresh generated DevNexus support skills for a managed project:
+
+```powershell
+pharo-nexus project skills status MyProject
+pharo-nexus project skills refresh MyProject
+```
+
 By default, PharoNexus creates the managed project root under
 `paths.projectsRoot` from `dev-nexus.home.json`. Use `--root` on
 `project create` or `--project-root` on `project import` to choose a different
@@ -325,18 +332,20 @@ project_link_tracker
 project_sync_tracker
 project_list
 project_status
+project_skill_status
+project_skill_refresh
 work_item_create
 work_item_list
 work_item_get
 work_item_update
 work_item_comment
 work_item_set_status
-codex_worktree_prepare
-codex_worktree_guide
-codex_worktree_list
-codex_worktree_status
-codex_worktree_record_execution
-codex_worktree_archive
+worktree_prepare
+worktree_guide
+worktree_list
+worktree_status
+worktree_record_execution
+worktree_archive
 ```
 
 ## Configuration Notes

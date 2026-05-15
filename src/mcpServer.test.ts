@@ -213,6 +213,8 @@ describe("PharoNexus MCP server tools", () => {
       "project_sync_tracker",
       "project_list",
       "project_status",
+      "project_skill_status",
+      "project_skill_refresh",
       "worktree_prepare",
       "worktree_guide",
       "worktree_list",
@@ -396,6 +398,107 @@ describe("PharoNexus MCP server tools", () => {
         plexusProjectConfigExists: false,
       },
     });
+
+    const skillsPayload = parseToolText(
+      await callPharoNexusMcpTool("project_skill_status", {
+        homePath,
+        project: "generic-mcp",
+      }),
+    );
+    expect(skillsPayload).toMatchObject({
+      ok: true,
+      project: {
+        id: "generic-mcp",
+      },
+      skillStatus: {
+        summary: {
+          expected: 5,
+          installed: 5,
+          missing: 0,
+          stale: 0,
+        },
+      },
+    });
+    expect(
+      (skillsPayload as {
+        skillStatus: { skills: Array<{ id: string }> };
+      }).skillStatus.skills.map((skill) => skill.id),
+    ).not.toContain("pharo-nexus-workflow");
+  });
+
+  it("inspects and refreshes specialization skills through MCP", async () => {
+    const homePath = makeTempDir("pharo-nexus-home-");
+    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "SkillMcp");
+    initNexusHome({ homePath });
+
+    await callPharoNexusMcpTool(
+      "project_create",
+      {
+        homePath,
+        name: "SkillMcp",
+        root: projectRoot,
+        syncTracker: false,
+      },
+      { gitRunner: fakeGitRunner },
+    );
+
+    fs.rmSync(
+      path.join(projectRoot, ".dev-nexus", "skills", "pharo-nexus-workflow"),
+      { recursive: true, force: true },
+    );
+    fs.appendFileSync(
+      path.join(projectRoot, ".dev-nexus", "skills", "diagnose", "SKILL.md"),
+      "\nLocal edit.\n",
+      "utf8",
+    );
+
+    const statusPayload = parseToolText(
+      await callPharoNexusMcpTool("project_skill_status", {
+        homePath,
+        project: "skill-mcp",
+      }),
+    );
+    expect(statusPayload).toMatchObject({
+      ok: true,
+      skillStatus: {
+        summary: {
+          expected: 9,
+          missing: 1,
+          stale: 1,
+        },
+      },
+    });
+
+    const refreshPayload = parseToolText(
+      await callPharoNexusMcpTool("project_skill_refresh", {
+        homePath,
+        project: "skill-mcp",
+      }),
+    );
+    expect(refreshPayload).toMatchObject({
+      ok: true,
+      refresh: {
+        before: {
+          summary: {
+            missing: 1,
+            stale: 1,
+          },
+        },
+        after: {
+          summary: {
+            expected: 9,
+            installed: 9,
+            missing: 0,
+            stale: 0,
+          },
+        },
+      },
+    });
+    expect(
+      fs.existsSync(
+        path.join(projectRoot, ".dev-nexus", "skills", "pharo-nexus-workflow", "SKILL.md"),
+      ),
+    ).toBe(true);
   });
 
   it("manages local work items through neutral MCP tool calls", async () => {

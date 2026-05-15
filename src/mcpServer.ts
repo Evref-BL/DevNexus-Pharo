@@ -24,6 +24,10 @@ import {
   type GitRunner,
 } from "./nexusProjectService.js";
 import {
+  getProjectSkillStatus,
+  refreshProjectSkills,
+} from "./nexusProjectSkillService.js";
+import {
   createPharoNexusProject,
   importPharoNexusProject,
   syncPharoNexusProjectTracker,
@@ -189,6 +193,32 @@ const tools: McpTool[] = [
   {
     name: "project_status",
     description: "Show one PharoNexus project by registered id or filesystem path.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        homePath: { type: "string" },
+        project: { type: "string" },
+      },
+      required: ["project"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "project_skill_status",
+    description: "Inspect installed DevNexus support skills for a PharoNexus project.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        homePath: { type: "string" },
+        project: { type: "string" },
+      },
+      required: ["project"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "project_skill_refresh",
+    description: "Refresh selected DevNexus support skills for a PharoNexus project.",
     inputSchema: {
       type: "object",
       properties: {
@@ -1064,6 +1094,22 @@ export async function callPharoNexusMcpTool(
         return toolResult({
           ok: true,
           ...getNexusProjectStatus({
+            homePath: homePathFromArgs(args),
+            project: requiredString(args, "project", "arguments"),
+          }),
+        });
+      case "project_skill_status":
+        return toolResult({
+          ok: true,
+          ...getProjectSkillStatus({
+            homePath: homePathFromArgs(args),
+            project: requiredString(args, "project", "arguments"),
+          }),
+        });
+      case "project_skill_refresh":
+        return toolResult({
+          ok: true,
+          ...refreshProjectSkills({
             homePath: homePathFromArgs(args),
             project: requiredString(args, "project", "arguments"),
           }),

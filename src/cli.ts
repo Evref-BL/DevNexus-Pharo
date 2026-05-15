@@ -74,6 +74,12 @@ import {
   type ImportPharoNexusProjectResult,
   type SyncPharoNexusProjectTrackerResult,
 } from "./pharoNexusProjectService.js";
+import {
+  getProjectSkillStatus,
+  refreshProjectSkills,
+  type ProjectSkillRefreshResult,
+  type ProjectSkillStatusResult,
+} from "./nexusProjectSkillService.js";
 import type { WorkComment } from "dev-nexus";
 import {
   runPharoNexusMcpServer,
@@ -114,6 +120,8 @@ export function usage(): string {
     "  pharo-nexus project configure-tracker <id-or-path> --provider <local|github|gitlab|jira> [options]",
     "  pharo-nexus project link-tracker <id-or-path> --tracker-project-id <id> [options]",
     "  pharo-nexus project sync-tracker <id-or-path> [options]",
+    "  pharo-nexus project skills status <id-or-path> [options]",
+    "  pharo-nexus project skills refresh <id-or-path> [options]",
     "  pharo-nexus project list [options]",
     "  pharo-nexus project status <id-or-path> [options]",
     "  pharo-nexus plexus-gateway start <home> [--force]",
@@ -257,6 +265,10 @@ export function usage(): string {
     "Options for project sync-tracker:",
     "  --vibe-host <host>",
     "  --vibe-port <port>",
+    "  --home <path>",
+    "  --json",
+    "",
+    "Options for project skills status/refresh:",
     "  --home <path>",
     "  --json",
     "",
@@ -1574,6 +1586,13 @@ interface ParsedProjectSyncTrackerCommand {
   json?: boolean;
 }
 
+interface ParsedProjectSkillsCommand {
+  homePath: string;
+  action: "status" | "refresh";
+  project: string;
+  json?: boolean;
+}
+
 interface ParsedProjectListCommand {
   homePath: string;
   json?: boolean;
@@ -1904,6 +1923,53 @@ function parseProjectSyncTrackerCommand(
   }
 
   return parsed as ParsedProjectSyncTrackerCommand;
+}
+
+function parseProjectSkillsCommand(argv: string[]): ParsedProjectSkillsCommand {
+  const [, command, action, project, ...rest] = argv;
+  if (command !== "skills") {
+    throw new Error(
+      "project requires create, import, configure-tracker, link-tracker, sync-tracker, skills, list, or status",
+    );
+  }
+
+  if (action !== "status" && action !== "refresh") {
+    throw new Error("project skills requires status or refresh");
+  }
+
+  if (!project || project.startsWith("--")) {
+    throw new Error(`project skills ${action} requires a project id or path`);
+  }
+
+  const parsed: Partial<ParsedProjectSkillsCommand> = {
+    homePath: defaultHomePath(),
+    action,
+    project,
+  };
+  for (let index = 0; index < rest.length; index += 1) {
+    const arg = rest[index];
+    const next = (): string => {
+      index += 1;
+      if (index >= rest.length) {
+        throw new Error(`${arg} requires a value`);
+      }
+
+      return rest[index];
+    };
+
+    switch (arg) {
+      case "--home":
+        parsed.homePath = next();
+        break;
+      case "--json":
+        parsed.json = true;
+        break;
+      default:
+        throw new Error(`Unknown project skills option: ${arg}`);
+    }
+  }
+
+  return parsed as ParsedProjectSkillsCommand;
 }
 
 function parseProjectListCommand(argv: string[]): ParsedProjectListCommand {
@@ -2272,6 +2338,68 @@ function printProjectStatusResult(
   console.log(JSON.stringify(payload, null, 2));
 }
 
+function skillStatusSummaryLine(
+  summary: ProjectSkillStatusResult["skillStatus"]["summary"],
+): string {
+  return [
+    `expected ${summary.expected}`,
+    `installed ${summary.installed}`,
+    `missing ${summary.missing}`,
+    `stale ${summary.stale}`,
+    `unexpected ${summary.unexpected}`,
+    `invalid ${summary.invalid}`,
+  ].join(", ");
+}
+
+function printProjectSkillStatusResult(
+  result: ProjectSkillStatusResult,
+  json: boolean | undefined,
+): void {
+  const payload = { ok: true, ...result };
+  if (json) {
+    console.log(JSON.stringify(payload, null, 2));
+    return;
+  }
+
+  console.log("PharoNexus project skill status.");
+  console.log(`  Project: ${result.project.id} (${result.project.name})`);
+  console.log(`  Skills directory: ${result.skillStatus.skillsDirectory}`);
+  console.log(`  Summary: ${skillStatusSummaryLine(result.skillStatus.summary)}`);
+  for (const skill of result.skillStatus.skills) {
+    if (skill.state === "installed") {
+      continue;
+    }
+
+    console.log(`  ${skill.id}: ${skill.state}`);
+    for (const reason of skill.reasons) {
+      console.log(`    - ${reason}`);
+    }
+  }
+  console.log("");
+  console.log("JSON:");
+  console.log(JSON.stringify(payload, null, 2));
+}
+
+function printProjectSkillRefreshResult(
+  result: ProjectSkillRefreshResult,
+  json: boolean | undefined,
+): void {
+  const payload = { ok: true, ...result };
+  if (json) {
+    console.log(JSON.stringify(payload, null, 2));
+    return;
+  }
+
+  console.log("PharoNexus project skills refreshed.");
+  console.log(`  Project: ${result.project.id} (${result.project.name})`);
+  console.log(`  Before: ${skillStatusSummaryLine(result.refresh.before.summary)}`);
+  console.log(`  After: ${skillStatusSummaryLine(result.refresh.after.summary)}`);
+  console.log(`  Materialized: ${result.refresh.materialized.installed.length}`);
+  console.log("");
+  console.log("JSON:");
+  console.log(JSON.stringify(payload, null, 2));
+}
+
 async function handleProjectCommand(argv: string[]): Promise<number> {
   const command = argv[1];
   if (command === "create") {
@@ -2376,6 +2504,19 @@ async function handleProjectCommand(argv: string[]): Promise<number> {
     return 0;
   }
 
+  if (command === "skills") {
+    const parsed = parseProjectSkillsCommand(argv);
+    if (parsed.action === "status") {
+      const result = getProjectSkillStatus(parsed);
+      printProjectSkillStatusResult(result, parsed.json);
+      return 0;
+    }
+
+    const result = refreshProjectSkills(parsed);
+    printProjectSkillRefreshResult(result, parsed.json);
+    return 0;
+  }
+
   if (command === "list") {
     const parsed = parseProjectListCommand(argv);
     const result = listNexusProjects({ homePath: parsed.homePath });
@@ -2391,7 +2532,7 @@ async function handleProjectCommand(argv: string[]): Promise<number> {
   }
 
   throw new Error(
-    "project requires create, import, configure-tracker, link-tracker, sync-tracker, list, or status",
+    "project requires create, import, configure-tracker, link-tracker, sync-tracker, skills, list, or status",
   );
 }
 

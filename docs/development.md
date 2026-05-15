@@ -47,10 +47,12 @@ Project commands:
 pharo-nexus project create MyProject --git-init
 pharo-nexus project create MyProject --from https://github.com/example/MyProject.git
 pharo-nexus project import C:\dev\code\git\ExistingProject --name ExistingProject
-pharo-nexus project link-kanban my-project --vibe-project-id <id>
-pharo-nexus project sync-kanban my-project
+pharo-nexus project link-tracker my-project --tracker-project-id <id>
+pharo-nexus project sync-tracker my-project
 pharo-nexus project list
 pharo-nexus project status MyProject
+pharo-nexus project skills status MyProject
+pharo-nexus project skills refresh MyProject
 ```
 
 Codex workspace commands:

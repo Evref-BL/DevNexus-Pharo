@@ -55,6 +55,8 @@ describe("pharo-nexus cli", () => {
     expect(usage()).toContain("pharo-nexus project configure-tracker <id-or-path>");
     expect(usage()).toContain("pharo-nexus project link-tracker <id-or-path>");
     expect(usage()).toContain("pharo-nexus project sync-tracker <id-or-path>");
+    expect(usage()).toContain("pharo-nexus project skills status <id-or-path>");
+    expect(usage()).toContain("pharo-nexus project skills refresh <id-or-path>");
     expect(usage()).toContain("pharo-nexus vibe-kanban start <home>");
     expect(usage()).toContain("pharo-nexus vibe-kanban status <home>");
     expect(usage()).toContain("pharo-nexus vibe-kanban stop <home>");
@@ -692,6 +694,12 @@ describe("pharo-nexus cli", () => {
     await expect(
       main(["project", "status", "listed", "--home", homePath, "--json"]),
     ).resolves.toBe(0);
+    await expect(
+      main(["project", "skills", "status", "listed", "--home", homePath, "--json"]),
+    ).resolves.toBe(0);
+    await expect(
+      main(["project", "skills", "refresh", "listed", "--home", homePath, "--json"]),
+    ).resolves.toBe(0);
 
     expect(JSON.parse(String(log.mock.calls[0]?.[0]))).toMatchObject({
       ok: true,
@@ -718,6 +726,43 @@ describe("pharo-nexus cli", () => {
         projectRoot,
       },
     });
+    expect(JSON.parse(String(log.mock.calls[2]?.[0]))).toMatchObject({
+      ok: true,
+      project: {
+        id: "listed",
+      },
+      skillStatus: {
+        summary: {
+          expected: 9,
+          missing: 9,
+        },
+      },
+    });
+    expect(JSON.parse(String(log.mock.calls[3]?.[0]))).toMatchObject({
+      ok: true,
+      project: {
+        id: "listed",
+      },
+      refresh: {
+        before: {
+          summary: {
+            missing: 9,
+          },
+        },
+        after: {
+          summary: {
+            expected: 9,
+            installed: 9,
+            missing: 0,
+          },
+        },
+      },
+    });
+    expect(
+      fs.existsSync(
+        path.join(projectRoot, ".dev-nexus", "skills", "pharo-nexus-workflow", "SKILL.md"),
+      ),
+    ).toBe(true);
   });
 
   it("links a project to a Vibe Kanban project id from the CLI", async () => {
