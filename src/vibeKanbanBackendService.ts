@@ -5,7 +5,7 @@ import path from "node:path";
 import {
   loadHomeConfig,
   pharoNexusLogsDirectoryName,
-  resolvePharoNexusHome,
+  resolveNexusHome,
   type NexusHomeConfig,
   type VibeKanbanBackendConfig,
   type VibeKanbanDindBackendConfig,
@@ -136,7 +136,7 @@ function loadConfig(
 
 export function vibeKanbanBackendStateDirectoryPath(homePath: string): string {
   return path.join(
-    resolvePharoNexusHome(homePath),
+    resolveNexusHome(homePath),
     vibeKanbanBackendStateDirectoryName,
     vibeKanbanBackendServicesStateDirectoryName,
   );
@@ -151,7 +151,7 @@ export function vibeKanbanBackendStatePath(homePath: string): string {
 
 export function vibeKanbanBackendLogDirectoryPath(homePath: string): string {
   return path.join(
-    resolvePharoNexusHome(homePath),
+    resolveNexusHome(homePath),
     pharoNexusLogsDirectoryName,
     vibeKanbanBackendServiceName,
   );
@@ -1165,7 +1165,7 @@ async function waitForHttpUrl(
 export async function startVibeKanbanBackend(
   options: VibeKanbanBackendStartOptions,
 ): Promise<VibeKanbanBackendServiceState> {
-  const homePath = resolvePharoNexusHome(options.homePath);
+  const homePath = resolveNexusHome(options.homePath);
   const config = loadConfig(homePath, options.config);
   const backend = config.integrations.vibeKanban.backend;
 
@@ -1285,7 +1285,7 @@ export async function startVibeKanbanBackend(
 export async function getVibeKanbanBackendStatus(
   options: VibeKanbanBackendStatusOptions,
 ): Promise<VibeKanbanBackendStatusResult> {
-  const homePath = resolvePharoNexusHome(options.homePath);
+  const homePath = resolveNexusHome(options.homePath);
   const config = loadConfig(homePath, options.config);
   const backend = config.integrations.vibeKanban.backend;
   const storedState = loadVibeKanbanBackendState(homePath);
@@ -1319,7 +1319,7 @@ export async function getVibeKanbanBackendStatus(
 export async function stopVibeKanbanBackend(
   options: VibeKanbanBackendStopOptions,
 ): Promise<VibeKanbanBackendStopResult> {
-  const homePath = resolvePharoNexusHome(options.homePath);
+  const homePath = resolveNexusHome(options.homePath);
   const config = loadConfig(homePath, options.config);
   const backend = config.integrations.vibeKanban.backend;
 

@@ -9,7 +9,7 @@ import {
   loadProjectConfig,
   projectConfigPath,
   projectWorktreesRootPath,
-  resolvePharoNexusHome,
+  resolveNexusHome,
   saveHomeConfig,
   saveProjectConfig,
   type NexusProjectConfig,
@@ -160,7 +160,7 @@ export function createPharoNexusProject(
     throw new NexusProjectError("--from and --git-init are mutually exclusive");
   }
 
-  const homePath = resolvePharoNexusHome(options.homePath);
+  const homePath = resolveNexusHome(options.homePath);
   const homeConfig = loadHomeConfig(homePath);
   const projectId = slugify(options.name);
   const projectRoot = path.resolve(
@@ -259,7 +259,7 @@ export function importPharoNexusProject(
   options: ImportPharoNexusProjectOptions,
 ): ImportPharoNexusProjectResult {
   const pharoNexusExtensions = pharoNexusProjectExtensionEntry();
-  const homePath = resolvePharoNexusHome(options.homePath);
+  const homePath = resolveNexusHome(options.homePath);
   const homeConfig = loadHomeConfig(homePath);
   const vibeKanbanProjectId =
     optionalNonEmptyString(options.vibeKanbanProjectId, "vibeKanbanProjectId") ??
@@ -384,7 +384,7 @@ export async function syncPharoNexusProjectTracker(
 ): Promise<SyncPharoNexusProjectTrackerResult> {
   assertNonEmptyString(options.project, "project");
 
-  const homePath = resolvePharoNexusHome(options.homePath);
+  const homePath = resolveNexusHome(options.homePath);
   const homeConfig = loadHomeConfig(homePath);
   const status = getNexusProjectStatus({
     homePath,

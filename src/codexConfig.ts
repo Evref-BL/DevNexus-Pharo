@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import {
   loadHomeConfig,
-  resolvePharoNexusHome,
+  resolveNexusHome,
   type NexusHomeConfig,
 } from "./config.js";
 import { defaultPharoNexusMcpHealthPath } from "./mcpServer.js";
@@ -219,7 +219,7 @@ export function initCodexWorkspace(
   options: InitCodexWorkspaceOptions,
 ): InitCodexWorkspaceResult {
   const workspacePath = path.resolve(options.workspacePath);
-  const homePath = resolvePharoNexusHome(options.homePath);
+  const homePath = resolveNexusHome(options.homePath);
   const config = options.config ?? loadHomeConfig(homePath);
   const configPath = codexConfigPath(workspacePath);
   const existingToml = fs.existsSync(configPath)
@@ -423,7 +423,7 @@ export async function doctorCodexWorkspace(
   options: DoctorCodexWorkspaceOptions,
 ): Promise<DoctorCodexWorkspaceResult> {
   const workspacePath = path.resolve(options.workspacePath);
-  const homePath = resolvePharoNexusHome(options.homePath);
+  const homePath = resolveNexusHome(options.homePath);
   const config = options.config ?? loadHomeConfig(homePath);
   const configPath = codexConfigPath(workspacePath);
   const checks: CodexDoctorCheck[] = [];

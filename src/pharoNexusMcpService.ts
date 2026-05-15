@@ -4,7 +4,7 @@ import {
   loadHomeConfig,
   pharoNexusCliEntrypointPath,
   pharoNexusLogsDirectoryName,
-  resolvePharoNexusHome,
+  resolveNexusHome,
   type NexusHomeConfig,
 } from "./config.js";
 import {
@@ -92,7 +92,7 @@ function now(): string {
 }
 
 function servicesStateDirectoryPath(homePath: string): string {
-  return path.join(resolvePharoNexusHome(homePath), "state", "services");
+  return path.join(resolveNexusHome(homePath), "state", "services");
 }
 
 export function pharoNexusMcpStatePath(homePath: string): string {
@@ -101,7 +101,7 @@ export function pharoNexusMcpStatePath(homePath: string): string {
 
 export function pharoNexusMcpLogDirectoryPath(homePath: string): string {
   return path.join(
-    resolvePharoNexusHome(homePath),
+    resolveNexusHome(homePath),
     pharoNexusLogsDirectoryName,
     pharoNexusMcpServiceName,
   );
@@ -286,7 +286,7 @@ function stateWithRuntimeStatus(
 export async function startPharoNexusMcp(
   options: PharoNexusMcpStartOptions,
 ): Promise<PharoNexusMcpServiceState> {
-  const homePath = resolvePharoNexusHome(options.homePath);
+  const homePath = resolveNexusHome(options.homePath);
   const config = loadConfig(homePath, options.config);
   const existingState = loadPharoNexusMcpState(homePath);
   const existingRuntimeState = existingState
@@ -387,7 +387,7 @@ export async function getPharoNexusMcpStatus(
 export async function stopPharoNexusMcp(
   options: PharoNexusMcpStopOptions,
 ): Promise<PharoNexusMcpStopResult> {
-  const homePath = resolvePharoNexusHome(options.homePath);
+  const homePath = resolveNexusHome(options.homePath);
   const state = loadPharoNexusMcpState(homePath);
   if (!state || !state.pid) {
     return { state };

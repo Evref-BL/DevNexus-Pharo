@@ -3,7 +3,7 @@ import path from "node:path";
 import {
   loadHomeConfig,
   pharoNexusLogsDirectoryName,
-  resolvePharoNexusHome,
+  resolveNexusHome,
   type NexusHomeConfig,
 } from "./config.js";
 import {
@@ -87,7 +87,7 @@ export interface PlexusGatewayServiceCommand {
 
 export function plexusGatewayStateDirectoryPath(homePath: string): string {
   return path.join(
-    resolvePharoNexusHome(homePath),
+    resolveNexusHome(homePath),
     pharoNexusStateDirectoryName,
     pharoNexusServicesStateDirectoryName,
   );
@@ -102,7 +102,7 @@ export function plexusGatewayStatePath(homePath: string): string {
 
 export function plexusGatewayLogDirectoryPath(homePath: string): string {
   return path.join(
-    resolvePharoNexusHome(homePath),
+    resolveNexusHome(homePath),
     pharoNexusLogsDirectoryName,
     plexusGatewayServiceName,
   );
@@ -326,7 +326,7 @@ function stateWithRuntimeStatus(
 export async function startPlexusGateway(
   options: PlexusGatewayStartOptions,
 ): Promise<PlexusGatewayServiceState> {
-  const homePath = resolvePharoNexusHome(options.homePath);
+  const homePath = resolveNexusHome(options.homePath);
   const config = loadConfig(homePath, options.config);
   const existingState = loadPlexusGatewayState(homePath);
   const existingRuntimeState = existingState
@@ -423,7 +423,7 @@ export async function getPlexusGatewayStatus(
 export async function stopPlexusGateway(
   options: PlexusGatewayStopOptions,
 ): Promise<PlexusGatewayStopResult> {
-  const homePath = resolvePharoNexusHome(options.homePath);
+  const homePath = resolveNexusHome(options.homePath);
   const state = loadPlexusGatewayState(homePath);
   if (!state || !state.pid) {
     return { state };

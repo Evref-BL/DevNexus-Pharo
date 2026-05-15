@@ -25,7 +25,7 @@ import {
   NexusConfigError,
   projectWorktreesRootPath,
   resolveNexusAgentConfig,
-  resolvePharoNexusHome,
+  resolveNexusHome,
   saveHomeConfig,
   saveProjectConfig,
   validateHomeConfig,
@@ -56,11 +56,11 @@ describe("PharoNexus home config", () => {
     const homePath = path.join(parentPath, "home");
     const relativeHomePath = path.relative(process.cwd(), homePath);
 
-    expect(resolvePharoNexusHome(relativeHomePath)).toBe(path.resolve(homePath));
+    expect(resolveNexusHome(relativeHomePath)).toBe(path.resolve(homePath));
     expect(devNexusHomeConfigPath(relativeHomePath)).toBe(
       path.join(path.resolve(homePath), devNexusHomeConfigFileName),
     );
-    expect(() => resolvePharoNexusHome("   ")).toThrow(NexusConfigError);
+    expect(() => resolveNexusHome("   ")).toThrow(NexusConfigError);
   });
 
   it("creates a default home config under the selected home", () => {

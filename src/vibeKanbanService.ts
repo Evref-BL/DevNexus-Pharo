@@ -3,7 +3,7 @@ import path from "node:path";
 import {
   loadHomeConfig,
   pharoNexusLogsDirectoryName,
-  resolvePharoNexusHome,
+  resolveNexusHome,
   type NexusHomeConfig,
 } from "./config.js";
 import {
@@ -81,7 +81,7 @@ export class VibeKanbanServiceError extends Error {
 
 export function vibeKanbanStateDirectoryPath(homePath: string): string {
   return path.join(
-    resolvePharoNexusHome(homePath),
+    resolveNexusHome(homePath),
     vibeKanbanStateDirectoryName,
     vibeKanbanServicesStateDirectoryName,
   );
@@ -93,7 +93,7 @@ export function vibeKanbanStatePath(homePath: string): string {
 
 export function vibeKanbanLogDirectoryPath(homePath: string): string {
   return path.join(
-    resolvePharoNexusHome(homePath),
+    resolveNexusHome(homePath),
     pharoNexusLogsDirectoryName,
     vibeKanbanServiceName,
   );
@@ -262,7 +262,7 @@ async function stopVibeKanbanPortOwner(
 export async function startVibeKanban(
   options: VibeKanbanStartOptions,
 ): Promise<VibeKanbanServiceState> {
-  const homePath = resolvePharoNexusHome(options.homePath);
+  const homePath = resolveNexusHome(options.homePath);
   const config = loadConfig(homePath, options.config);
   const existingState = loadVibeKanbanState(homePath);
   const existingRuntimeState = existingState
@@ -359,7 +359,7 @@ export async function getVibeKanbanStatus(
 export async function stopVibeKanban(
   options: VibeKanbanStopOptions,
 ): Promise<VibeKanbanStopResult> {
-  const homePath = resolvePharoNexusHome(options.homePath);
+  const homePath = resolveNexusHome(options.homePath);
   const config = loadConfig(homePath, undefined);
   const state = loadVibeKanbanState(homePath);
   if (!state || !state.pid) {

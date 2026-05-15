@@ -13,7 +13,7 @@ import {
   pharoNexusControlProjectId,
   pharoNexusControlProjectName,
   projectConfigPath,
-  resolvePharoNexusHome,
+  resolveNexusHome,
   saveHomeConfig,
   saveProjectConfig,
   type NexusHomeConfig,
@@ -569,7 +569,7 @@ function vibeKanbanProjectUrl(port: number, projectId: string | null): string {
 export async function startPharoNexus(
   options: PharoNexusStartOptions,
 ): Promise<PharoNexusStartResult> {
-  const homePath = resolvePharoNexusHome(options.homePath);
+  const homePath = resolveNexusHome(options.homePath);
   options.progress?.(`Using PharoNexus home: ${homePath}`);
   const config = loadConfig(homePath, options.config);
   const vibeKanbanBackend = await ensureVibeKanbanBackendReady(
@@ -728,7 +728,7 @@ export async function startPharoNexus(
 export async function getPharoNexusStatus(
   options: PharoNexusStatusOptions,
 ): Promise<PharoNexusStatusResult> {
-  const homePath = resolvePharoNexusHome(options.homePath);
+  const homePath = resolveNexusHome(options.homePath);
   const config = loadConfig(homePath, options.config);
   const vibeKanbanBackend = await getVibeKanbanBackendStatus({
     homePath,
@@ -776,7 +776,7 @@ export async function getPharoNexusStatus(
 export async function stopPharoNexus(
   options: PharoNexusStopOptions,
 ): Promise<PharoNexusStopResult> {
-  const homePath = resolvePharoNexusHome(options.homePath);
+  const homePath = resolveNexusHome(options.homePath);
   options.progress?.(`Using PharoNexus home: ${homePath}`);
   const config = loadConfig(homePath, options.config);
   options.progress?.("Stopping Vibe Kanban app...");

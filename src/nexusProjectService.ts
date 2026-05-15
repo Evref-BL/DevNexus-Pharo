@@ -10,7 +10,7 @@ import {
   nexusProjectWorktreesDirectoryName,
   projectConfigPath,
   projectWorktreesRootPath,
-  resolvePharoNexusHome,
+  resolveNexusHome,
   saveHomeConfig,
   saveProjectConfig,
   type NexusProjectExtensionsConfig,
@@ -895,7 +895,7 @@ export function createNexusProject(
     throw new NexusProjectError("--from and --git-init are mutually exclusive");
   }
 
-  const homePath = resolvePharoNexusHome(options.homePath);
+  const homePath = resolveNexusHome(options.homePath);
   const homeConfig = loadHomeConfig(homePath);
   const projectId = slugify(options.name);
   const projectRoot = path.resolve(
@@ -974,7 +974,7 @@ export function createNexusProject(
 export function importNexusProject(
   options: ImportNexusProjectOptions,
 ): ImportNexusProjectResult {
-  const homePath = resolvePharoNexusHome(options.homePath);
+  const homePath = resolveNexusHome(options.homePath);
   const homeConfig = loadHomeConfig(homePath);
   const vibeKanbanProjectId =
     optionalNonEmptyString(options.vibeKanbanProjectId, "vibeKanbanProjectId") ??
@@ -1071,7 +1071,7 @@ export function importNexusProject(
 export function listNexusProjects(
   options: ListNexusProjectsOptions,
 ): ListNexusProjectsResult {
-  const homePath = resolvePharoNexusHome(options.homePath);
+  const homePath = resolveNexusHome(options.homePath);
   const homeConfig = loadHomeConfig(homePath);
 
   return {
@@ -1085,7 +1085,7 @@ export function getNexusProjectStatus(
 ): GetNexusProjectStatusResult {
   assertNonEmptyString(options.project, "project");
 
-  const homePath = resolvePharoNexusHome(options.homePath);
+  const homePath = resolveNexusHome(options.homePath);
   const homeConfig = loadHomeConfig(homePath);
   const projectSelector = options.project.trim();
   const reference =
@@ -1128,7 +1128,7 @@ export function linkNexusProjectTracker(
     throw new NexusProjectError("trackerProjectId must be a non-empty string");
   }
 
-  const homePath = resolvePharoNexusHome(options.homePath);
+  const homePath = resolveNexusHome(options.homePath);
   const homeConfig = loadHomeConfig(homePath);
   const existingReference = findProjectReference(homeConfig, options.project);
   const projectRoot = existingReference
@@ -1174,7 +1174,7 @@ export function configureNexusProjectTracker(
   assertNonEmptyString(options.project, "project");
   assertNonEmptyString(options.provider, "provider");
 
-  const homePath = resolvePharoNexusHome(options.homePath);
+  const homePath = resolveNexusHome(options.homePath);
   const homeConfig = loadHomeConfig(homePath);
   const existingReference = findProjectReference(homeConfig, options.project);
   const projectRoot = existingReference

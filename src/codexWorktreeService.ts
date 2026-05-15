@@ -6,7 +6,7 @@ import {
   loadProjectConfig,
   nexusGeneratedDirectoryName,
   projectWorktreesRootPath,
-  resolvePharoNexusHome,
+  resolveNexusHome,
   type NexusProjectConfig,
 } from "./config.js";
 import {
@@ -194,7 +194,7 @@ export class CodexWorktreeServiceError extends Error {
 export function prepareCodexWorktree(
   options: PrepareCodexWorktreeOptions,
 ): PrepareCodexWorktreeResult {
-  const homePath = resolvePharoNexusHome(options.homePath);
+  const homePath = resolveNexusHome(options.homePath);
   const status = getNexusProjectStatus({
     homePath,
     project: options.project,
@@ -281,7 +281,7 @@ export function prepareCodexWorktree(
 export function archiveCodexWorktree(
   options: ArchiveCodexWorktreeOptions,
 ): ArchiveCodexWorktreeResult {
-  const homePath = resolvePharoNexusHome(options.homePath);
+  const homePath = resolveNexusHome(options.homePath);
   const metadataPath = codexWorktreeMetadataStorePath(homePath);
   const archivedAt = nowString(options.now);
   const store = readCodexWorktreeMetadataStore(metadataPath, archivedAt);
@@ -327,7 +327,7 @@ export function archiveCodexWorktree(
 export function listCodexWorktrees(
   options: ListCodexWorktreesOptions,
 ): ListCodexWorktreesResult {
-  const homePath = resolvePharoNexusHome(options.homePath);
+  const homePath = resolveNexusHome(options.homePath);
   const metadataPath = codexWorktreeMetadataStorePath(homePath);
   const store = readCodexWorktreeMetadataStore(
     metadataPath,
@@ -354,7 +354,7 @@ export function listCodexWorktrees(
 export function getCodexWorktreeStatus(
   options: GetCodexWorktreeStatusOptions,
 ): GetCodexWorktreeStatusResult {
-  const homePath = resolvePharoNexusHome(options.homePath);
+  const homePath = resolveNexusHome(options.homePath);
   const metadataPath = codexWorktreeMetadataStorePath(homePath);
   const store = readCodexWorktreeMetadataStore(
     metadataPath,
@@ -377,7 +377,7 @@ export function getCodexWorktreeStatus(
 export function recordCodexWorktreeExecution(
   options: RecordCodexWorktreeExecutionOptions,
 ): RecordCodexWorktreeExecutionResult {
-  const homePath = resolvePharoNexusHome(options.homePath);
+  const homePath = resolveNexusHome(options.homePath);
   const metadataPath = codexWorktreeMetadataStorePath(homePath);
   const updatedAt = nowString(options.now);
   const store = readCodexWorktreeMetadataStore(metadataPath, updatedAt);
@@ -452,7 +452,7 @@ export function recordCodexWorktreeExecution(
 
 export function codexWorktreeMetadataStorePath(homePath: string): string {
   return path.join(
-    resolvePharoNexusHome(homePath),
+    resolveNexusHome(homePath),
     nexusGeneratedDirectoryName,
     codexWorktreeMetadataFileName,
   );

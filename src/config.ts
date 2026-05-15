@@ -238,28 +238,28 @@ export function defaultNexusToolCommand(): NexusToolCommand {
   };
 }
 
-export function resolvePharoNexusHome(homePath: string): string {
+export function resolveNexusHome(homePath: string): string {
   if (!homePath.trim()) {
-    throw new NexusConfigError("PharoNexus home path is required");
+    throw new NexusConfigError("Nexus home path is required");
   }
 
   return path.resolve(homePath);
 }
 
 export function devNexusHomeConfigPath(homePath: string): string {
-  return path.join(resolvePharoNexusHome(homePath), devNexusHomeConfigFileName);
+  return path.join(resolveNexusHome(homePath), devNexusHomeConfigFileName);
 }
 
 export function controlProjectRootPath(homePath: string): string {
   return path.join(
-    resolvePharoNexusHome(homePath),
+    resolveNexusHome(homePath),
     pharoNexusControlProjectDirectoryName,
   );
 }
 
 export function legacyControlProjectRootPath(homePath: string): string {
   return path.join(
-    resolvePharoNexusHome(homePath),
+    resolveNexusHome(homePath),
     pharoNexusLegacyControlProjectDirectoryName,
   );
 }
@@ -367,7 +367,7 @@ export function createDefaultHomeConfig(
   homePath: string,
   options: CreateDefaultHomeConfigOptions = {},
 ): NexusHomeConfig {
-  const resolvedHomePath = resolvePharoNexusHome(homePath);
+  const resolvedHomePath = resolveNexusHome(homePath);
   const config: NexusHomeConfig = {
     version: 1,
     paths: {
@@ -1039,7 +1039,7 @@ function validateVibeKanbanBackendConfig(
   value: unknown,
   homePathForDefaults: string | undefined,
 ): VibeKanbanBackendConfig {
-  const homePath = resolvePharoNexusHome(homePathForDefaults ?? ".");
+  const homePath = resolveNexusHome(homePathForDefaults ?? ".");
   const defaults = defaultVibeKanbanBackendConfig(homePath);
   const dindDefaults = defaultVibeKanbanDindBackendConfig(homePath);
   if (value === undefined) {
@@ -1482,7 +1482,7 @@ export function loadHomeConfig(homePath: string): NexusHomeConfig {
 
   return validateHomeConfig(
     JSON.parse(fs.readFileSync(configPath, "utf8").replace(/^\uFEFF/, "")),
-    resolvePharoNexusHome(homePath),
+    resolveNexusHome(homePath),
   );
 }
 
@@ -1503,7 +1503,7 @@ export function saveHomeConfig(
 export function initPharoNexusHome(
   options: InitPharoNexusHomeOptions,
 ): InitPharoNexusHomeResult {
-  const homePath = resolvePharoNexusHome(options.homePath);
+  const homePath = resolveNexusHome(options.homePath);
   const configPath = devNexusHomeConfigPath(homePath);
   if (fs.existsSync(configPath) && !options.force) {
     throw new NexusConfigError(

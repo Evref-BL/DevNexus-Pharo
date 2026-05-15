@@ -1,6 +1,6 @@
 import {
   loadHomeConfig,
-  resolvePharoNexusHome,
+  resolveNexusHome,
   type NexusHomeConfig,
 } from "./config.js";
 
@@ -413,7 +413,7 @@ export function mergeMcpServerConfig(
 export async function installPlexusMcpForExecutor(
   options: InstallPlexusMcpConfigOptions,
 ): Promise<InstallPlexusMcpConfigResult> {
-  const homePath = resolvePharoNexusHome(options.homePath);
+  const homePath = resolveNexusHome(options.homePath);
   const config = options.config ?? loadHomeConfig(homePath);
   const executor = normalizeVibeKanbanExecutor(options.executor);
   const serverName = options.serverName ?? defaultPlexusMcpServerName;
@@ -458,7 +458,7 @@ export async function installPlexusMcpForExecutor(
 export async function installPharoNexusAndPlexusMcpForExecutor(
   options: InstallPharoNexusAndPlexusMcpConfigOptions,
 ): Promise<InstallPharoNexusAndPlexusMcpConfigResult> {
-  const homePath = resolvePharoNexusHome(options.homePath);
+  const homePath = resolveNexusHome(options.homePath);
   const config = options.config ?? loadHomeConfig(homePath);
   const executor = normalizeVibeKanbanExecutor(options.executor);
   const pharoNexusServerName =
