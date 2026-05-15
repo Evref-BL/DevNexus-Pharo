@@ -12,6 +12,7 @@ import {
   defaultVibeKanbanToolCommand,
   ensureControlProject,
   initPharoNexusHome,
+  legacyKanbanFromWorkTracking,
   loadHomeConfig,
   loadProjectConfig,
   pharoNexusControlProjectId,
@@ -26,12 +27,14 @@ import {
   plexusProjectConfigFileName,
   projectPlexusConfigPath,
   projectWorktreesRootPath,
+  resolveProjectWorkTrackingConfig,
   resolvePharoNexusAgentConfig,
   resolvePharoNexusHome,
   saveHomeConfig,
   saveProjectConfig,
   validateHomeConfig,
   validateProjectConfig,
+  workTrackingFromLegacyKanban,
 } from "./config.js";
 
 const tempDirs: string[] = [];
@@ -322,6 +325,138 @@ describe("PharoNexus home config", () => {
         projectId: null,
       },
     });
+  });
+
+  it("resolves legacy Kanban config to provider-neutral work tracking", () => {
+    const legacyConfig = validateProjectConfig({
+      version: 1,
+      id: "legacy-project",
+      name: "Legacy Project",
+      kanban: {
+        provider: "vibe-kanban",
+        projectId: "vk-project",
+      },
+    });
+
+    expect(workTrackingFromLegacyKanban(legacyConfig.kanban)).toEqual({
+      provider: "vibe-kanban",
+      projectId: "vk-project",
+    });
+    expect(resolveProjectWorkTrackingConfig(legacyConfig)).toEqual({
+      provider: "vibe-kanban",
+      projectId: "vk-project",
+    });
+  });
+
+  it("accepts provider-neutral local work tracking config", () => {
+    const config = validateProjectConfig({
+      version: 1,
+      id: "local-tracked-project",
+      name: "Local Tracked Project",
+      kanban: {
+        provider: "vibe-kanban",
+        projectId: null,
+      },
+      workTracking: {
+        provider: "local",
+        storePath: ".pharo-nexus/work-items.json",
+      },
+    });
+
+    expect(config.workTracking).toEqual({
+      provider: "local",
+      storePath: ".pharo-nexus/work-items.json",
+    });
+    expect(resolveProjectWorkTrackingConfig(config)).toEqual(config.workTracking);
+    expect(legacyKanbanFromWorkTracking(config.workTracking!)).toBeUndefined();
+  });
+
+  it("accepts provider-neutral GitHub work tracking config", () => {
+    const config = validateProjectConfig({
+      version: 1,
+      id: "github-tracked-project",
+      name: "GitHub Tracked Project",
+      kanban: {
+        provider: "vibe-kanban",
+        projectId: null,
+      },
+      workTracking: {
+        provider: "github",
+        host: "https://github.com",
+        repository: {
+          owner: "example",
+          name: "project",
+        },
+        board: {
+          kind: "github-project-v2",
+          ownerKind: "organization",
+          owner: "example",
+          number: 1,
+          projectId: "PVT_project",
+          statusFieldId: "PVTSSF_status",
+          statusOptions: {
+            todo: "Todo",
+            done: "Done",
+          },
+        },
+      },
+    });
+
+    expect(config.workTracking).toEqual({
+      provider: "github",
+      host: "https://github.com",
+      repository: {
+        owner: "example",
+        name: "project",
+      },
+      board: {
+        kind: "github-project-v2",
+        ownerKind: "organization",
+        owner: "example",
+        number: 1,
+        projectId: "PVT_project",
+        statusFieldId: "PVTSSF_status",
+        statusOptions: {
+          todo: "Todo",
+          done: "Done",
+        },
+      },
+    });
+  });
+
+  it("rejects invalid provider-neutral work tracking config", () => {
+    expect(() =>
+      validateProjectConfig({
+        version: 1,
+        id: "invalid-tracked-project",
+        name: "Invalid Tracked Project",
+        kanban: {
+          provider: "vibe-kanban",
+          projectId: null,
+        },
+        workTracking: {
+          provider: "trello",
+        },
+      }),
+    ).toThrow(/workTracking\.provider/);
+
+    expect(() =>
+      validateProjectConfig({
+        version: 1,
+        id: "invalid-github-project",
+        name: "Invalid GitHub Project",
+        kanban: {
+          provider: "vibe-kanban",
+          projectId: null,
+        },
+        workTracking: {
+          provider: "github",
+          repository: {
+            owner: "example",
+          },
+        },
+      }),
+    ).toThrow(/workTracking\.repository\.name/);
   });
 
   it("resolves project-local paths from the project directory", () => {

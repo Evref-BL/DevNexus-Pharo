@@ -3,6 +3,17 @@ import os from "node:os";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
+import type {
+  GitHubWorkTrackingConfig,
+  GitLabWorkTrackingConfig,
+  JiraWorkTrackingConfig,
+  LocalWorkTrackingConfig,
+  VibeKanbanWorkTrackingConfig,
+  WorkTrackingBoardConfig,
+  WorkTrackingConfig,
+  WorkTrackingProviderName,
+  WorkTrackingRepositoryConfig,
+} from "./workTrackingTypes.js";
 
 export const pharoNexusHomeConfigFileName = "pharo-nexus.home.json";
 export const pharoNexusProjectConfigFileName = "pharo-nexus.project.json";
@@ -48,6 +59,11 @@ export interface PharoNexusAgentConfig {
   reasoning?: string;
 }
 
+export interface PharoNexusProjectKanbanConfig {
+  provider: "vibe-kanban";
+  projectId: string | null;
+}
+
 export interface PharoNexusProjectConfig {
   version: 1;
   id: string;
@@ -56,10 +72,8 @@ export interface PharoNexusProjectConfig {
   repo: PharoNexusProjectRepoConfig;
   plexusProjectConfig: string;
   worktreesRoot: string;
-  kanban: {
-    provider: "vibe-kanban";
-    projectId: string | null;
-  };
+  kanban: PharoNexusProjectKanbanConfig;
+  workTracking?: WorkTrackingConfig;
   agent?: PharoNexusAgentConfig;
 }
 
@@ -703,9 +717,7 @@ function validateControlProjectReference(
   };
 }
 
-function validateKanbanConfig(
-  value: unknown,
-): PharoNexusProjectConfig["kanban"] {
+function validateKanbanConfig(value: unknown): PharoNexusProjectKanbanConfig {
   const record = assertRecord(value, "kanban");
   if (record.provider !== "vibe-kanban") {
     throw new PharoNexusConfigError("kanban.provider must be vibe-kanban");
@@ -715,6 +727,290 @@ function validateKanbanConfig(
     provider: "vibe-kanban",
     projectId: nullableString(record, "projectId", "kanban"),
   };
+}
+
+function validateWorkTrackingProviderName(
+  value: unknown,
+): WorkTrackingProviderName {
+  if (
+    value === "local" ||
+    value === "vibe-kanban" ||
+    value === "github" ||
+    value === "gitlab" ||
+    value === "jira"
+  ) {
+    return value;
+  }
+
+  throw new PharoNexusConfigError(
+    "workTracking.provider must be local, vibe-kanban, github, gitlab, or jira",
+  );
+}
+
+function optionalNullableString(
+  record: Record<string, unknown>,
+  key: string,
+  pathName: string,
+): string | null | undefined {
+  const value = record[key];
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (value === null) {
+    return null;
+  }
+
+  if (typeof value !== "string" || value.trim().length === 0) {
+    throw new PharoNexusConfigError(
+      `${pathName}.${key} must be a non-empty string or null`,
+    );
+  }
+
+  return value;
+}
+
+function optionalInteger(
+  record: Record<string, unknown>,
+  key: string,
+  pathName: string,
+): number | null | undefined {
+  const value = record[key];
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (value === null) {
+    return null;
+  }
+
+  if (typeof value !== "number" || !Number.isInteger(value)) {
+    throw new PharoNexusConfigError(`${pathName}.${key} must be an integer or null`);
+  }
+
+  return value;
+}
+
+function optionalStringRecord(
+  record: Record<string, unknown>,
+  key: string,
+  pathName: string,
+): Record<string, string> | undefined {
+  const value = record[key];
+  if (value === undefined) {
+    return undefined;
+  }
+
+  const valueRecord = assertRecord(value, `${pathName}.${key}`);
+  for (const [recordKey, recordValue] of Object.entries(valueRecord)) {
+    if (typeof recordValue !== "string") {
+      throw new PharoNexusConfigError(
+        `${pathName}.${key}.${recordKey} must be a string`,
+      );
+    }
+  }
+
+  return valueRecord as Record<string, string>;
+}
+
+function validateWorkTrackingRepositoryConfig(
+  value: unknown,
+  pathName: string,
+): WorkTrackingRepositoryConfig | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  const record = assertRecord(value, pathName);
+  const owner = optionalString(record, "owner", pathName);
+  const name = optionalString(record, "name", pathName);
+  const id = optionalString(record, "id", pathName);
+  const repositoryPath = optionalString(record, "path", pathName);
+
+  return {
+    ...(owner ? { owner } : {}),
+    ...(name ? { name } : {}),
+    ...(id ? { id } : {}),
+    ...(repositoryPath ? { path: repositoryPath } : {}),
+  };
+}
+
+function validateRequiredWorkTrackingRepositoryConfig(
+  value: unknown,
+  pathName: string,
+): WorkTrackingRepositoryConfig {
+  const repository = validateWorkTrackingRepositoryConfig(value, pathName);
+  if (!repository) {
+    throw new PharoNexusConfigError(`${pathName} must be an object`);
+  }
+
+  return repository;
+}
+
+function validateWorkTrackingBoardConfig(
+  value: unknown,
+): WorkTrackingBoardConfig | null | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (value === null) {
+    return null;
+  }
+
+  const pathName = "workTracking.board";
+  const record = assertRecord(value, pathName);
+  const id = optionalNullableString(record, "id", pathName);
+  const number = optionalInteger(record, "number", pathName);
+  const owner = optionalNullableString(record, "owner", pathName);
+  const ownerKind = optionalNullableString(record, "ownerKind", pathName);
+  const projectId = optionalNullableString(record, "projectId", pathName);
+  const statusFieldId = optionalNullableString(
+    record,
+    "statusFieldId",
+    pathName,
+  );
+  const statusOptions = optionalStringRecord(record, "statusOptions", pathName);
+
+  return {
+    kind: requiredString(record, "kind", pathName),
+    ...(id !== undefined ? { id } : {}),
+    ...(number !== undefined ? { number } : {}),
+    ...(owner !== undefined ? { owner } : {}),
+    ...(ownerKind !== undefined ? { ownerKind } : {}),
+    ...(projectId !== undefined ? { projectId } : {}),
+    ...(statusFieldId !== undefined ? { statusFieldId } : {}),
+    ...(statusOptions ? { statusOptions } : {}),
+  };
+}
+
+function validateWorkTrackingConfig(
+  value: unknown,
+): WorkTrackingConfig | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  const record = assertRecord(value, "workTracking");
+  const provider = validateWorkTrackingProviderName(record.provider);
+  const host = optionalNullableString(record, "host", "workTracking");
+  const repository = validateWorkTrackingRepositoryConfig(
+    record.repository,
+    "workTracking.repository",
+  );
+  const board = validateWorkTrackingBoardConfig(record.board);
+  const common = {
+    ...(host !== undefined ? { host } : {}),
+    ...(repository ? { repository } : {}),
+    ...(board !== undefined ? { board } : {}),
+  };
+
+  if (provider === "local") {
+    const storePath = optionalNullableString(record, "storePath", "workTracking");
+
+    return {
+      provider,
+      ...common,
+      ...(storePath !== undefined ? { storePath } : {}),
+    } satisfies LocalWorkTrackingConfig;
+  }
+
+  if (provider === "vibe-kanban") {
+    const projectId = optionalNullableString(record, "projectId", "workTracking");
+    const repoId = optionalNullableString(record, "repoId", "workTracking");
+
+    return {
+      provider,
+      ...common,
+      ...(projectId !== undefined ? { projectId } : {}),
+      ...(repoId !== undefined ? { repoId } : {}),
+    } satisfies VibeKanbanWorkTrackingConfig;
+  }
+
+  if (provider === "github") {
+    const githubRepository = validateRequiredWorkTrackingRepositoryConfig(
+      record.repository,
+      "workTracking.repository",
+    );
+    if (!githubRepository.owner) {
+      throw new PharoNexusConfigError(
+        "workTracking.repository.owner must be a non-empty string",
+      );
+    }
+    if (!githubRepository.name) {
+      throw new PharoNexusConfigError(
+        "workTracking.repository.name must be a non-empty string",
+      );
+    }
+
+    return {
+      provider,
+      ...common,
+      repository: {
+        ...githubRepository,
+        owner: githubRepository.owner,
+        name: githubRepository.name,
+      },
+    } satisfies GitHubWorkTrackingConfig;
+  }
+
+  if (provider === "gitlab") {
+    const gitlabRepository = validateRequiredWorkTrackingRepositoryConfig(
+      record.repository,
+      "workTracking.repository",
+    );
+    if (!gitlabRepository.id) {
+      throw new PharoNexusConfigError(
+        "workTracking.repository.id must be a non-empty string",
+      );
+    }
+
+    return {
+      provider,
+      ...common,
+      repository: {
+        ...gitlabRepository,
+        id: gitlabRepository.id,
+      },
+    } satisfies GitLabWorkTrackingConfig;
+  }
+
+  const issueType = optionalNullableString(record, "issueType", "workTracking");
+
+  return {
+    provider,
+    ...common,
+    projectKey: requiredString(record, "projectKey", "workTracking"),
+    ...(issueType !== undefined ? { issueType } : {}),
+  } satisfies JiraWorkTrackingConfig;
+}
+
+export function workTrackingFromLegacyKanban(
+  kanban: PharoNexusProjectKanbanConfig,
+): VibeKanbanWorkTrackingConfig {
+  return {
+    provider: "vibe-kanban",
+    projectId: kanban.projectId,
+  };
+}
+
+export function legacyKanbanFromWorkTracking(
+  workTracking: WorkTrackingConfig,
+): PharoNexusProjectKanbanConfig | undefined {
+  if (workTracking.provider !== "vibe-kanban") {
+    return undefined;
+  }
+
+  return {
+    provider: "vibe-kanban",
+    projectId: workTracking.projectId ?? null,
+  };
+}
+
+export function resolveProjectWorkTrackingConfig(
+  config: Pick<PharoNexusProjectConfig, "kanban" | "workTracking">,
+): WorkTrackingConfig {
+  return config.workTracking ?? workTrackingFromLegacyKanban(config.kanban);
 }
 
 function validateRepoConfig(value: unknown): PharoNexusProjectRepoConfig {
@@ -895,6 +1191,7 @@ export function validateProjectConfig(value: unknown): PharoNexusProjectConfig {
     throw new PharoNexusConfigError("project config.version must be 1");
   }
   const agent = validateAgentConfig(record.agent, "project config.agent");
+  const workTracking = validateWorkTrackingConfig(record.workTracking);
 
   return {
     version: 1,
@@ -909,6 +1206,7 @@ export function validateProjectConfig(value: unknown): PharoNexusProjectConfig {
       optionalString(record, "worktreesRoot", "project config") ??
       pharoNexusProjectWorktreesDirectoryName,
     kanban: validateKanbanConfig(record.kanban),
+    ...(workTracking ? { workTracking } : {}),
     ...(agent ? { agent } : {}),
   };
 }
