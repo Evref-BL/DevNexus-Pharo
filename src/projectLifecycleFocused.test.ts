@@ -22,7 +22,7 @@ import {
 import {
   createPharoNexusProject,
   importPharoNexusProject,
-  PharoNexusProjectError,
+  NexusProjectError,
   type GitCommandResult,
   type GitRunner,
 } from "./projectService.js";
@@ -227,7 +227,7 @@ describe("PharoNexus focused project lifecycle contracts", () => {
         root: path.join(makeTempDir("pharo-nexus-projects-"), "Duplicate2"),
         gitRunner: fakeGitRunner(gitCalls),
       }),
-    ).toThrow(PharoNexusProjectError);
+    ).toThrow(NexusProjectError);
     expect(gitCalls).toEqual([]);
   });
 

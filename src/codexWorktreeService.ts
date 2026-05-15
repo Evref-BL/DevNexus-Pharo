@@ -7,10 +7,10 @@ import {
   pharoNexusGeneratedDirectoryName,
   projectWorktreesRootPath,
   resolvePharoNexusHome,
-  type PharoNexusProjectConfig,
+  type NexusProjectConfig,
 } from "./config.js";
 import {
-  getPharoNexusProjectStatus,
+  getNexusProjectStatus,
   type GitCommandResult,
   type GitRunner,
 } from "./projectService.js";
@@ -195,7 +195,7 @@ export function prepareCodexWorktree(
   options: PrepareCodexWorktreeOptions,
 ): PrepareCodexWorktreeResult {
   const homePath = resolvePharoNexusHome(options.homePath);
-  const status = getPharoNexusProjectStatus({
+  const status = getNexusProjectStatus({
     homePath,
     project: options.project,
   }).project;
@@ -334,7 +334,7 @@ export function listCodexWorktrees(
     nowString(options.now),
   );
   const projectId = options.project
-    ? getPharoNexusProjectStatus({
+    ? getNexusProjectStatus({
         homePath,
         project: options.project,
       }).project.id
@@ -471,7 +471,7 @@ function codexWorktreeStatusFromRecord(
 
 function resolveProjectSourceRoot(
   projectRoot: string,
-  projectConfig: PharoNexusProjectConfig,
+  projectConfig: NexusProjectConfig,
 ): string {
   const sourceRoot = projectConfig.repo.sourceRoot;
   if (!sourceRoot) {

@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import type { PharoNexusHomeConfig, VibeKanbanBackendConfig } from "./config.js";
+import type { NexusHomeConfig, VibeKanbanBackendConfig } from "./config.js";
 import {
   vibeKanbanApiBaseUrl,
   type VibeKanbanApiOptions,
@@ -30,7 +30,7 @@ export interface VibeKanbanAutoLoginResult {
 
 export interface EnsureVibeKanbanSelfHostedLoginOptions
   extends VibeKanbanApiOptions {
-  config: PharoNexusHomeConfig;
+  config: NexusHomeConfig;
 }
 
 export class VibeKanbanAuthError extends Error {
@@ -109,7 +109,7 @@ function managedBackendEnvFile(
 }
 
 export function readVibeKanbanLocalAuthCredentials(
-  config: PharoNexusHomeConfig,
+  config: NexusHomeConfig,
 ): VibeKanbanLocalAuthCredentials | undefined {
   const envFile = managedBackendEnvFile(config.integrations.vibeKanban.backend);
   if (!envFile || !fs.existsSync(envFile)) {

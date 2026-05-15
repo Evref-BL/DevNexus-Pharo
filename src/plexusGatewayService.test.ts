@@ -7,7 +7,7 @@ import {
   initPharoNexusHome,
   loadHomeConfig,
   saveHomeConfig,
-  type PharoNexusHomeConfig,
+  type NexusHomeConfig,
 } from "./config.js";
 import {
   buildPlexusGatewayServiceArgs,
@@ -58,7 +58,7 @@ function fileIncludes(filePath: string, expected: string): boolean {
 
 function initHomeWithGateway(
   args: string[],
-  configure?: (config: PharoNexusHomeConfig) => void,
+  configure?: (config: NexusHomeConfig) => void,
 ): string {
   const homePath = makeTempDir("pharo-nexus-home-");
   initPharoNexusHome({ homePath });

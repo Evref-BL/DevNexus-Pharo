@@ -21,7 +21,7 @@ export const pharoNexusLogsDirectoryName = "logs";
 export const pharoNexusGeneratedDirectoryName = "generated";
 export const pharoNexusControlProjectDirectoryName = "PharoNexus";
 export const pharoNexusLegacyControlProjectDirectoryName = "control";
-export const pharoNexusProjectWorktreesDirectoryName = "worktrees";
+export const nexusProjectWorktreesDirectoryName = "worktrees";
 export const pharoNexusControlProjectId = "pharo-nexus-control";
 export const pharoNexusControlProjectName = "PharoNexus";
 export const vibeKanbanPinnedVersion = "0.1.43";
@@ -43,42 +43,42 @@ export interface NexusControlProjectReference {
   vibeKanbanRepoId: string | null;
 }
 
-export type PharoNexusProjectRepoKind = "local" | "git";
+export type NexusProjectRepoKind = "local" | "git";
 
-export interface PharoNexusProjectRepoConfig {
-  kind: PharoNexusProjectRepoKind;
+export interface NexusProjectRepoConfig {
+  kind: NexusProjectRepoKind;
   remoteUrl: string | null;
   defaultBranch: string | null;
   sourceRoot?: string;
 }
 
-export interface PharoNexusAgentConfig {
+export interface NexusAgentConfig {
   executor?: string;
   model?: string;
   reasoning?: string;
 }
 
-export interface PharoNexusProjectKanbanConfig {
+export interface NexusProjectKanbanConfig {
   provider: "vibe-kanban";
   projectId: string | null;
 }
 
 export type NexusProjectExtensionsConfig = Record<string, Record<string, unknown>>;
 
-export interface PharoNexusProjectConfig {
+export interface NexusProjectConfig {
   version: 1;
   id: string;
   name: string;
   home: string | null;
-  repo: PharoNexusProjectRepoConfig;
+  repo: NexusProjectRepoConfig;
   worktreesRoot: string;
-  kanban: PharoNexusProjectKanbanConfig;
+  kanban: NexusProjectKanbanConfig;
   workTracking?: WorkTrackingConfig;
   extensions?: NexusProjectExtensionsConfig;
-  agent?: PharoNexusAgentConfig;
+  agent?: NexusAgentConfig;
 }
 
-export interface PharoNexusToolCommand {
+export interface NexusToolCommand {
   command: string;
   args: string[];
 }
@@ -137,7 +137,7 @@ export type VibeKanbanBackendConfig =
   | VibeKanbanDindBackendConfig
   | VibeKanbanExternalBackendConfig;
 
-export interface PharoNexusHomeConfig {
+export interface NexusHomeConfig {
   version: 1;
   paths: {
     projectsRoot: string;
@@ -153,9 +153,9 @@ export interface PharoNexusHomeConfig {
     host: string;
   };
   tools: {
-    pharoNexus: PharoNexusToolCommand;
-    vibeKanban: PharoNexusToolCommand;
-    plexus: PharoNexusToolCommand;
+    pharoNexus: NexusToolCommand;
+    vibeKanban: NexusToolCommand;
+    plexus: NexusToolCommand;
   };
   integrations: {
     vibeKanban: {
@@ -167,16 +167,16 @@ export interface PharoNexusHomeConfig {
       backend: VibeKanbanBackendConfig;
     };
   };
-  agent?: PharoNexusAgentConfig;
+  agent?: NexusAgentConfig;
   controlProject: NexusControlProjectReference;
   projects: NexusProjectReference[];
 }
 
-export interface ResolvePharoNexusAgentConfigOptions {
-  issue?: PharoNexusAgentConfig;
-  project?: Pick<PharoNexusProjectConfig, "agent"> | PharoNexusAgentConfig;
-  home?: Pick<PharoNexusHomeConfig, "agent"> | PharoNexusAgentConfig;
-  fallback?: PharoNexusAgentConfig;
+export interface ResolveNexusAgentConfigOptions {
+  issue?: NexusAgentConfig;
+  project?: Pick<NexusProjectConfig, "agent"> | NexusAgentConfig;
+  home?: Pick<NexusHomeConfig, "agent"> | NexusAgentConfig;
+  fallback?: NexusAgentConfig;
 }
 
 export interface CreateDefaultHomeConfigOptions {
@@ -197,15 +197,15 @@ export interface InitPharoNexusHomeOptions extends CreateDefaultHomeConfigOption
 export interface InitPharoNexusHomeResult {
   homePath: string;
   configPath: string;
-  config: PharoNexusHomeConfig;
+  config: NexusHomeConfig;
   controlProjectPath: string;
   controlProjectConfigPath: string;
 }
 
-export class PharoNexusConfigError extends Error {
+export class NexusConfigError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = "PharoNexusConfigError";
+    this.name = "NexusConfigError";
   }
 }
 
@@ -213,7 +213,7 @@ export function defaultPharoNexusHomePath(): string {
   return process.env.PHARO_NEXUS_HOME ?? path.join(os.homedir(), ".pharo-nexus");
 }
 
-export function defaultVibeKanbanToolCommand(): PharoNexusToolCommand {
+export function defaultVibeKanbanToolCommand(): NexusToolCommand {
   return {
     command: "npx",
     args: ["-y", vibeKanbanPinnedPackage],
@@ -231,7 +231,7 @@ export function pharoNexusCliEntrypointPath(): string {
   return path.join(packageRoot, "dist", "cli.js");
 }
 
-export function defaultPharoNexusToolCommand(): PharoNexusToolCommand {
+export function defaultNexusToolCommand(): NexusToolCommand {
   return {
     command: process.execPath,
     args: [pharoNexusCliEntrypointPath(), "mcp"],
@@ -240,7 +240,7 @@ export function defaultPharoNexusToolCommand(): PharoNexusToolCommand {
 
 export function resolvePharoNexusHome(homePath: string): string {
   if (!homePath.trim()) {
-    throw new PharoNexusConfigError("PharoNexus home path is required");
+    throw new NexusConfigError("PharoNexus home path is required");
   }
 
   return path.resolve(homePath);
@@ -274,11 +274,11 @@ function resolveFromProject(projectRootPath: string, value: string): string {
 
 export function projectWorktreesRootPath(
   projectRootPath: string,
-  config?: Pick<PharoNexusProjectConfig, "worktreesRoot">,
+  config?: Pick<NexusProjectConfig, "worktreesRoot">,
 ): string {
   return resolveFromProject(
     projectRootPath,
-    config?.worktreesRoot ?? pharoNexusProjectWorktreesDirectoryName,
+    config?.worktreesRoot ?? nexusProjectWorktreesDirectoryName,
   );
 }
 
@@ -292,7 +292,7 @@ export function controlProjectWorktreesRootPath(
 ): string {
   return path.join(
     controlProject?.root ?? controlProjectRootPath(homePath),
-    pharoNexusProjectWorktreesDirectoryName,
+    nexusProjectWorktreesDirectoryName,
   );
 }
 
@@ -366,9 +366,9 @@ export function defaultVibeKanbanDindBackendConfig(
 export function createDefaultHomeConfig(
   homePath: string,
   options: CreateDefaultHomeConfigOptions = {},
-): PharoNexusHomeConfig {
+): NexusHomeConfig {
   const resolvedHomePath = resolvePharoNexusHome(homePath);
-  const config: PharoNexusHomeConfig = {
+  const config: NexusHomeConfig = {
     version: 1,
     paths: {
       projectsRoot: resolveFromHome(
@@ -396,7 +396,7 @@ export function createDefaultHomeConfig(
       host: options.mcpHost ?? "127.0.0.1",
     },
     tools: {
-      pharoNexus: defaultPharoNexusToolCommand(),
+      pharoNexus: defaultNexusToolCommand(),
       vibeKanban: defaultVibeKanbanToolCommand(),
       plexus: {
         command: "plexus-gateway",
@@ -428,7 +428,7 @@ export function createDefaultHomeConfig(
 
 function assertRecord(value: unknown, pathName: string): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new PharoNexusConfigError(`${pathName} must be an object`);
+    throw new NexusConfigError(`${pathName} must be an object`);
   }
 
   return value as Record<string, unknown>;
@@ -441,7 +441,7 @@ function requiredString(
 ): string {
   const value = record[key];
   if (typeof value !== "string" || value.trim().length === 0) {
-    throw new PharoNexusConfigError(
+    throw new NexusConfigError(
       `${pathName}.${key} must be a non-empty string`,
     );
   }
@@ -460,7 +460,7 @@ function optionalString(
   }
 
   if (typeof value !== "string" || value.trim().length === 0) {
-    throw new PharoNexusConfigError(
+    throw new NexusConfigError(
       `${pathName}.${key} must be a non-empty string`,
     );
   }
@@ -479,7 +479,7 @@ function optionalBoolean(
   }
 
   if (typeof value !== "boolean") {
-    throw new PharoNexusConfigError(`${pathName}.${key} must be a boolean`);
+    throw new NexusConfigError(`${pathName}.${key} must be a boolean`);
   }
 
   return value;
@@ -496,7 +496,7 @@ function optionalStringArray(
   }
 
   if (!Array.isArray(value) || value.some((item) => typeof item !== "string")) {
-    throw new PharoNexusConfigError(
+    throw new NexusConfigError(
       `${pathName}.${key} must be an array of strings`,
     );
   }
@@ -515,7 +515,7 @@ function nullableString(
   }
 
   if (typeof value !== "string" || value.trim().length === 0) {
-    throw new PharoNexusConfigError(
+    throw new NexusConfigError(
       `${pathName}.${key} must be a non-empty string or null`,
     );
   }
@@ -526,7 +526,7 @@ function nullableString(
 function validateAgentConfig(
   value: unknown,
   pathName: string,
-): PharoNexusAgentConfig | undefined {
+): NexusAgentConfig | undefined {
   if (value === undefined) {
     return undefined;
   }
@@ -538,7 +538,7 @@ function validateAgentConfig(
     reasoning: optionalString(record, "reasoning", pathName),
   });
   if (Object.keys(agent).length === 0) {
-    throw new PharoNexusConfigError(
+    throw new NexusConfigError(
       `${pathName} must define executor, model, or reasoning`,
     );
   }
@@ -547,9 +547,9 @@ function validateAgentConfig(
 }
 
 function compactAgentConfig(
-  config: PharoNexusAgentConfig | undefined,
-): PharoNexusAgentConfig {
-  const compacted: PharoNexusAgentConfig = {};
+  config: NexusAgentConfig | undefined,
+): NexusAgentConfig {
+  const compacted: NexusAgentConfig = {};
   if (config?.executor) {
     compacted.executor = config.executor;
   }
@@ -565,25 +565,25 @@ function compactAgentConfig(
 
 function agentConfigFromSource(
   source:
-    | Pick<PharoNexusProjectConfig, "agent">
-    | Pick<PharoNexusHomeConfig, "agent">
-    | PharoNexusAgentConfig
+    | Pick<NexusProjectConfig, "agent">
+    | Pick<NexusHomeConfig, "agent">
+    | NexusAgentConfig
     | undefined,
-): PharoNexusAgentConfig {
+): NexusAgentConfig {
   if (!source) {
     return {};
   }
 
   if (Object.prototype.hasOwnProperty.call(source, "agent")) {
-    return compactAgentConfig((source as { agent?: PharoNexusAgentConfig }).agent);
+    return compactAgentConfig((source as { agent?: NexusAgentConfig }).agent);
   }
 
-  return compactAgentConfig(source as PharoNexusAgentConfig);
+  return compactAgentConfig(source as NexusAgentConfig);
 }
 
-export function resolvePharoNexusAgentConfig(
-  options: ResolvePharoNexusAgentConfigOptions,
-): PharoNexusAgentConfig {
+export function resolveNexusAgentConfig(
+  options: ResolveNexusAgentConfigOptions,
+): NexusAgentConfig {
   return compactAgentConfig({
     ...agentConfigFromSource(options.fallback),
     ...agentConfigFromSource(options.home),
@@ -600,7 +600,7 @@ function requiredPort(record: Record<string, unknown>, key: string): number {
     value < 1 ||
     value > 65_535
   ) {
-    throw new PharoNexusConfigError(
+    throw new NexusConfigError(
       `ports.${key} must be an integer between 1 and 65535`,
     );
   }
@@ -611,13 +611,13 @@ function requiredPort(record: Record<string, unknown>, key: string): number {
 function validateToolCommand(
   value: unknown,
   pathName: string,
-): PharoNexusToolCommand {
+): NexusToolCommand {
   const record = assertRecord(value, pathName);
   const command = requiredString(record, "command", pathName);
   const args = record.args;
 
   if (!Array.isArray(args) || args.some((arg) => typeof arg !== "string")) {
-    throw new PharoNexusConfigError(
+    throw new NexusConfigError(
       `${pathName}.args must be an array of strings`,
     );
   }
@@ -678,7 +678,7 @@ function validateControlProjectReference(
     (typeof vibeKanbanProjectId !== "string" ||
       vibeKanbanProjectId.trim().length === 0)
   ) {
-    throw new PharoNexusConfigError(
+    throw new NexusConfigError(
       "controlProject.vibeKanbanProjectId must be a non-empty string or null",
     );
   }
@@ -689,7 +689,7 @@ function validateControlProjectReference(
     (typeof vibeKanbanRepoId !== "string" ||
       vibeKanbanRepoId.trim().length === 0)
   ) {
-    throw new PharoNexusConfigError(
+    throw new NexusConfigError(
       "controlProject.vibeKanbanRepoId must be a non-empty string or null",
     );
   }
@@ -708,10 +708,10 @@ function validateControlProjectReference(
   };
 }
 
-function validateKanbanConfig(value: unknown): PharoNexusProjectKanbanConfig {
+function validateKanbanConfig(value: unknown): NexusProjectKanbanConfig {
   const record = assertRecord(value, "kanban");
   if (record.provider !== "vibe-kanban") {
-    throw new PharoNexusConfigError("kanban.provider must be vibe-kanban");
+    throw new NexusConfigError("kanban.provider must be vibe-kanban");
   }
 
   return {
@@ -731,7 +731,7 @@ function validateProjectExtensionsConfig(
   const extensions: NexusProjectExtensionsConfig = {};
   for (const [key, extensionValue] of Object.entries(record)) {
     if (!key.trim()) {
-      throw new PharoNexusConfigError(
+      throw new NexusConfigError(
         "project config.extensions keys must be non-empty strings",
       );
     }
@@ -740,7 +740,7 @@ function validateProjectExtensionsConfig(
       typeof extensionValue !== "object" ||
       Array.isArray(extensionValue)
     ) {
-      throw new PharoNexusConfigError(
+      throw new NexusConfigError(
         `project config.extensions.${key} must be an object`,
       );
     }
@@ -764,7 +764,7 @@ function validateWorkTrackingProviderName(
     return value;
   }
 
-  throw new PharoNexusConfigError(
+  throw new NexusConfigError(
     "workTracking.provider must be local, vibe-kanban, github, gitlab, or jira",
   );
 }
@@ -784,7 +784,7 @@ function optionalNullableString(
   }
 
   if (typeof value !== "string" || value.trim().length === 0) {
-    throw new PharoNexusConfigError(
+    throw new NexusConfigError(
       `${pathName}.${key} must be a non-empty string or null`,
     );
   }
@@ -807,7 +807,7 @@ function optionalInteger(
   }
 
   if (typeof value !== "number" || !Number.isInteger(value)) {
-    throw new PharoNexusConfigError(`${pathName}.${key} must be an integer or null`);
+    throw new NexusConfigError(`${pathName}.${key} must be an integer or null`);
   }
 
   return value;
@@ -826,7 +826,7 @@ function optionalStringRecord(
   const valueRecord = assertRecord(value, `${pathName}.${key}`);
   for (const [recordKey, recordValue] of Object.entries(valueRecord)) {
     if (typeof recordValue !== "string") {
-      throw new PharoNexusConfigError(
+      throw new NexusConfigError(
         `${pathName}.${key}.${recordKey} must be a string`,
       );
     }
@@ -863,7 +863,7 @@ function validateRequiredWorkTrackingRepositoryConfig(
 ): WorkTrackingRepositoryConfig {
   const repository = validateWorkTrackingRepositoryConfig(value, pathName);
   if (!repository) {
-    throw new PharoNexusConfigError(`${pathName} must be an object`);
+    throw new NexusConfigError(`${pathName} must be an object`);
   }
 
   return repository;
@@ -955,12 +955,12 @@ function validateWorkTrackingConfig(
       "workTracking.repository",
     );
     if (!githubRepository.owner) {
-      throw new PharoNexusConfigError(
+      throw new NexusConfigError(
         "workTracking.repository.owner must be a non-empty string",
       );
     }
     if (!githubRepository.name) {
-      throw new PharoNexusConfigError(
+      throw new NexusConfigError(
         "workTracking.repository.name must be a non-empty string",
       );
     }
@@ -982,7 +982,7 @@ function validateWorkTrackingConfig(
       "workTracking.repository",
     );
     if (!gitlabRepository.id) {
-      throw new PharoNexusConfigError(
+      throw new NexusConfigError(
         "workTracking.repository.id must be a non-empty string",
       );
     }
@@ -1007,7 +1007,7 @@ function validateWorkTrackingConfig(
   } satisfies JiraWorkTrackingConfig;
 }
 
-function validateRepoConfig(value: unknown): PharoNexusProjectRepoConfig {
+function validateRepoConfig(value: unknown): NexusProjectRepoConfig {
   if (value === undefined) {
     return {
       kind: "local",
@@ -1019,7 +1019,7 @@ function validateRepoConfig(value: unknown): PharoNexusProjectRepoConfig {
   const record = assertRecord(value, "repo");
   const kind = record.kind;
   if (kind !== "local" && kind !== "git") {
-    throw new PharoNexusConfigError("repo.kind must be local or git");
+    throw new NexusConfigError("repo.kind must be local or git");
   }
   const sourceRoot = optionalString(record, "sourceRoot", "repo");
 
@@ -1049,7 +1049,7 @@ function validateVibeKanbanBackendConfig(
   const record = assertRecord(value, "integrations.vibeKanban.backend");
   const mode = record.mode ?? defaults.mode;
   if (mode !== "docker" && mode !== "dind" && mode !== "external") {
-    throw new PharoNexusConfigError(
+    throw new NexusConfigError(
       "integrations.vibeKanban.backend.mode must be docker, dind, or external",
     );
   }
@@ -1179,10 +1179,10 @@ function validateVibeKanbanBackendConfig(
   };
 }
 
-export function validateProjectConfig(value: unknown): PharoNexusProjectConfig {
+export function validateProjectConfig(value: unknown): NexusProjectConfig {
   const record = assertRecord(value, "project config");
   if (record.version !== 1) {
-    throw new PharoNexusConfigError("project config.version must be 1");
+    throw new NexusConfigError("project config.version must be 1");
   }
   const agent = validateAgentConfig(record.agent, "project config.agent");
   const workTracking = validateWorkTrackingConfig(record.workTracking);
@@ -1196,7 +1196,7 @@ export function validateProjectConfig(value: unknown): PharoNexusProjectConfig {
     repo: validateRepoConfig(record.repo),
     worktreesRoot:
       optionalString(record, "worktreesRoot", "project config") ??
-      pharoNexusProjectWorktreesDirectoryName,
+      nexusProjectWorktreesDirectoryName,
     kanban: validateKanbanConfig(record.kanban),
     ...(workTracking ? { workTracking } : {}),
     ...(extensions ? { extensions } : {}),
@@ -1206,7 +1206,7 @@ export function validateProjectConfig(value: unknown): PharoNexusProjectConfig {
 
 export function createControlProjectConfig(
   controlProject?: NexusControlProjectReference,
-): PharoNexusProjectConfig {
+): NexusProjectConfig {
   const vibeKanbanProjectId = controlProject?.vibeKanbanProjectId;
 
   return {
@@ -1219,7 +1219,7 @@ export function createControlProjectConfig(
       remoteUrl: null,
       defaultBranch: null,
     },
-    worktreesRoot: pharoNexusProjectWorktreesDirectoryName,
+    worktreesRoot: nexusProjectWorktreesDirectoryName,
     kanban: {
       provider: "vibe-kanban",
       projectId: vibeKanbanProjectId ?? null,
@@ -1227,10 +1227,10 @@ export function createControlProjectConfig(
   };
 }
 
-export function loadProjectConfig(projectRootPath: string): PharoNexusProjectConfig {
+export function loadProjectConfig(projectRootPath: string): NexusProjectConfig {
   const configPath = projectConfigPath(projectRootPath);
   if (!fs.existsSync(configPath)) {
-    throw new PharoNexusConfigError(
+    throw new NexusConfigError(
       `PharoNexus project is not initialized: ${configPath}`,
     );
   }
@@ -1242,7 +1242,7 @@ export function loadProjectConfig(projectRootPath: string): PharoNexusProjectCon
 
 export function saveProjectConfig(
   projectRootPath: string,
-  config: PharoNexusProjectConfig,
+  config: NexusProjectConfig,
 ): string {
   const configPath = projectConfigPath(projectRootPath);
   fs.mkdirSync(path.dirname(configPath), { recursive: true });
@@ -1260,13 +1260,13 @@ export function initControlProject(
 ): {
   projectPath: string;
   configPath: string;
-  config: PharoNexusProjectConfig;
+  config: NexusProjectConfig;
 } {
   const projectPath = path.resolve(
     controlProject?.root ?? controlProjectRootPath(homePath),
   );
   const config = createControlProjectConfig(controlProject);
-  fs.mkdirSync(path.join(projectPath, pharoNexusProjectWorktreesDirectoryName), {
+  fs.mkdirSync(path.join(projectPath, nexusProjectWorktreesDirectoryName), {
     recursive: true,
   });
   const configPath = saveProjectConfig(projectPath, config);
@@ -1284,13 +1284,13 @@ export function ensureControlProject(
 ): {
   projectPath: string;
   configPath: string;
-  config: PharoNexusProjectConfig;
+  config: NexusProjectConfig;
 } {
   const projectPath = path.resolve(
     controlProject?.root ?? controlProjectRootPath(homePath),
   );
   const configPath = projectConfigPath(projectPath);
-  fs.mkdirSync(path.join(projectPath, pharoNexusProjectWorktreesDirectoryName), {
+  fs.mkdirSync(path.join(projectPath, nexusProjectWorktreesDirectoryName), {
     recursive: true,
   });
 
@@ -1315,7 +1315,7 @@ export function ensureControlProject(
 function validateVibeKanbanIntegration(
   value: unknown,
   homePathForDefaults: string | undefined,
-): PharoNexusHomeConfig["integrations"]["vibeKanban"] {
+): NexusHomeConfig["integrations"]["vibeKanban"] {
   if (value === undefined) {
     return {
       executor: "CODEX",
@@ -1334,7 +1334,7 @@ function validateVibeKanbanIntegration(
     installMcpOnStart !== undefined &&
     typeof installMcpOnStart !== "boolean"
   ) {
-    throw new PharoNexusConfigError(
+    throw new NexusConfigError(
       "integrations.vibeKanban.installMcpOnStart must be a boolean",
     );
   }
@@ -1343,7 +1343,7 @@ function validateVibeKanbanIntegration(
     openBrowserOnStart !== undefined &&
     typeof openBrowserOnStart !== "boolean"
   ) {
-    throw new PharoNexusConfigError(
+    throw new NexusConfigError(
       "integrations.vibeKanban.openBrowserOnStart must be a boolean",
     );
   }
@@ -1375,7 +1375,7 @@ function validateVibeKanbanIntegration(
 function validateIntegrations(
   value: unknown,
   homePathForDefaults: string | undefined,
-): PharoNexusHomeConfig["integrations"] {
+): NexusHomeConfig["integrations"] {
   const record =
     value === undefined ? {} : assertRecord(value, "integrations");
 
@@ -1390,10 +1390,10 @@ function validateIntegrations(
 export function validateHomeConfig(
   value: unknown,
   homePathForDefaults?: string,
-): PharoNexusHomeConfig {
+): NexusHomeConfig {
   const record = assertRecord(value, "config");
   if (record.version !== 1) {
-    throw new PharoNexusConfigError("config.version must be 1");
+    throw new NexusConfigError("config.version must be 1");
   }
 
   const paths = assertRecord(record.paths, "paths");
@@ -1412,7 +1412,7 @@ export function validateHomeConfig(
   );
   const projectsValue = record.projects;
   if (!Array.isArray(projectsValue)) {
-    throw new PharoNexusConfigError("projects must be an array");
+    throw new NexusConfigError("projects must be an array");
   }
 
   const vibeKanbanPort = requiredPort(ports, "vibeKanban");
@@ -1427,7 +1427,7 @@ export function validateHomeConfig(
     plexusMcpPort,
   ]);
   if (uniquePorts.size !== 3) {
-    throw new PharoNexusConfigError(
+    throw new NexusConfigError(
       "ports.vibeKanban, ports.pharoNexusMcp, and ports.plexusMcp must be different",
     );
   }
@@ -1436,7 +1436,7 @@ export function validateHomeConfig(
   const projectIds = new Set<string>();
   for (const project of projects) {
     if (projectIds.has(project.id)) {
-      throw new PharoNexusConfigError(`Project id is duplicated: ${project.id}`);
+      throw new NexusConfigError(`Project id is duplicated: ${project.id}`);
     }
 
     projectIds.add(project.id);
@@ -1459,7 +1459,7 @@ export function validateHomeConfig(
     },
     tools: {
       pharoNexus: validateToolCommand(
-        tools.pharoNexus ?? defaultPharoNexusToolCommand(),
+        tools.pharoNexus ?? defaultNexusToolCommand(),
         "tools.pharoNexus",
       ),
       vibeKanban: validateToolCommand(tools.vibeKanban, "tools.vibeKanban"),
@@ -1472,10 +1472,10 @@ export function validateHomeConfig(
   };
 }
 
-export function loadHomeConfig(homePath: string): PharoNexusHomeConfig {
+export function loadHomeConfig(homePath: string): NexusHomeConfig {
   const configPath = devNexusHomeConfigPath(homePath);
   if (!fs.existsSync(configPath)) {
-    throw new PharoNexusConfigError(
+    throw new NexusConfigError(
       `PharoNexus home is not initialized: ${configPath}. Run "pharo-nexus init" first, or set PHARO_NEXUS_HOME to an initialized home.`,
     );
   }
@@ -1488,7 +1488,7 @@ export function loadHomeConfig(homePath: string): PharoNexusHomeConfig {
 
 export function saveHomeConfig(
   homePath: string,
-  config: PharoNexusHomeConfig,
+  config: NexusHomeConfig,
 ): string {
   const configPath = devNexusHomeConfigPath(homePath);
   fs.mkdirSync(path.dirname(configPath), { recursive: true });
@@ -1506,7 +1506,7 @@ export function initPharoNexusHome(
   const homePath = resolvePharoNexusHome(options.homePath);
   const configPath = devNexusHomeConfigPath(homePath);
   if (fs.existsSync(configPath) && !options.force) {
-    throw new PharoNexusConfigError(
+    throw new NexusConfigError(
       `PharoNexus home is already initialized: ${configPath}`,
     );
   }

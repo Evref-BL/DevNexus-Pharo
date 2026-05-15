@@ -1,6 +1,6 @@
 import type {
-  PharoNexusProjectConfig,
-  PharoNexusProjectKanbanConfig,
+  NexusProjectConfig,
+  NexusProjectKanbanConfig,
 } from "./config.js";
 import type { VibeKanbanApiOptions } from "./vibeKanbanMcpConfig.js";
 import {
@@ -43,7 +43,7 @@ export class WorkTrackingServiceError extends Error {
 }
 
 export function workTrackingFromLegacyKanban(
-  kanban: PharoNexusProjectKanbanConfig,
+  kanban: NexusProjectKanbanConfig,
 ): VibeKanbanWorkTrackingConfig {
   return {
     provider: "vibe-kanban",
@@ -53,7 +53,7 @@ export function workTrackingFromLegacyKanban(
 
 export function legacyKanbanFromWorkTracking(
   workTracking: WorkTrackingConfig,
-): PharoNexusProjectKanbanConfig | undefined {
+): NexusProjectKanbanConfig | undefined {
   if (workTracking.provider !== "vibe-kanban") {
     return undefined;
   }
@@ -65,7 +65,7 @@ export function legacyKanbanFromWorkTracking(
 }
 
 export function resolveProjectWorkTrackingConfig(
-  config: Pick<PharoNexusProjectConfig, "kanban" | "workTracking">,
+  config: Pick<NexusProjectConfig, "kanban" | "workTracking">,
 ): WorkTrackingConfig {
   return config.workTracking ?? workTrackingFromLegacyKanban(config.kanban);
 }
@@ -123,7 +123,7 @@ export function createWorkTrackerProvider(
 }
 
 export function createProjectWorkTrackerProvider(
-  config: Pick<PharoNexusProjectConfig, "kanban" | "workTracking">,
+  config: Pick<NexusProjectConfig, "kanban" | "workTracking">,
   options: CreateWorkTrackerProviderOptions = {},
 ): WorkTrackerProvider {
   return createWorkTrackerProvider(resolveProjectWorkTrackingConfig(config), options);

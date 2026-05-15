@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { NexusExtension } from "./nexusExtension.js";
 import {
-  type PharoNexusProjectConfig,
+  type NexusProjectConfig,
 } from "./config.js";
 
 export interface PlexusProjectConfig {
@@ -38,7 +38,7 @@ export function pharoNexusProjectExtensionEntry(
 }
 
 export function projectUsesPharoNexusExtension(
-  projectConfig: Pick<PharoNexusProjectConfig, "extensions"> | undefined,
+  projectConfig: Pick<NexusProjectConfig, "extensions"> | undefined,
 ): boolean {
   return Boolean(
     projectConfig?.extensions?.[pharoNexusProjectExtensionConfigKey],
@@ -47,7 +47,7 @@ export function projectUsesPharoNexusExtension(
 
 export interface InstallPharoNexusProjectFilesOptions {
   projectRoot: string;
-  projectConfig: PharoNexusProjectConfig;
+  projectConfig: NexusProjectConfig;
   vibeKanbanProjectId?: string | null;
 }
 
@@ -83,7 +83,7 @@ function resolveFromProject(projectRootPath: string, value: string): string {
 }
 
 export function pharoNexusProjectExtensionConfig(
-  projectConfig: Pick<PharoNexusProjectConfig, "extensions">,
+  projectConfig: Pick<NexusProjectConfig, "extensions">,
 ): PharoNexusProjectExtensionConfig {
   const value = projectConfig.extensions?.[pharoNexusProjectExtensionConfigKey];
   if (value === undefined) {
@@ -107,7 +107,7 @@ export function pharoNexusProjectExtensionConfig(
 
 export function projectPlexusConfigPath(
   projectRootPath: string,
-  config?: Pick<PharoNexusProjectConfig, "extensions">,
+  config?: Pick<NexusProjectConfig, "extensions">,
 ): string {
   const extensionConfig = config
     ? pharoNexusProjectExtensionConfig(config)
@@ -135,7 +135,7 @@ function installDefaultAgentsFile(projectRoot: string): string {
 
 function resolveProjectSourceRoot(
   projectRoot: string,
-  projectConfig: PharoNexusProjectConfig,
+  projectConfig: NexusProjectConfig,
 ): string {
   const sourceRoot = projectConfig.repo.sourceRoot;
   if (!sourceRoot) {
@@ -153,7 +153,7 @@ function formatPromptValue(value: string | null | undefined): string {
 
 function buildSuggestedFirstPrompt(
   projectRoot: string,
-  projectConfig: PharoNexusProjectConfig,
+  projectConfig: NexusProjectConfig,
 ): string {
   const sourceRoot = resolveProjectSourceRoot(projectRoot, projectConfig);
   const kanbanProjectId = projectConfig.kanban.projectId;
@@ -182,7 +182,7 @@ function buildSuggestedFirstPrompt(
 
 function installSuggestedFirstPrompt(
   projectRoot: string,
-  projectConfig: PharoNexusProjectConfig,
+  projectConfig: NexusProjectConfig,
 ): string {
   const suggestedFirstPromptPath = projectSuggestedFirstPromptPath(projectRoot);
   if (fs.existsSync(suggestedFirstPromptPath)) {
@@ -278,7 +278,7 @@ export function installPharoNexusProjectFiles(
 }
 
 export const pharoNexusExtension: NexusExtension<
-  PharoNexusProjectConfig,
+  NexusProjectConfig,
   PharoNexusProjectFiles
 > = {
   id: "pharo-nexus",

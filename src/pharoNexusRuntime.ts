@@ -16,8 +16,8 @@ import {
   resolvePharoNexusHome,
   saveHomeConfig,
   saveProjectConfig,
-  type PharoNexusHomeConfig,
-  type PharoNexusProjectConfig,
+  type NexusHomeConfig,
+  type NexusProjectConfig,
 } from "./config.js";
 import {
   getPharoNexusMcpStatus,
@@ -80,7 +80,7 @@ export type PharoNexusProgressReporter = (message: string) => void;
 
 export interface PharoNexusStartOptions {
   homePath: string;
-  config?: PharoNexusHomeConfig;
+  config?: NexusHomeConfig;
   force?: boolean;
   executor?: string;
   serverName?: string;
@@ -117,7 +117,7 @@ export interface PharoNexusStartResult {
 export interface PharoNexusControlProjectStartResult {
   projectPath: string;
   configPath: string;
-  config: PharoNexusProjectConfig;
+  config: NexusProjectConfig;
   linked: boolean;
   vibeKanbanProjectId: string | null;
   vibeKanbanRepoId?: string | null;
@@ -132,7 +132,7 @@ export interface PharoNexusControlProjectStartResult {
 
 export interface PharoNexusStatusOptions {
   homePath: string;
-  config?: PharoNexusHomeConfig;
+  config?: NexusHomeConfig;
   checkHealth?: boolean;
   healthTimeoutMs?: number;
 }
@@ -151,7 +151,7 @@ export interface PharoNexusStatusResult {
 
 export interface PharoNexusStopOptions {
   homePath: string;
-  config?: PharoNexusHomeConfig;
+  config?: NexusHomeConfig;
   force?: boolean;
   timeoutMs?: number;
   pollIntervalMs?: number;
@@ -182,13 +182,13 @@ interface EnsuredVibeKanbanService {
 
 function loadConfig(
   homePath: string,
-  config: PharoNexusHomeConfig | undefined,
-): PharoNexusHomeConfig {
+  config: NexusHomeConfig | undefined,
+): NexusHomeConfig {
   return config ?? loadHomeConfig(homePath);
 }
 
 export function vibeKanbanToolOpensBrowserOnStart(
-  tool: PharoNexusHomeConfig["tools"]["vibeKanban"],
+  tool: NexusHomeConfig["tools"]["vibeKanban"],
 ): boolean {
   const commandName =
     tool.command.replace(/\\/g, "/").split("/").pop()?.toLowerCase() ?? "";
@@ -210,7 +210,7 @@ export function vibeKanbanToolOpensBrowserOnStart(
 
 async function ensurePlexusGatewayStarted(
   homePath: string,
-  config: PharoNexusHomeConfig,
+  config: NexusHomeConfig,
   force: boolean | undefined,
   progress?: PharoNexusProgressReporter,
 ): Promise<PlexusGatewayServiceState> {
@@ -228,7 +228,7 @@ async function ensurePlexusGatewayStarted(
 
 async function ensurePharoNexusMcpStarted(
   homePath: string,
-  config: PharoNexusHomeConfig,
+  config: NexusHomeConfig,
   force: boolean | undefined,
   progress?: PharoNexusProgressReporter,
 ): Promise<PharoNexusMcpServiceState> {
@@ -246,7 +246,7 @@ async function ensurePharoNexusMcpStarted(
 
 async function ensureVibeKanbanStarted(
   homePath: string,
-  config: PharoNexusHomeConfig,
+  config: NexusHomeConfig,
   force: boolean | undefined,
   progress?: PharoNexusProgressReporter,
 ): Promise<EnsuredVibeKanbanService> {
@@ -269,7 +269,7 @@ async function ensureVibeKanbanStarted(
 
 async function ensureVibeKanbanBackendReady(
   homePath: string,
-  config: PharoNexusHomeConfig,
+  config: NexusHomeConfig,
   force: boolean | undefined,
   backendHealthTimeoutMs: number | undefined,
   progress?: VibeKanbanBackendProgressReporter,
@@ -353,7 +353,7 @@ function samePath(left: string, right: string): boolean {
 
 function migrateLegacyControlProject(
   homePath: string,
-  config: PharoNexusHomeConfig,
+  config: NexusHomeConfig,
 ): void {
   if (config.controlProject.id !== pharoNexusControlProjectId) {
     return;
@@ -387,7 +387,7 @@ function migrateLegacyControlProject(
   const migratedProjectConfigPath = projectConfigPath(config.controlProject.root);
   if (fs.existsSync(migratedProjectConfigPath)) {
     const migratedProject = ensureControlProject(homePath, config.controlProject);
-    const updatedProject: PharoNexusProjectConfig = {
+    const updatedProject: NexusProjectConfig = {
       ...migratedProject.config,
       name: pharoNexusControlProjectName,
       kanban: {
@@ -413,7 +413,7 @@ function projectPathMatchesRepo(
 
 async function resolveControlProjectRepoId(
   homePath: string,
-  config: PharoNexusHomeConfig,
+  config: NexusHomeConfig,
   projectPath: string,
 ): Promise<{
   repoId: string | null;
@@ -466,7 +466,7 @@ async function resolveControlProjectRepoId(
 
 async function ensureControlProjectLinked(
   homePath: string,
-  config: PharoNexusHomeConfig,
+  config: NexusHomeConfig,
 ): Promise<PharoNexusControlProjectStartResult> {
   migrateLegacyControlProject(homePath, config);
   const controlProject = ensureControlProject(homePath, config.controlProject);
@@ -517,7 +517,7 @@ async function ensureControlProjectLinked(
       port: config.ports.vibeKanban,
       name: config.controlProject.name,
     });
-    const updatedConfig: PharoNexusProjectConfig = {
+    const updatedConfig: NexusProjectConfig = {
       ...controlProject.config,
       name: config.controlProject.name,
       kanban: {

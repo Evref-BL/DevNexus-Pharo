@@ -15,14 +15,14 @@ import {
 import { commentCodexWorktreeHandoff } from "./codexWorktreeTrackerHandoff.js";
 import { defaultPharoNexusHomePath, loadProjectConfig } from "./config.js";
 import {
-  configurePharoNexusProjectTracker,
+  configureNexusProjectTracker,
   createNexusProject,
   createPharoNexusProject,
-  getPharoNexusProjectStatus,
+  getNexusProjectStatus,
   importNexusProject,
   importPharoNexusProject,
-  linkPharoNexusProjectTracker,
-  listPharoNexusProjects,
+  linkNexusProjectTracker,
+  listNexusProjects,
   syncPharoNexusProjectTracker,
   type GitRunner,
   type SyncPharoNexusProjectTrackerResult,
@@ -1006,7 +1006,7 @@ export async function callPharoNexusMcpTool(
       case "project_link_tracker":
         return toolResult({
           ok: true,
-          ...linkPharoNexusProjectTracker({
+          ...linkNexusProjectTracker({
             homePath: homePathFromArgs(args),
             project: requiredString(args, "project", "arguments"),
             trackerProjectId: requiredString(
@@ -1019,7 +1019,7 @@ export async function callPharoNexusMcpTool(
       case "project_configure_tracker":
         return toolResult({
           ok: true,
-          ...configurePharoNexusProjectTracker({
+          ...configureNexusProjectTracker({
             homePath: homePathFromArgs(args),
             project: requiredString(args, "project", "arguments"),
             provider: trackerProviderFromArgs(args),
@@ -1054,14 +1054,14 @@ export async function callPharoNexusMcpTool(
       case "project_list":
         return toolResult({
           ok: true,
-          ...listPharoNexusProjects({
+          ...listNexusProjects({
             homePath: homePathFromArgs(args),
           }),
         });
       case "project_status":
         return toolResult({
           ok: true,
-          ...getPharoNexusProjectStatus({
+          ...getNexusProjectStatus({
             homePath: homePathFromArgs(args),
             project: requiredString(args, "project", "arguments"),
           }),

@@ -50,25 +50,25 @@ import {
   stopPharoNexus,
 } from "./pharoNexusRuntime.js";
 import {
-  configurePharoNexusProjectTracker,
+  configureNexusProjectTracker,
   createNexusProject,
   createPharoNexusProject,
-  getPharoNexusProjectStatus,
+  getNexusProjectStatus,
   importNexusProject,
   importPharoNexusProject,
-  linkPharoNexusProjectTracker,
-  listPharoNexusProjects,
+  linkNexusProjectTracker,
+  listNexusProjects,
   syncPharoNexusProjectTracker,
-  type ConfigurePharoNexusProjectTrackerProvider,
-  type ConfigurePharoNexusProjectTrackerResult,
+  type ConfigureNexusProjectTrackerProvider,
+  type ConfigureNexusProjectTrackerResult,
   type CreateNexusProjectResult,
   type CreatePharoNexusProjectResult,
-  type GetPharoNexusProjectStatusResult,
+  type GetNexusProjectStatusResult,
   type ImportNexusProjectResult,
   type ImportPharoNexusProjectResult,
-  type LinkPharoNexusProjectTrackerResult,
-  type ListPharoNexusProjectsResult,
-  type PharoNexusProjectStatus,
+  type LinkNexusProjectTrackerResult,
+  type ListNexusProjectsResult,
+  type NexusProjectStatus,
   type GitRunner,
   type SyncPharoNexusProjectTrackerResult,
 } from "./projectService.js";
@@ -1546,7 +1546,7 @@ interface ParsedProjectImportCommand {
 interface ParsedProjectConfigureTrackerCommand {
   homePath: string;
   project: string;
-  provider: ConfigurePharoNexusProjectTrackerProvider;
+  provider: ConfigureNexusProjectTrackerProvider;
   host?: string;
   repositoryOwner?: string;
   repositoryName?: string;
@@ -1794,7 +1794,7 @@ function parseProjectConfigureTrackerCommand(
 
 function parseTrackerProvider(
   value: string,
-): ConfigurePharoNexusProjectTrackerProvider {
+): ConfigureNexusProjectTrackerProvider {
   if (
     value === "local" ||
     value === "github" ||
@@ -2132,7 +2132,7 @@ function printNexusProjectImportResult(
 }
 
 function printProjectLinkTrackerResult(
-  result: LinkPharoNexusProjectTrackerResult,
+  result: LinkNexusProjectTrackerResult,
   json: boolean | undefined,
 ): void {
   const payload = { ok: true, ...result };
@@ -2155,7 +2155,7 @@ function printProjectLinkTrackerResult(
 }
 
 function printProjectConfigureTrackerResult(
-  result: ConfigurePharoNexusProjectTrackerResult,
+  result: ConfigureNexusProjectTrackerResult,
   json: boolean | undefined,
 ): void {
   const payload = { ok: true, ...result };
@@ -2214,7 +2214,7 @@ function printProjectSyncTrackerResult(
   console.log(JSON.stringify(payload, null, 2));
 }
 
-function printProjectStatus(project: PharoNexusProjectStatus): void {
+function printProjectStatus(project: NexusProjectStatus): void {
   console.log(`  ${project.id} (${project.name})`);
   console.log(`    Root: ${project.projectRoot}`);
   console.log(`    Repo origin: ${project.repo?.remoteUrl ?? "(none)"}`);
@@ -2235,7 +2235,7 @@ function printProjectStatus(project: PharoNexusProjectStatus): void {
 }
 
 function printProjectListResult(
-  result: ListPharoNexusProjectsResult,
+  result: ListNexusProjectsResult,
   json: boolean | undefined,
 ): void {
   const payload = { ok: true, ...result };
@@ -2254,7 +2254,7 @@ function printProjectListResult(
 }
 
 function printProjectStatusResult(
-  result: GetPharoNexusProjectStatusResult,
+  result: GetNexusProjectStatusResult,
   json: boolean | undefined,
 ): void {
   const payload = { ok: true, ...result };
@@ -2350,14 +2350,14 @@ async function handleProjectCommand(argv: string[]): Promise<number> {
 
   if (command === "link-tracker") {
     const parsed = parseProjectLinkTrackerCommand(argv);
-    const result = linkPharoNexusProjectTracker(parsed);
+    const result = linkNexusProjectTracker(parsed);
     printProjectLinkTrackerResult(result, parsed.json);
     return 0;
   }
 
   if (command === "configure-tracker") {
     const parsed = parseProjectConfigureTrackerCommand(argv);
-    const result = configurePharoNexusProjectTracker(parsed);
+    const result = configureNexusProjectTracker(parsed);
     printProjectConfigureTrackerResult(result, parsed.json);
     return 0;
   }
@@ -2376,14 +2376,14 @@ async function handleProjectCommand(argv: string[]): Promise<number> {
 
   if (command === "list") {
     const parsed = parseProjectListCommand(argv);
-    const result = listPharoNexusProjects({ homePath: parsed.homePath });
+    const result = listNexusProjects({ homePath: parsed.homePath });
     printProjectListResult(result, parsed.json);
     return 0;
   }
 
   if (command === "status") {
     const parsed = parseProjectStatusCommand(argv);
-    const result = getPharoNexusProjectStatus(parsed);
+    const result = getNexusProjectStatus(parsed);
     printProjectStatusResult(result, parsed.json);
     return 0;
   }

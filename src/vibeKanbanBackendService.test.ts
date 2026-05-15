@@ -6,7 +6,7 @@ import {
   initPharoNexusHome,
   loadHomeConfig,
   saveHomeConfig,
-  type PharoNexusHomeConfig,
+  type NexusHomeConfig,
 } from "./config.js";
 import {
   getVibeKanbanBackendStatus,
@@ -499,7 +499,7 @@ describe("Vibe Kanban Docker backend service", () => {
       startOnPharoNexusStart: false,
       stopOnPharoNexusStop: false,
     };
-    saveHomeConfig(homePath, config as PharoNexusHomeConfig);
+    saveHomeConfig(homePath, config as NexusHomeConfig);
     const fetchMock = vi.fn(async () => new Response("ok", { status: 200 }));
 
     const status = await getVibeKanbanBackendStatus({

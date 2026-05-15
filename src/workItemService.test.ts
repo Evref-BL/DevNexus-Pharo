@@ -6,8 +6,8 @@ import {
   createDefaultHomeConfig,
   saveHomeConfig,
   saveProjectConfig,
-  type PharoNexusHomeConfig,
-  type PharoNexusProjectConfig,
+  type NexusHomeConfig,
+  type NexusProjectConfig,
 } from "./config.js";
 import {
   createWorkItemService,
@@ -35,7 +35,7 @@ afterEach(() => {
   }
 });
 
-function writeHome(homePath: string, projectRoot?: string): PharoNexusHomeConfig {
+function writeHome(homePath: string, projectRoot?: string): NexusHomeConfig {
   const homeConfig = createDefaultHomeConfig(homePath);
   if (projectRoot) {
     homeConfig.projects = [
@@ -52,9 +52,9 @@ function writeHome(homePath: string, projectRoot?: string): PharoNexusHomeConfig
 
 function writeProject(
   projectRoot: string,
-  overrides: Partial<PharoNexusProjectConfig> = {},
-): PharoNexusProjectConfig {
-  const projectConfig: PharoNexusProjectConfig = {
+  overrides: Partial<NexusProjectConfig> = {},
+): NexusProjectConfig {
+  const projectConfig: NexusProjectConfig = {
     version: 1,
     id: "tracked-project",
     name: "Tracked Project",

@@ -7,7 +7,7 @@ import {
   initPharoNexusHome,
   loadHomeConfig,
   saveHomeConfig,
-  type PharoNexusHomeConfig,
+  type NexusHomeConfig,
 } from "./config.js";
 import {
   getVibeKanbanStatus,
@@ -56,7 +56,7 @@ function fileIncludes(filePath: string, expected: string): boolean {
 
 function initHomeWithVibeKanban(
   args: string[],
-  configure?: (config: PharoNexusHomeConfig) => void,
+  configure?: (config: NexusHomeConfig) => void,
 ): string {
   const homePath = makeTempDir("pharo-nexus-home-");
   initPharoNexusHome({ homePath });

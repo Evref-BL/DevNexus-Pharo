@@ -5,7 +5,7 @@ import {
   pharoNexusCliEntrypointPath,
   pharoNexusLogsDirectoryName,
   resolvePharoNexusHome,
-  type PharoNexusHomeConfig,
+  type NexusHomeConfig,
 } from "./config.js";
 import {
   defaultPharoNexusMcpHealthPath,
@@ -42,7 +42,7 @@ export interface PharoNexusMcpServiceState {
 
 export interface PharoNexusMcpStartOptions {
   homePath: string;
-  config?: PharoNexusHomeConfig;
+  config?: NexusHomeConfig;
   force?: boolean;
   appendLogs?: boolean;
   release?: boolean;
@@ -109,8 +109,8 @@ export function pharoNexusMcpLogDirectoryPath(homePath: string): string {
 
 function loadConfig(
   homePath: string,
-  config: PharoNexusHomeConfig | undefined,
-): PharoNexusHomeConfig {
+  config: NexusHomeConfig | undefined,
+): NexusHomeConfig {
   return config ?? loadHomeConfig(homePath);
 }
 

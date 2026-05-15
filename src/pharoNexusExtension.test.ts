@@ -8,8 +8,8 @@ import {
 } from "./pharoNexusExtension.js";
 import { scaffoldNexusProject } from "./nexusProjectScaffold.js";
 import {
-  pharoNexusProjectWorktreesDirectoryName,
-  type PharoNexusProjectConfig,
+  nexusProjectWorktreesDirectoryName,
+  type NexusProjectConfig,
 } from "./config.js";
 import {
   pharoNexusProjectExtensionConfigKey,
@@ -24,7 +24,7 @@ function makeTempDir(prefix: string): string {
   return tempDir;
 }
 
-function projectConfig(overrides: Partial<PharoNexusProjectConfig> = {}): PharoNexusProjectConfig {
+function projectConfig(overrides: Partial<NexusProjectConfig> = {}): NexusProjectConfig {
   return {
     version: 1,
     id: "pharo-project",
@@ -36,7 +36,7 @@ function projectConfig(overrides: Partial<PharoNexusProjectConfig> = {}): PharoN
       defaultBranch: "main",
       sourceRoot: "git",
     },
-    worktreesRoot: pharoNexusProjectWorktreesDirectoryName,
+    worktreesRoot: nexusProjectWorktreesDirectoryName,
     kanban: {
       provider: "vibe-kanban",
       projectId: "vk-pharo-project",

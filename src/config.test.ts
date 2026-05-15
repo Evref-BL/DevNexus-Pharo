@@ -8,7 +8,7 @@ import {
   controlProjectWorktreesRootPath,
   createControlProjectConfig,
   createDefaultHomeConfig,
-  defaultPharoNexusToolCommand,
+  defaultNexusToolCommand,
   defaultVibeKanbanToolCommand,
   ensureControlProject,
   initPharoNexusHome,
@@ -21,10 +21,10 @@ import {
   devNexusHomeConfigFileName,
   pharoNexusLogsDirectoryName,
   devNexusProjectConfigFileName,
-  pharoNexusProjectWorktreesDirectoryName,
-  PharoNexusConfigError,
+  nexusProjectWorktreesDirectoryName,
+  NexusConfigError,
   projectWorktreesRootPath,
-  resolvePharoNexusAgentConfig,
+  resolveNexusAgentConfig,
   resolvePharoNexusHome,
   saveHomeConfig,
   saveProjectConfig,
@@ -60,7 +60,7 @@ describe("PharoNexus home config", () => {
     expect(devNexusHomeConfigPath(relativeHomePath)).toBe(
       path.join(path.resolve(homePath), devNexusHomeConfigFileName),
     );
-    expect(() => resolvePharoNexusHome("   ")).toThrow(PharoNexusConfigError);
+    expect(() => resolvePharoNexusHome("   ")).toThrow(NexusConfigError);
   });
 
   it("creates a default home config under the selected home", () => {
@@ -89,7 +89,7 @@ describe("PharoNexus home config", () => {
         host: "127.0.0.1",
       },
       tools: {
-        pharoNexus: defaultPharoNexusToolCommand(),
+        pharoNexus: defaultNexusToolCommand(),
         vibeKanban: defaultVibeKanbanToolCommand(),
         plexus: {
           command: "plexus-gateway",
@@ -139,7 +139,7 @@ describe("PharoNexus home config", () => {
       path.join(homePath, "PharoNexus", devNexusProjectConfigFileName),
     );
     expect(controlProjectWorktreesRootPath(homePath)).toBe(
-      path.join(homePath, "PharoNexus", pharoNexusProjectWorktreesDirectoryName),
+      path.join(homePath, "PharoNexus", nexusProjectWorktreesDirectoryName),
     );
     expect(createControlProjectConfig()).toEqual({
       version: 1,
@@ -151,7 +151,7 @@ describe("PharoNexus home config", () => {
         remoteUrl: null,
         defaultBranch: null,
       },
-      worktreesRoot: pharoNexusProjectWorktreesDirectoryName,
+      worktreesRoot: nexusProjectWorktreesDirectoryName,
       kanban: {
         provider: "vibe-kanban",
         projectId: null,
@@ -174,7 +174,7 @@ describe("PharoNexus home config", () => {
         host: "127.0.0.1",
       },
       tools: {
-        pharoNexus: defaultPharoNexusToolCommand(),
+        pharoNexus: defaultNexusToolCommand(),
       },
     });
   });
@@ -262,12 +262,12 @@ describe("PharoNexus home config", () => {
         },
         agent: {},
       }),
-    ).toThrow(PharoNexusConfigError);
+    ).toThrow(NexusConfigError);
   });
 
   it("resolves agent configuration using issue, project, home, then fallback precedence", () => {
     expect(
-      resolvePharoNexusAgentConfig({
+      resolveNexusAgentConfig({
         fallback: {
           executor: "CODEX",
           model: "profile-default",
@@ -732,7 +732,7 @@ describe("PharoNexus home config", () => {
     const config = createDefaultHomeConfig(makeTempDir("pharo-nexus-home-"));
     config.ports.vibeKanban = 7330;
 
-    expect(() => validateHomeConfig(config)).toThrow(PharoNexusConfigError);
+    expect(() => validateHomeConfig(config)).toThrow(NexusConfigError);
 
     for (const invalidPort of [0, -1, 65_536, 3.14, "3000"]) {
       const invalidConfig = createDefaultHomeConfig(
@@ -742,7 +742,7 @@ describe("PharoNexus home config", () => {
       ports.vibeKanban = invalidPort;
 
       expect(() => validateHomeConfig(invalidConfig)).toThrow(
-        PharoNexusConfigError,
+        NexusConfigError,
       );
     }
   });
@@ -762,7 +762,7 @@ describe("PharoNexus home config", () => {
       },
     ];
 
-    expect(() => validateHomeConfig(config)).toThrow(PharoNexusConfigError);
+    expect(() => validateHomeConfig(config)).toThrow(NexusConfigError);
   });
 
   it("initializes a home directory, writes config, and creates runtime directories", () => {
@@ -845,7 +845,7 @@ describe("PharoNexus home config", () => {
     initPharoNexusHome({ homePath });
 
     expect(() => initPharoNexusHome({ homePath })).toThrow(
-      PharoNexusConfigError,
+      NexusConfigError,
     );
 
     expect(() =>

@@ -19,15 +19,15 @@ import {
   loadHomeConfig,
   loadProjectConfig,
   devNexusProjectConfigFileName,
-  pharoNexusProjectWorktreesDirectoryName,
+  nexusProjectWorktreesDirectoryName,
   projectConfigPath,
   projectWorktreesRootPath,
   resolvePharoNexusHome,
   saveHomeConfig,
   saveProjectConfig,
   type NexusProjectExtensionsConfig,
-  type PharoNexusHomeConfig,
-  type PharoNexusProjectConfig,
+  type NexusHomeConfig,
+  type NexusProjectConfig,
   type NexusProjectReference,
 } from "./config.js";
 import {
@@ -96,7 +96,7 @@ export interface CreateNexusProjectResult {
   projectRoot: string;
   projectConfigPath: string;
   worktreesRoot: string;
-  projectConfig: PharoNexusProjectConfig;
+  projectConfig: NexusProjectConfig;
   git: {
     operation: "clone" | "init";
     remoteUrl: string | null;
@@ -110,7 +110,7 @@ export interface ImportNexusProjectResult {
   projectRoot: string;
   projectConfigPath: string;
   worktreesRoot: string;
-  projectConfig: PharoNexusProjectConfig;
+  projectConfig: NexusProjectConfig;
   git: {
     operation: "import";
     remoteUrl: string | null;
@@ -128,7 +128,7 @@ export interface CreatePharoNexusProjectResult {
   agentsPath: string;
   suggestedFirstPromptPath: string;
   codexConfigPath: string;
-  projectConfig: PharoNexusProjectConfig;
+  projectConfig: NexusProjectConfig;
   plexusProjectConfig: PlexusProjectConfig;
   codex: InitCodexWorkspaceResult;
   git: {
@@ -148,7 +148,7 @@ export interface ImportPharoNexusProjectResult {
   agentsPath: string;
   suggestedFirstPromptPath: string;
   codexConfigPath: string;
-  projectConfig: PharoNexusProjectConfig;
+  projectConfig: NexusProjectConfig;
   plexusProjectConfig: PlexusProjectConfig;
   codex: InitCodexWorkspaceResult;
   git: {
@@ -159,11 +159,11 @@ export interface ImportPharoNexusProjectResult {
   };
 }
 
-export interface PharoNexusProjectStatus {
+export interface NexusProjectStatus {
   id: string;
   name: string;
   projectRoot: string;
-  repo: PharoNexusProjectConfig["repo"] | null;
+  repo: NexusProjectConfig["repo"] | null;
   workTracking: WorkTrackingConfig | null;
   vibeKanbanProjectId: string | null;
   vibeKanbanRepoId: string | null;
@@ -175,41 +175,41 @@ export interface PharoNexusProjectStatus {
   worktreesRootExists: boolean;
 }
 
-export interface ListPharoNexusProjectsOptions {
+export interface ListNexusProjectsOptions {
   homePath: string;
 }
 
-export interface ListPharoNexusProjectsResult {
+export interface ListNexusProjectsResult {
   homePath: string;
-  projects: PharoNexusProjectStatus[];
+  projects: NexusProjectStatus[];
 }
 
-export interface GetPharoNexusProjectStatusOptions {
+export interface GetNexusProjectStatusOptions {
   homePath: string;
   project: string;
 }
 
-export interface GetPharoNexusProjectStatusResult {
+export interface GetNexusProjectStatusResult {
   homePath: string;
-  project: PharoNexusProjectStatus;
+  project: NexusProjectStatus;
 }
 
-export interface LinkPharoNexusProjectTrackerOptions {
+export interface LinkNexusProjectTrackerOptions {
   homePath: string;
   project: string;
   trackerProjectId: string;
 }
 
-export type ConfigurePharoNexusProjectTrackerProvider =
+export type ConfigureNexusProjectTrackerProvider =
   | "local"
   | "github"
   | "gitlab"
   | "jira";
 
-export interface ConfigurePharoNexusProjectTrackerOptions {
+export interface ConfigureNexusProjectTrackerOptions {
   homePath: string;
   project: string;
-  provider: ConfigurePharoNexusProjectTrackerProvider;
+  provider: ConfigureNexusProjectTrackerProvider;
   host?: string;
   repositoryOwner?: string;
   repositoryName?: string;
@@ -219,20 +219,20 @@ export interface ConfigurePharoNexusProjectTrackerOptions {
   storePath?: string;
 }
 
-export interface ConfigurePharoNexusProjectTrackerResult {
+export interface ConfigureNexusProjectTrackerResult {
   homePath: string;
-  project: PharoNexusProjectStatus;
+  project: NexusProjectStatus;
   projectConfigPath: string;
   plexusProjectConfigPath: string | null;
-  projectConfig: PharoNexusProjectConfig;
+  projectConfig: NexusProjectConfig;
   workTracking: WorkTrackingConfig;
 }
 
-export interface LinkPharoNexusProjectTrackerResult {
+export interface LinkNexusProjectTrackerResult {
   homePath: string;
   vibeKanbanProjectId: string;
   vibeKanbanRepoId: string | null;
-  project: PharoNexusProjectStatus;
+  project: NexusProjectStatus;
   projectConfigPath: string;
   plexusProjectConfigPath: string | null;
   plexusProjectConfig: PlexusProjectConfig | null;
@@ -247,7 +247,7 @@ export interface SyncPharoNexusProjectTrackerOptions {
 }
 
 export interface SyncPharoNexusProjectTrackerResult
-  extends LinkPharoNexusProjectTrackerResult {
+  extends LinkNexusProjectTrackerResult {
   plexusProjectConfigPath: string;
   plexusProjectConfig: PlexusProjectConfig;
   vibeKanbanRepoId: string;
@@ -261,16 +261,16 @@ export interface SyncPharoNexusProjectTrackerResult
   };
 }
 
-export class PharoNexusProjectError extends Error {
+export class NexusProjectError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = "PharoNexusProjectError";
+    this.name = "NexusProjectError";
   }
 }
 
 function assertNonEmptyString(value: string, name: string): void {
   if (value.trim().length === 0) {
-    throw new PharoNexusProjectError(`${name} must be a non-empty string`);
+    throw new NexusProjectError(`${name} must be a non-empty string`);
   }
 }
 
@@ -297,7 +297,7 @@ function slugify(value: string): string {
     .replace(/^-+|-+$/g, "");
 
   if (!slug) {
-    throw new PharoNexusProjectError(
+    throw new NexusProjectError(
       "Project name must contain at least one filesystem-safe character",
     );
   }
@@ -322,7 +322,7 @@ function directoryExistsAndIsNonEmpty(directoryPath: string): boolean {
 
   const stat = fs.statSync(directoryPath);
   if (!stat.isDirectory()) {
-    throw new PharoNexusProjectError(
+    throw new NexusProjectError(
       `Project root exists and is not a directory: ${directoryPath}`,
     );
   }
@@ -332,7 +332,7 @@ function directoryExistsAndIsNonEmpty(directoryPath: string): boolean {
 
 function assertFileDoesNotExist(filePath: string): void {
   if (fs.existsSync(filePath)) {
-    throw new PharoNexusProjectError(`Refusing to overwrite existing file: ${filePath}`);
+    throw new NexusProjectError(`Refusing to overwrite existing file: ${filePath}`);
   }
 }
 
@@ -340,7 +340,7 @@ const defaultSourceCheckoutDirectoryName = "git";
 
 function resolveProjectSourceRoot(
   projectRoot: string,
-  projectConfig: PharoNexusProjectConfig,
+  projectConfig: NexusProjectConfig,
 ): string {
   const sourceRoot = projectConfig.repo.sourceRoot;
   if (!sourceRoot) {
@@ -470,7 +470,7 @@ function defaultGitRunner(args: readonly string[], cwd?: string): GitCommandResu
   });
 
   if (result.error) {
-    throw new PharoNexusProjectError(
+    throw new NexusProjectError(
       `Failed to run git ${args.join(" ")}: ${result.error.message}`,
     );
   }
@@ -483,7 +483,7 @@ function defaultGitRunner(args: readonly string[], cwd?: string): GitCommandResu
   };
 
   if (result.status !== 0) {
-    throw new PharoNexusProjectError(
+    throw new NexusProjectError(
       `git ${args.join(" ")} failed with exit code ${result.status}: ${
         commandResult.stderr.trim() || commandResult.stdout.trim()
       }`,
@@ -503,7 +503,7 @@ function runGitCommand(
   commands.push(result);
 
   if (result.exitCode !== 0) {
-    throw new PharoNexusProjectError(
+    throw new NexusProjectError(
       `git ${args.join(" ")} failed with exit code ${result.exitCode}: ${
         result.stderr.trim() || result.stdout.trim()
       }`,
@@ -553,7 +553,7 @@ function assertGitRepository(
   );
 
   if (result.stdout.trim() !== "true") {
-    throw new PharoNexusProjectError(
+    throw new NexusProjectError(
       `Path is not inside a Git work tree: ${projectRoot}`,
     );
   }
@@ -575,7 +575,7 @@ function detectOriginUrl(
 }
 
 function ensureUniqueProject(
-  config: PharoNexusHomeConfig,
+  config: NexusHomeConfig,
   projectId: string,
   projectRoot: string,
 ): void {
@@ -587,7 +587,7 @@ function ensureUniqueProject(
   );
 
   if (duplicate) {
-    throw new PharoNexusProjectError(
+    throw new NexusProjectError(
       `Project is already registered: ${duplicate.id}`,
     );
   }
@@ -616,7 +616,7 @@ function pathForProjectConfig(projectRoot: string, targetPath: string): string {
 }
 
 function defaultImportedProjectRoot(
-  homeConfig: PharoNexusHomeConfig,
+  homeConfig: NexusHomeConfig,
   projectName: string,
   sourceRoot: string,
 ): string {
@@ -629,7 +629,7 @@ function defaultImportedProjectRoot(
 
 function loadProjectConfigIfExists(
   projectRoot: string,
-): PharoNexusProjectConfig | undefined {
+): NexusProjectConfig | undefined {
   if (!fs.existsSync(projectConfigPath(projectRoot))) {
     return undefined;
   }
@@ -646,7 +646,7 @@ function projectRootFromInput(input: string): string {
 
 function statusForProjectReference(
   reference: NexusProjectReference,
-): PharoNexusProjectStatus {
+): NexusProjectStatus {
   const projectRoot = path.resolve(reference.projectRoot);
   const config = loadProjectConfigIfExists(projectRoot);
   const resolvedProjectConfigPath = projectConfigPath(projectRoot);
@@ -676,10 +676,10 @@ function statusForProjectReference(
   };
 }
 
-function statusForProjectPath(projectRoot: string): PharoNexusProjectStatus {
+function statusForProjectPath(projectRoot: string): NexusProjectStatus {
   const config = loadProjectConfigIfExists(projectRoot);
   if (!config) {
-    throw new PharoNexusProjectError(
+    throw new NexusProjectError(
       `PharoNexus project is not initialized: ${projectConfigPath(projectRoot)}`,
     );
   }
@@ -695,7 +695,7 @@ function statusForProjectPath(projectRoot: string): PharoNexusProjectStatus {
 }
 
 function findProjectReferenceById(
-  config: PharoNexusHomeConfig,
+  config: NexusHomeConfig,
   id: string,
 ): NexusProjectReference | undefined {
   return (
@@ -708,7 +708,7 @@ function findProjectReferenceById(
 }
 
 function findProjectReferenceByPath(
-  config: PharoNexusHomeConfig,
+  config: NexusHomeConfig,
   projectPath: string,
 ): NexusProjectReference | undefined {
   const projectRoot = projectRootFromInput(projectPath);
@@ -718,7 +718,7 @@ function findProjectReferenceByPath(
 }
 
 function findProjectReference(
-  config: PharoNexusHomeConfig,
+  config: NexusHomeConfig,
   idOrPath: string,
 ): NexusProjectReference | undefined {
   return (
@@ -736,7 +736,7 @@ function buildProjectConfig(
   sourceRoot?: string | null,
   forceGit = false,
   extensions?: NexusProjectExtensionsConfig,
-): PharoNexusProjectConfig {
+): NexusProjectConfig {
   return {
     version: 1,
     id: projectId,
@@ -748,7 +748,7 @@ function buildProjectConfig(
       defaultBranch,
       ...(sourceRoot ? { sourceRoot } : {}),
     },
-    worktreesRoot: pharoNexusProjectWorktreesDirectoryName,
+    worktreesRoot: nexusProjectWorktreesDirectoryName,
     kanban: {
       provider: "vibe-kanban",
       projectId: vibeKanbanProjectId,
@@ -758,7 +758,7 @@ function buildProjectConfig(
 }
 
 function buildConfiguredWorkTracking(
-  options: ConfigurePharoNexusProjectTrackerOptions,
+  options: ConfigureNexusProjectTrackerOptions,
 ): WorkTrackingConfig {
   if (options.provider === "local") {
     const storePath = optionalNonEmptyString(options.storePath, "storePath");
@@ -775,12 +775,12 @@ function buildConfiguredWorkTracking(
     );
     const name = optionalNonEmptyString(options.repositoryName, "repositoryName");
     if (!owner) {
-      throw new PharoNexusProjectError(
+      throw new NexusProjectError(
         "repositoryOwner is required for github tracker configuration",
       );
     }
     if (!name) {
-      throw new PharoNexusProjectError(
+      throw new NexusProjectError(
         "repositoryName is required for github tracker configuration",
       );
     }
@@ -799,7 +799,7 @@ function buildConfiguredWorkTracking(
   if (options.provider === "gitlab") {
     const id = optionalNonEmptyString(options.repositoryId, "repositoryId");
     if (!id) {
-      throw new PharoNexusProjectError(
+      throw new NexusProjectError(
         "repositoryId is required for gitlab tracker configuration",
       );
     }
@@ -819,12 +819,12 @@ function buildConfiguredWorkTracking(
     const projectKey = optionalNonEmptyString(options.projectKey, "projectKey");
     const issueType = optionalNonEmptyString(options.issueType, "issueType");
     if (!host) {
-      throw new PharoNexusProjectError(
+      throw new NexusProjectError(
         "host is required for jira tracker configuration",
       );
     }
     if (!projectKey) {
-      throw new PharoNexusProjectError(
+      throw new NexusProjectError(
         "projectKey is required for jira tracker configuration",
       );
     }
@@ -837,15 +837,15 @@ function buildConfiguredWorkTracking(
     };
   }
 
-  throw new PharoNexusProjectError(
+  throw new NexusProjectError(
     `Unsupported tracker provider: ${options.provider}`,
   );
 }
 
 function upsertProjectReference(
-  config: PharoNexusHomeConfig,
+  config: NexusHomeConfig,
   projectRoot: string,
-  projectConfig: PharoNexusProjectConfig,
+  projectConfig: NexusProjectConfig,
   vibeKanbanProjectId: string | null,
   vibeKanbanRepoId?: string | null,
 ): NexusProjectReference {
@@ -879,7 +879,7 @@ function upsertProjectReference(
     (project) => project.id === projectConfig.id,
   );
   if (duplicateId) {
-    throw new PharoNexusProjectError(
+    throw new NexusProjectError(
       `Project id is already registered at another root: ${duplicateId.id}`,
     );
   }
@@ -898,7 +898,7 @@ export function createPharoNexusProject(
     optionalNonEmptyString(options.vibeKanbanProjectId, "vibeKanbanProjectId") ??
     null;
   if (options.from && options.gitInit) {
-    throw new PharoNexusProjectError("--from and --git-init are mutually exclusive");
+    throw new NexusProjectError("--from and --git-init are mutually exclusive");
   }
 
   const homePath = resolvePharoNexusHome(options.homePath);
@@ -911,7 +911,7 @@ export function createPharoNexusProject(
 
   const creatingFromRemote = Boolean(options.from);
   if (directoryExistsAndIsNonEmpty(projectRoot)) {
-    throw new PharoNexusProjectError(
+    throw new NexusProjectError(
       `Project root already exists and is not empty: ${projectRoot}`,
     );
   }
@@ -1004,7 +1004,7 @@ export function createNexusProject(
     optionalNonEmptyString(options.vibeKanbanProjectId, "vibeKanbanProjectId") ??
     null;
   if (options.from && options.gitInit) {
-    throw new PharoNexusProjectError("--from and --git-init are mutually exclusive");
+    throw new NexusProjectError("--from and --git-init are mutually exclusive");
   }
 
   const homePath = resolvePharoNexusHome(options.homePath);
@@ -1017,7 +1017,7 @@ export function createNexusProject(
 
   const creatingFromRemote = Boolean(options.from);
   if (directoryExistsAndIsNonEmpty(projectRoot)) {
-    throw new PharoNexusProjectError(
+    throw new NexusProjectError(
       `Project root already exists and is not empty: ${projectRoot}`,
     );
   }
@@ -1094,7 +1094,7 @@ export function importPharoNexusProject(
     null;
   const sourceRoot = path.resolve(options.root);
   if (!fs.existsSync(sourceRoot) || !fs.statSync(sourceRoot).isDirectory()) {
-    throw new PharoNexusProjectError(
+    throw new NexusProjectError(
       `Project source root must be an existing directory: ${sourceRoot}`,
     );
   }
@@ -1115,7 +1115,7 @@ export function importPharoNexusProject(
       );
   ensureUniqueProject(homeConfig, projectId, projectRoot);
   if (!existingProjectConfig && directoryExistsAndIsNonEmpty(projectRoot)) {
-    throw new PharoNexusProjectError(
+    throw new NexusProjectError(
       `Project root already exists and is not empty: ${projectRoot}`,
     );
   }
@@ -1217,7 +1217,7 @@ export function importNexusProject(
     null;
   const sourceRoot = path.resolve(options.root);
   if (!fs.existsSync(sourceRoot) || !fs.statSync(sourceRoot).isDirectory()) {
-    throw new PharoNexusProjectError(
+    throw new NexusProjectError(
       `Project source root must be an existing directory: ${sourceRoot}`,
     );
   }
@@ -1239,7 +1239,7 @@ export function importNexusProject(
       );
   ensureUniqueProject(homeConfig, projectId, projectRoot);
   if (!existingProjectConfig && directoryExistsAndIsNonEmpty(projectRoot)) {
-    throw new PharoNexusProjectError(
+    throw new NexusProjectError(
       `Project root already exists and is not empty: ${projectRoot}`,
     );
   }
@@ -1304,9 +1304,9 @@ export function importNexusProject(
   };
 }
 
-export function listPharoNexusProjects(
-  options: ListPharoNexusProjectsOptions,
-): ListPharoNexusProjectsResult {
+export function listNexusProjects(
+  options: ListNexusProjectsOptions,
+): ListNexusProjectsResult {
   const homePath = resolvePharoNexusHome(options.homePath);
   const homeConfig = loadHomeConfig(homePath);
 
@@ -1316,9 +1316,9 @@ export function listPharoNexusProjects(
   };
 }
 
-export function getPharoNexusProjectStatus(
-  options: GetPharoNexusProjectStatusOptions,
-): GetPharoNexusProjectStatusResult {
+export function getNexusProjectStatus(
+  options: GetNexusProjectStatusOptions,
+): GetNexusProjectStatusResult {
   assertNonEmptyString(options.project, "project");
 
   const homePath = resolvePharoNexusHome(options.homePath);
@@ -1327,7 +1327,7 @@ export function getPharoNexusProjectStatus(
   const reference =
     findProjectReferenceById(homeConfig, projectSelector) ??
     findProjectReferenceByPath(homeConfig, projectSelector);
-  let project: PharoNexusProjectStatus;
+  let project: NexusProjectStatus;
   if (reference) {
     project = statusForProjectReference(reference);
   } else {
@@ -1335,8 +1335,8 @@ export function getPharoNexusProjectStatus(
     try {
       project = statusForProjectPath(projectRoot);
     } catch (error) {
-      if (error instanceof PharoNexusProjectError) {
-        throw new PharoNexusProjectError(
+      if (error instanceof NexusProjectError) {
+        throw new NexusProjectError(
           `No registered project matched "${projectSelector}". ` +
             `Path fallback checked "${projectRoot}" and failed: ${error.message}`,
         );
@@ -1352,16 +1352,16 @@ export function getPharoNexusProjectStatus(
   };
 }
 
-export function linkPharoNexusProjectTracker(
-  options: LinkPharoNexusProjectTrackerOptions,
-): LinkPharoNexusProjectTrackerResult {
+export function linkNexusProjectTracker(
+  options: LinkNexusProjectTrackerOptions,
+): LinkNexusProjectTrackerResult {
   assertNonEmptyString(options.project, "project");
   const vibeKanbanProjectId = optionalNonEmptyString(
     options.trackerProjectId,
     "trackerProjectId",
   );
   if (!vibeKanbanProjectId) {
-    throw new PharoNexusProjectError("trackerProjectId must be a non-empty string");
+    throw new NexusProjectError("trackerProjectId must be a non-empty string");
   }
 
   const homePath = resolvePharoNexusHome(options.homePath);
@@ -1371,7 +1371,7 @@ export function linkPharoNexusProjectTracker(
     ? path.resolve(existingReference.projectRoot)
     : projectRootFromInput(options.project);
   const projectConfig = loadProjectConfig(projectRoot);
-  const updatedProjectConfig: PharoNexusProjectConfig = {
+  const updatedProjectConfig: NexusProjectConfig = {
     ...projectConfig,
     kanban: {
       ...projectConfig.kanban,
@@ -1410,9 +1410,9 @@ export function linkPharoNexusProjectTracker(
   };
 }
 
-export function configurePharoNexusProjectTracker(
-  options: ConfigurePharoNexusProjectTrackerOptions,
-): ConfigurePharoNexusProjectTrackerResult {
+export function configureNexusProjectTracker(
+  options: ConfigureNexusProjectTrackerOptions,
+): ConfigureNexusProjectTrackerResult {
   assertNonEmptyString(options.project, "project");
   assertNonEmptyString(options.provider, "provider");
 
@@ -1424,7 +1424,7 @@ export function configurePharoNexusProjectTracker(
     : projectRootFromInput(options.project);
   const projectConfig = loadProjectConfig(projectRoot);
   const workTracking = buildConfiguredWorkTracking(options);
-  const updatedProjectConfig: PharoNexusProjectConfig = {
+  const updatedProjectConfig: NexusProjectConfig = {
     ...projectConfig,
     workTracking,
   };
@@ -1456,13 +1456,13 @@ export async function syncPharoNexusProjectTracker(
 
   const homePath = resolvePharoNexusHome(options.homePath);
   const homeConfig = loadHomeConfig(homePath);
-  const status = getPharoNexusProjectStatus({
+  const status = getNexusProjectStatus({
     homePath,
     project: options.project,
   }).project;
   const initialProjectConfig = loadProjectConfig(status.projectRoot);
   if (!projectUsesPharoNexusExtension(initialProjectConfig)) {
-    throw new PharoNexusProjectError(
+    throw new NexusProjectError(
       "project sync-tracker requires a PharoNexus-managed project",
     );
   }
@@ -1506,13 +1506,13 @@ export async function syncPharoNexusProjectTracker(
   });
   const vibeKanbanBoardRef = await vibeProvider.ensureBoard(trackerContext);
   const vibeKanbanBoard = vibeKanbanBoardRef.vibeKanbanBoard;
-  const linked = linkPharoNexusProjectTracker({
+  const linked = linkNexusProjectTracker({
     homePath,
     project: status.projectRoot,
     trackerProjectId: vibeKanbanBoardRef.id,
   });
   if (!linked.plexusProjectConfigPath || !linked.plexusProjectConfig) {
-    throw new PharoNexusProjectError(
+    throw new NexusProjectError(
       "project sync-tracker requires a PharoNexus-managed project",
     );
   }

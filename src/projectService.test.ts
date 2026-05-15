@@ -17,14 +17,14 @@ import {
 } from "./pharoNexusExtension.js";
 import {
   createNexusProject,
-  configurePharoNexusProjectTracker,
+  configureNexusProjectTracker,
   createPharoNexusProject,
-  getPharoNexusProjectStatus,
+  getNexusProjectStatus,
   importNexusProject,
   importPharoNexusProject,
-  linkPharoNexusProjectTracker,
-  listPharoNexusProjects,
-  PharoNexusProjectError,
+  linkNexusProjectTracker,
+  listNexusProjects,
+  NexusProjectError,
   syncPharoNexusProjectTracker,
   type GitCommandResult,
   type GitRunner,
@@ -245,7 +245,7 @@ describe("PharoNexus project service", () => {
     expect(result.projectConfig.extensions).toBeUndefined();
     expect(fs.existsSync(path.join(result.projectRoot, "AGENTS.md"))).toBe(false);
     expect(fs.existsSync(codexConfigPath(result.projectRoot))).toBe(false);
-    expect(getPharoNexusProjectStatus({ homePath, project: "plain-tool" }).project)
+    expect(getNexusProjectStatus({ homePath, project: "plain-tool" }).project)
       .toMatchObject({
         id: "plain-tool",
         plexusProjectConfigPath: null,
@@ -340,7 +340,7 @@ describe("PharoNexus project service", () => {
       gitRunner: fakeGitRunner([], { branch: "main" }),
     });
 
-    expect(listPharoNexusProjects({ homePath })).toEqual({
+    expect(listNexusProjects({ homePath })).toEqual({
       homePath,
       projects: [
         {
@@ -378,15 +378,15 @@ describe("PharoNexus project service", () => {
       gitRunner: fakeGitRunner([], { branch: "main" }),
     });
 
-    const byId = getPharoNexusProjectStatus({
+    const byId = getNexusProjectStatus({
       homePath,
       project: "status",
     });
-    const byPath = getPharoNexusProjectStatus({
+    const byPath = getNexusProjectStatus({
       homePath,
       project: projectRoot,
     });
-    const byConfigPath = getPharoNexusProjectStatus({
+    const byConfigPath = getNexusProjectStatus({
       homePath,
       project: path.join(projectRoot, devNexusProjectConfigFileName),
     });
@@ -419,7 +419,7 @@ describe("PharoNexus project service", () => {
     });
 
     expect(projectRoot.startsWith(process.cwd())).toBe(false);
-    const result = getPharoNexusProjectStatus({
+    const result = getNexusProjectStatus({
       homePath,
       project: "pharo-launcher-mcp",
     });
@@ -436,7 +436,7 @@ describe("PharoNexus project service", () => {
     initPharoNexusHome({ homePath });
 
     expect(() =>
-      getPharoNexusProjectStatus({
+      getNexusProjectStatus({
         homePath,
         project: "pharo-launcher-mcp",
       }),
@@ -461,7 +461,7 @@ describe("PharoNexus project service", () => {
       gitRunner: fakeGitRunner([], { branch: "main" }),
     });
 
-    const result = linkPharoNexusProjectTracker({
+    const result = linkNexusProjectTracker({
       homePath,
       project: "linkable",
       trackerProjectId: "vk-linkable",
@@ -520,7 +520,7 @@ describe("PharoNexus project service", () => {
       "utf8",
     );
 
-    linkPharoNexusProjectTracker({
+    linkNexusProjectTracker({
       homePath,
       project: projectRoot,
       trackerProjectId: "vk-unregistered",
@@ -558,7 +558,7 @@ describe("PharoNexus project service", () => {
       gitRunner: fakeGitRunner([], { branch: "main" }),
     });
 
-    const result = configurePharoNexusProjectTracker({
+    const result = configureNexusProjectTracker({
       homePath,
       project: projectRoot,
       provider: "github",
@@ -603,7 +603,7 @@ describe("PharoNexus project service", () => {
       gitRunner: fakeGitRunner([], { branch: "main" }),
     });
 
-    const result = configurePharoNexusProjectTracker({
+    const result = configureNexusProjectTracker({
       homePath,
       project: projectRoot,
       provider: "gitlab",
@@ -641,7 +641,7 @@ describe("PharoNexus project service", () => {
       gitRunner: fakeGitRunner([], { branch: "main" }),
     });
 
-    const result = configurePharoNexusProjectTracker({
+    const result = configureNexusProjectTracker({
       homePath,
       project: projectRoot,
       provider: "jira",
@@ -689,7 +689,7 @@ describe("PharoNexus project service", () => {
       },
     });
 
-    const result = configurePharoNexusProjectTracker({
+    const result = configureNexusProjectTracker({
       homePath,
       project: projectRoot,
       provider: "local",
@@ -1093,7 +1093,7 @@ describe("PharoNexus project service", () => {
     expect(fs.readFileSync(path.join(sourceRoot, "AGENTS.md"), "utf8")).toBe(
       "# Source owned\n",
     );
-    expect(getPharoNexusProjectStatus({ homePath, project: "imported-generic" }).project)
+    expect(getNexusProjectStatus({ homePath, project: "imported-generic" }).project)
       .toMatchObject({
         id: "imported-generic",
         plexusProjectConfigPath: null,
@@ -1223,7 +1223,7 @@ describe("PharoNexus project service", () => {
       "utf8",
     );
 
-    expect(listPharoNexusProjects({ homePath }).projects[0]).toEqual({
+    expect(listNexusProjects({ homePath }).projects[0]).toEqual({
       id: "missing",
       name: "Missing",
       projectRoot,
@@ -1258,7 +1258,7 @@ describe("PharoNexus project service", () => {
         root: path.join(makeTempDir("pharo-nexus-projects-"), "Duplicate2"),
         gitRunner: fakeGitRunner(gitCalls),
       }),
-    ).toThrow(PharoNexusProjectError);
+    ).toThrow(NexusProjectError);
     expect(gitCalls).toEqual([]);
   });
 

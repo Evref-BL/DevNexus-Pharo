@@ -6,7 +6,7 @@ import {
   loadHomeConfig,
   pharoNexusLogsDirectoryName,
   resolvePharoNexusHome,
-  type PharoNexusHomeConfig,
+  type NexusHomeConfig,
   type VibeKanbanBackendConfig,
   type VibeKanbanDindBackendConfig,
   type VibeKanbanDockerBackendConfig,
@@ -75,7 +75,7 @@ export type VibeKanbanBackendCommandRunner = (
 
 export interface VibeKanbanBackendStartOptions {
   homePath: string;
-  config?: PharoNexusHomeConfig;
+  config?: NexusHomeConfig;
   force?: boolean;
   commandRunner?: VibeKanbanBackendCommandRunner;
   progress?: VibeKanbanBackendProgressReporter;
@@ -86,14 +86,14 @@ export interface VibeKanbanBackendStartOptions {
 
 export interface VibeKanbanBackendStopOptions {
   homePath: string;
-  config?: PharoNexusHomeConfig;
+  config?: NexusHomeConfig;
   commandRunner?: VibeKanbanBackendCommandRunner;
   timeoutMs?: number;
 }
 
 export interface VibeKanbanBackendStatusOptions {
   homePath: string;
-  config?: PharoNexusHomeConfig;
+  config?: NexusHomeConfig;
   checkHealth?: boolean;
   fetch?: typeof fetch;
   healthTimeoutMs?: number;
@@ -129,8 +129,8 @@ function now(): string {
 
 function loadConfig(
   homePath: string,
-  config: PharoNexusHomeConfig | undefined,
-): PharoNexusHomeConfig {
+  config: NexusHomeConfig | undefined,
+): NexusHomeConfig {
   return config ?? loadHomeConfig(homePath);
 }
 

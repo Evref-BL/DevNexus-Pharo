@@ -4,7 +4,7 @@ import {
   loadHomeConfig,
   pharoNexusLogsDirectoryName,
   resolvePharoNexusHome,
-  type PharoNexusHomeConfig,
+  type NexusHomeConfig,
 } from "./config.js";
 import {
   checkHttpPort,
@@ -40,7 +40,7 @@ export interface PlexusGatewayServiceState {
 
 export interface PlexusGatewayStartOptions {
   homePath: string;
-  config?: PharoNexusHomeConfig;
+  config?: NexusHomeConfig;
   force?: boolean;
   appendLogs?: boolean;
   release?: boolean;
@@ -211,8 +211,8 @@ export function resolvePlexusGatewayServiceCommand(
 
 function loadConfig(
   homePath: string,
-  config: PharoNexusHomeConfig | undefined,
-): PharoNexusHomeConfig {
+  config: NexusHomeConfig | undefined,
+): NexusHomeConfig {
   return config ?? loadHomeConfig(homePath);
 }
 

@@ -3,7 +3,7 @@ import path from "node:path";
 import {
   loadHomeConfig,
   resolvePharoNexusHome,
-  type PharoNexusHomeConfig,
+  type NexusHomeConfig,
 } from "./config.js";
 import { defaultPharoNexusMcpHealthPath } from "./mcpServer.js";
 
@@ -27,7 +27,7 @@ export interface CodexMcpServerConfig {
 export interface InitCodexWorkspaceOptions {
   workspacePath: string;
   homePath: string;
-  config?: PharoNexusHomeConfig;
+  config?: NexusHomeConfig;
   dryRun?: boolean;
   platform?: NodeJS.Platform;
 }
@@ -43,7 +43,7 @@ export interface InitCodexWorkspaceResult {
 export interface DoctorCodexWorkspaceOptions {
   workspacePath: string;
   homePath: string;
-  config?: PharoNexusHomeConfig;
+  config?: NexusHomeConfig;
   fetch?: typeof fetch;
   timeoutMs?: number;
   platform?: NodeJS.Platform;
@@ -180,7 +180,7 @@ function withVibeKanbanMcpMode(args: string[]): string[] {
 
 export function buildCodexMcpServers(
   homePath: string,
-  config: PharoNexusHomeConfig,
+  config: NexusHomeConfig,
   platform: NodeJS.Platform = process.platform,
 ): Record<string, CodexMcpServerConfig> {
   const host = config.mcp.host;

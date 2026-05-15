@@ -1,7 +1,7 @@
 import {
   loadHomeConfig,
   resolvePharoNexusHome,
-  type PharoNexusHomeConfig,
+  type NexusHomeConfig,
 } from "./config.js";
 
 export const defaultVibeKanbanHost = "127.0.0.1";
@@ -51,7 +51,7 @@ export interface VibeKanbanMcpConfigResponse {
 
 export interface InstallPlexusMcpConfigOptions extends VibeKanbanApiOptions {
   homePath: string;
-  config?: PharoNexusHomeConfig;
+  config?: NexusHomeConfig;
   executor: string;
   serverName?: string;
   dryRun?: boolean;
@@ -69,7 +69,7 @@ export interface InstallPlexusMcpConfigResult {
 export interface InstallPharoNexusAndPlexusMcpConfigOptions
   extends VibeKanbanApiOptions {
   homePath: string;
-  config?: PharoNexusHomeConfig;
+  config?: NexusHomeConfig;
   executor: string;
   pharoNexusServerName?: string;
   plexusServerName?: string;
@@ -377,7 +377,7 @@ export async function updateVibeKanbanMcpConfig(
 
 export function buildPlexusMcpServerConfig(
   _homePath: string,
-  config: PharoNexusHomeConfig,
+  config: NexusHomeConfig,
 ): VibeKanbanMcpServerConfig {
   return {
     type: "http",
@@ -387,7 +387,7 @@ export function buildPlexusMcpServerConfig(
 
 export function buildPharoNexusMcpServerConfig(
   homePath: string,
-  config: PharoNexusHomeConfig,
+  config: NexusHomeConfig,
 ): VibeKanbanMcpServerConfig {
   return {
     type: "http",

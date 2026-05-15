@@ -1,11 +1,11 @@
 import path from "node:path";
 import {
   loadProjectConfig,
-  type PharoNexusProjectConfig,
+  type NexusProjectConfig,
 } from "./config.js";
 import {
-  getPharoNexusProjectStatus,
-  type PharoNexusProjectStatus,
+  getNexusProjectStatus,
+  type NexusProjectStatus,
 } from "./projectService.js";
 import {
   createProjectWorkTrackerProvider,
@@ -61,8 +61,8 @@ export interface SetProjectWorkItemStatusInput extends WorkItemProjectSelector {
 export interface ResolvedWorkItemProviderContext {
   homePath: string;
   projectRoot: string;
-  projectStatus: PharoNexusProjectStatus;
-  projectConfig: PharoNexusProjectConfig;
+  projectStatus: NexusProjectStatus;
+  projectConfig: NexusProjectConfig;
   projectContext: NexusProjectContext;
   workTracking: WorkTrackingConfig;
   provider: WorkTrackerProvider;
@@ -94,7 +94,7 @@ export class WorkItemService {
     selector: WorkItemProjectSelector,
   ): ResolvedWorkItemProviderContext {
     const projectSelector = normalizeProjectSelector(selector);
-    const projectStatus = getPharoNexusProjectStatus({
+    const projectStatus = getNexusProjectStatus({
       homePath: this.homePath,
       project: projectSelector,
     }).project;
@@ -227,7 +227,7 @@ export function normalizeWorkItemRef(
 
 function resolveProjectSourceRoot(
   projectRoot: string,
-  projectConfig: PharoNexusProjectConfig,
+  projectConfig: NexusProjectConfig,
 ): string {
   const sourceRoot = projectConfig.repo.sourceRoot;
   if (!sourceRoot) {

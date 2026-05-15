@@ -4,7 +4,7 @@ import {
   loadHomeConfig,
   pharoNexusLogsDirectoryName,
   resolvePharoNexusHome,
-  type PharoNexusHomeConfig,
+  type NexusHomeConfig,
 } from "./config.js";
 import {
   checkHttpPort,
@@ -39,7 +39,7 @@ export interface VibeKanbanServiceState {
 
 export interface VibeKanbanStartOptions {
   homePath: string;
-  config?: PharoNexusHomeConfig;
+  config?: NexusHomeConfig;
   force?: boolean;
   appendLogs?: boolean;
   release?: boolean;
@@ -105,8 +105,8 @@ function now(): string {
 
 function loadConfig(
   homePath: string,
-  config: PharoNexusHomeConfig | undefined,
-): PharoNexusHomeConfig {
+  config: NexusHomeConfig | undefined,
+): NexusHomeConfig {
   return config ?? loadHomeConfig(homePath);
 }
 
