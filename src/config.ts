@@ -18,7 +18,7 @@ import type {
 export const devNexusHomeConfigFileName = "dev-nexus.home.json";
 export const devNexusProjectConfigFileName = "dev-nexus.project.json";
 export const pharoNexusLogsDirectoryName = "logs";
-export const pharoNexusGeneratedDirectoryName = "generated";
+export const nexusGeneratedDirectoryName = "generated";
 export const pharoNexusControlProjectDirectoryName = "PharoNexus";
 export const pharoNexusLegacyControlProjectDirectoryName = "control";
 export const nexusProjectWorktreesDirectoryName = "worktrees";
@@ -1519,7 +1519,7 @@ export function initPharoNexusHome(
   fs.mkdirSync(path.join(homePath, pharoNexusLogsDirectoryName), {
     recursive: true,
   });
-  fs.mkdirSync(path.join(homePath, pharoNexusGeneratedDirectoryName), {
+  fs.mkdirSync(path.join(homePath, nexusGeneratedDirectoryName), {
     recursive: true,
   });
   saveHomeConfig(homePath, config);

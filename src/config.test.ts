@@ -16,7 +16,7 @@ import {
   loadProjectConfig,
   pharoNexusControlProjectId,
   pharoNexusControlProjectName,
-  pharoNexusGeneratedDirectoryName,
+  nexusGeneratedDirectoryName,
   devNexusHomeConfigPath,
   devNexusHomeConfigFileName,
   pharoNexusLogsDirectoryName,
@@ -785,7 +785,7 @@ describe("PharoNexus home config", () => {
       fs.existsSync(path.join(homePath, pharoNexusLogsDirectoryName)),
     ).toBe(true);
     expect(
-      fs.existsSync(path.join(homePath, pharoNexusGeneratedDirectoryName)),
+      fs.existsSync(path.join(homePath, nexusGeneratedDirectoryName)),
     ).toBe(true);
     expect(result.controlProjectPath).toBe(controlProjectRootPath(homePath));
     expect(result.controlProjectConfigPath).toBe(

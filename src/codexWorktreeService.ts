@@ -4,7 +4,7 @@ import path from "node:path";
 import { codexConfigPath } from "./codexConfig.js";
 import {
   loadProjectConfig,
-  pharoNexusGeneratedDirectoryName,
+  nexusGeneratedDirectoryName,
   projectWorktreesRootPath,
   resolvePharoNexusHome,
   type NexusProjectConfig,
@@ -453,7 +453,7 @@ export function recordCodexWorktreeExecution(
 export function codexWorktreeMetadataStorePath(homePath: string): string {
   return path.join(
     resolvePharoNexusHome(homePath),
-    pharoNexusGeneratedDirectoryName,
+    nexusGeneratedDirectoryName,
     codexWorktreeMetadataFileName,
   );
 }
