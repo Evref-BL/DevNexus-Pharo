@@ -352,7 +352,7 @@ describe("Jira work tracker provider", () => {
         body: {
           id: "9001",
           self: "https://example.atlassian.net/rest/api/3/issue/FCD-1/comment/9001",
-          body: adf("Recorded from PharoNexus"),
+          body: adf("Recorded from DevNexus"),
           author: {
             accountId: "abc-123",
             displayName: "Alice",
@@ -384,11 +384,11 @@ describe("Jira work tracker provider", () => {
             itemId: "10001",
           },
         },
-        "  Recorded from PharoNexus  ",
+        "  Recorded from DevNexus  ",
       ),
     ).resolves.toMatchObject({
       id: "jira-comment-9001",
-      body: "Recorded from PharoNexus",
+      body: "Recorded from DevNexus",
       author: "Alice",
       externalRef: {
         itemId: "9001",
@@ -399,7 +399,7 @@ describe("Jira work tracker provider", () => {
       url: "https://example.atlassian.net/rest/api/3/issue/FCD-1/comment",
       method: "POST",
       body: {
-        body: adf("Recorded from PharoNexus"),
+        body: adf("Recorded from DevNexus"),
       },
     });
 

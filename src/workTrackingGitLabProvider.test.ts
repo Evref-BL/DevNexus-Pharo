@@ -278,7 +278,7 @@ describe("GitLab work tracker provider", () => {
         status: 201,
         body: {
           id: 9001,
-          body: "Recorded from PharoNexus",
+          body: "Recorded from DevNexus",
           author: { username: "root" },
           created_at: "2026-05-15T11:00:00Z",
           updated_at: "2026-05-15T11:00:00Z",
@@ -298,10 +298,10 @@ describe("GitLab work tracker provider", () => {
     });
 
     await expect(
-      provider.addComment({ externalRef: { provider: "gitlab", itemId: "7" } }, "  Recorded from PharoNexus  "),
+      provider.addComment({ externalRef: { provider: "gitlab", itemId: "7" } }, "  Recorded from DevNexus  "),
     ).resolves.toMatchObject({
       id: "gitlab-note-9001",
-      body: "Recorded from PharoNexus",
+      body: "Recorded from DevNexus",
       author: "root",
       externalRef: {
         itemId: "9001",
@@ -312,7 +312,7 @@ describe("GitLab work tracker provider", () => {
       url: "https://gitlab.com/api/v4/projects/example%2Fproject/issues/7/notes",
       method: "POST",
       body: {
-        body: "Recorded from PharoNexus",
+        body: "Recorded from DevNexus",
       },
     });
 

@@ -282,7 +282,7 @@ export class GitLabWorkTrackerProvider implements WorkTrackerProvider {
     const url = new URL(pathAndQuery.replace(/^\/+/, ""), `${this.apiBaseUrl}/`);
     const headers: Record<string, string> = {
       Accept: "application/json",
-      "User-Agent": "pharo-nexus",
+      "User-Agent": "dev-nexus",
       ...this.authorizationHeaders(),
     };
     if (body !== undefined) {

@@ -488,7 +488,7 @@ describe("GitHub work tracker provider", () => {
         body: {
           id: 9001,
           node_id: "IC_node",
-          body: "Recorded from PharoNexus",
+          body: "Recorded from DevNexus",
           user: { login: "octocat" },
           created_at: "2026-05-15T11:00:00Z",
           updated_at: "2026-05-15T11:00:00Z",
@@ -508,10 +508,10 @@ describe("GitHub work tracker provider", () => {
     });
 
     await expect(
-      provider.addComment({ externalRef: { provider: "github", itemId: "7" } }, "  Recorded from PharoNexus  "),
+      provider.addComment({ externalRef: { provider: "github", itemId: "7" } }, "  Recorded from DevNexus  "),
     ).resolves.toMatchObject({
       id: "github-comment-9001",
-      body: "Recorded from PharoNexus",
+      body: "Recorded from DevNexus",
       author: "octocat",
       externalRef: {
         itemId: "9001",
@@ -523,7 +523,7 @@ describe("GitHub work tracker provider", () => {
       url: "https://api.github.com/repos/example/project/issues/7/comments",
       method: "POST",
       body: {
-        body: "Recorded from PharoNexus",
+        body: "Recorded from DevNexus",
       },
     });
 
