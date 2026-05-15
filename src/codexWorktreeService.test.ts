@@ -14,6 +14,8 @@ import {
   archiveCodexWorktree,
   CodexWorktreeServiceError,
   codexWorktreeMetadataStorePath,
+  getCodexWorktreeStatus,
+  listCodexWorktrees,
   prepareCodexWorktree,
 } from "./codexWorktreeService.js";
 
@@ -331,5 +333,85 @@ describe("Codex worktree service", () => {
       args: ["worktree", "remove", prepared.worktreePath],
     });
     expect(fs.existsSync(prepared.worktreePath)).toBe(false);
+  });
+
+  it("lists and reports recorded Codex worktree status", () => {
+    const homePath = makeTempDir("pharo-nexus-home-");
+    initPharoNexusHome({ homePath });
+    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "Listed");
+    createPharoNexusProject({
+      homePath,
+      name: "Listed",
+      root: projectRoot,
+      gitInit: true,
+      gitRunner: fakeProjectGitRunner(),
+    });
+    const calls: Array<{ args: string[]; cwd?: string }> = [];
+    const first = prepareCodexWorktree({
+      homePath,
+      project: "listed",
+      branchName: "codex/one",
+      gitRunner: fakeWorktreeGitRunner(calls),
+    });
+    const second = prepareCodexWorktree({
+      homePath,
+      project: "listed",
+      branchName: "codex/two",
+      gitRunner: fakeWorktreeGitRunner(calls),
+    });
+    archiveCodexWorktree({
+      homePath,
+      id: second.metadataRecord.id,
+      removeWorktree: true,
+      gitRunner: fakeWorktreeGitRunner(calls),
+      now: () => "2026-05-15T11:00:00.000Z",
+    });
+
+    expect(listCodexWorktrees({ homePath, project: "listed" })).toMatchObject({
+      homePath,
+      metadataPath: codexWorktreeMetadataStorePath(homePath),
+      worktrees: [
+        {
+          metadataRecord: {
+            id: "listed:codex/one",
+            state: "active",
+          },
+          projectRootExists: true,
+          sourceRootExists: true,
+          worktreeExists: true,
+        },
+        {
+          metadataRecord: {
+            id: "listed:codex/two",
+            state: "archived",
+          },
+          projectRootExists: true,
+          sourceRootExists: true,
+          worktreeExists: false,
+        },
+      ],
+    });
+    expect(listCodexWorktrees({ homePath, state: "active" })).toMatchObject({
+      worktrees: [
+        {
+          metadataRecord: {
+            id: first.metadataRecord.id,
+          },
+        },
+      ],
+    });
+    expect(getCodexWorktreeStatus({
+      homePath,
+      id: second.metadataRecord.id,
+    })).toMatchObject({
+      worktree: {
+        metadataRecord: {
+          id: second.metadataRecord.id,
+          state: "archived",
+          removedAt: "2026-05-15T11:00:00.000Z",
+        },
+        worktreeExists: false,
+      },
+    });
   });
 });

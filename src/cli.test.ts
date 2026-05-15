@@ -40,6 +40,8 @@ describe("pharo-nexus cli", () => {
     expect(usage()).toContain("pharo-nexus mcp");
     expect(usage()).toContain("pharo-nexus codex init <workspace>");
     expect(usage()).toContain("pharo-nexus codex doctor <workspace>");
+    expect(usage()).toContain("pharo-nexus codex worktree list");
+    expect(usage()).toContain("pharo-nexus codex worktree status <id>");
     expect(usage()).toContain("pharo-nexus codex worktree prepare <project>");
     expect(usage()).toContain("pharo-nexus codex worktree archive <id>");
     expect(usage()).toContain("pharo-nexus project create <name>");
@@ -56,6 +58,7 @@ describe("pharo-nexus cli", () => {
     expect(usage()).toContain("--tracker-project-id");
     expect(usage()).toContain("--sync-tracker");
     expect(usage()).toContain("--no-open-browser");
+    expect(usage()).toContain("--state <active|archived>");
     expect(usage()).toContain("--work-item-id");
     expect(usage()).toContain("--remove-worktree");
     expect(usage()).toContain("--json");
@@ -243,6 +246,63 @@ describe("pharo-nexus cli", () => {
         [
           "codex",
           "worktree",
+          "list",
+          "--home",
+          homePath,
+          "--project",
+          "prepared",
+          "--state",
+          "active",
+          "--json",
+        ],
+        context,
+      ),
+    ).resolves.toBe(0);
+    expect(JSON.parse(String(log.mock.calls[1]?.[0]))).toMatchObject({
+      ok: true,
+      worktrees: [
+        {
+          metadataRecord: {
+            id: "prepared:codex/fcd-900",
+            state: "active",
+          },
+          worktreeExists: true,
+        },
+      ],
+    });
+
+    await expect(
+      main(
+        [
+          "codex",
+          "worktree",
+          "status",
+          "prepared:codex/fcd-900",
+          "--home",
+          homePath,
+          "--json",
+        ],
+        context,
+      ),
+    ).resolves.toBe(0);
+    expect(JSON.parse(String(log.mock.calls[2]?.[0]))).toMatchObject({
+      ok: true,
+      worktree: {
+        metadataRecord: {
+          id: "prepared:codex/fcd-900",
+          branchName: "codex/fcd-900",
+        },
+        projectRootExists: true,
+        sourceRootExists: true,
+        worktreeExists: true,
+      },
+    });
+
+    await expect(
+      main(
+        [
+          "codex",
+          "worktree",
           "archive",
           "prepared:codex/fcd-900",
           "--home",
@@ -254,7 +314,7 @@ describe("pharo-nexus cli", () => {
       ),
     ).resolves.toBe(0);
 
-    expect(JSON.parse(String(log.mock.calls[1]?.[0]))).toMatchObject({
+    expect(JSON.parse(String(log.mock.calls[3]?.[0]))).toMatchObject({
       ok: true,
       removedWorktree: true,
       metadataRecord: {

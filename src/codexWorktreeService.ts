@@ -38,6 +38,19 @@ export interface ArchiveCodexWorktreeOptions {
   now?: () => Date | string;
 }
 
+export interface ListCodexWorktreesOptions {
+  homePath: string;
+  project?: string;
+  state?: CodexWorktreeState;
+  now?: () => Date | string;
+}
+
+export interface GetCodexWorktreeStatusOptions {
+  homePath: string;
+  id: string;
+  now?: () => Date | string;
+}
+
 export interface PrepareCodexWorktreeResult {
   homePath: string;
   metadataPath: string;
@@ -64,6 +77,25 @@ export interface ArchiveCodexWorktreeResult {
   git: {
     commands: GitCommandResult[];
   };
+}
+
+export interface CodexWorktreeStatus {
+  metadataRecord: CodexWorktreeRecord;
+  projectRootExists: boolean;
+  sourceRootExists: boolean;
+  worktreeExists: boolean;
+}
+
+export interface ListCodexWorktreesResult {
+  homePath: string;
+  metadataPath: string;
+  worktrees: CodexWorktreeStatus[];
+}
+
+export interface GetCodexWorktreeStatusResult {
+  homePath: string;
+  metadataPath: string;
+  worktree: CodexWorktreeStatus;
 }
 
 export type CodexWorktreeState = "active" | "archived";
@@ -231,12 +263,73 @@ export function archiveCodexWorktree(
   };
 }
 
+export function listCodexWorktrees(
+  options: ListCodexWorktreesOptions,
+): ListCodexWorktreesResult {
+  const homePath = resolvePharoNexusHome(options.homePath);
+  const metadataPath = codexWorktreeMetadataStorePath(homePath);
+  const store = readCodexWorktreeMetadataStore(
+    metadataPath,
+    nowString(options.now),
+  );
+  const projectId = options.project
+    ? getPharoNexusProjectStatus({
+        homePath,
+        project: options.project,
+      }).project.id
+    : undefined;
+  const worktrees = store.worktrees
+    .filter((record) => !projectId || record.projectId === projectId)
+    .filter((record) => !options.state || record.state === options.state)
+    .map(codexWorktreeStatusFromRecord);
+
+  return {
+    homePath,
+    metadataPath,
+    worktrees,
+  };
+}
+
+export function getCodexWorktreeStatus(
+  options: GetCodexWorktreeStatusOptions,
+): GetCodexWorktreeStatusResult {
+  const homePath = resolvePharoNexusHome(options.homePath);
+  const metadataPath = codexWorktreeMetadataStorePath(homePath);
+  const store = readCodexWorktreeMetadataStore(
+    metadataPath,
+    nowString(options.now),
+  );
+  const metadataRecord = store.worktrees.find((record) => record.id === options.id);
+  if (!metadataRecord) {
+    throw new CodexWorktreeServiceError(
+      `Codex worktree metadata record was not found: ${options.id}`,
+    );
+  }
+
+  return {
+    homePath,
+    metadataPath,
+    worktree: codexWorktreeStatusFromRecord(metadataRecord),
+  };
+}
+
 export function codexWorktreeMetadataStorePath(homePath: string): string {
   return path.join(
     resolvePharoNexusHome(homePath),
     pharoNexusGeneratedDirectoryName,
     codexWorktreeMetadataFileName,
   );
+}
+
+function codexWorktreeStatusFromRecord(
+  metadataRecord: CodexWorktreeRecord,
+): CodexWorktreeStatus {
+  return {
+    metadataRecord,
+    projectRootExists: fs.existsSync(metadataRecord.projectRoot),
+    sourceRootExists: fs.existsSync(metadataRecord.sourceRoot),
+    worktreeExists: fs.existsSync(metadataRecord.worktreePath),
+  };
 }
 
 function resolveProjectSourceRoot(

@@ -3,7 +3,10 @@ import http from "node:http";
 import process from "node:process";
 import {
   archiveCodexWorktree,
+  getCodexWorktreeStatus,
+  listCodexWorktrees,
   prepareCodexWorktree,
+  type CodexWorktreeState,
 } from "./codexWorktreeService.js";
 import { defaultPharoNexusHomePath, loadProjectConfig } from "./config.js";
 import {
@@ -177,6 +180,32 @@ const tools: McpTool[] = [
         workItemId: { type: "string" },
       },
       required: ["project"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "codex_worktree_list",
+    description: "List recorded local Codex worktrees from the PharoNexus home metadata store.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        homePath: { type: "string" },
+        project: { type: "string" },
+        state: { type: "string", enum: ["active", "archived"] },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "codex_worktree_status",
+    description: "Show one recorded local Codex worktree status from the PharoNexus home metadata store.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        homePath: { type: "string" },
+        id: { type: "string" },
+      },
+      required: ["id"],
       additionalProperties: false,
     },
   },
@@ -481,6 +510,22 @@ function optionalWorkStatusQuery(
 
     return parseWorkStatus(item, `${pathName}.${key}[${index}]`);
   });
+}
+
+function optionalCodexWorktreeState(
+  record: Record<string, unknown>,
+  key: string,
+  pathName: string,
+): CodexWorktreeState | undefined {
+  const value = optionalString(record, key, pathName);
+  if (value === undefined) {
+    return undefined;
+  }
+  if (value !== "active" && value !== "archived") {
+    throw new Error(`${pathName}.${key} must be active or archived`);
+  }
+
+  return value;
 }
 
 function homePathFromArgs(args: Record<string, unknown>): string {
@@ -806,6 +851,23 @@ export async function callPharoNexusMcpTool(
           }),
         });
       }
+      case "codex_worktree_list":
+        return toolResult({
+          ok: true,
+          ...listCodexWorktrees({
+            homePath: homePathFromArgs(args),
+            project: optionalString(args, "project", "arguments"),
+            state: optionalCodexWorktreeState(args, "state", "arguments"),
+          }),
+        });
+      case "codex_worktree_status":
+        return toolResult({
+          ok: true,
+          ...getCodexWorktreeStatus({
+            homePath: homePathFromArgs(args),
+            id: requiredString(args, "id", "arguments"),
+          }),
+        });
       case "codex_worktree_archive":
         return toolResult({
           ok: true,

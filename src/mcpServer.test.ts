@@ -213,6 +213,8 @@ describe("PharoNexus MCP server tools", () => {
       "project_list",
       "project_status",
       "codex_worktree_prepare",
+      "codex_worktree_list",
+      "codex_worktree_status",
       "codex_worktree_archive",
       "work_item_create",
       "work_item_list",
@@ -791,6 +793,53 @@ describe("PharoNexus MCP server tools", () => {
         workItem: {
           id: "FCD-900",
         },
+      },
+    });
+
+    const listPayload = parseToolText(
+      await callPharoNexusMcpTool(
+        "codex_worktree_list",
+        {
+          homePath,
+          project: "codex-mcp",
+          state: "active",
+        },
+        { gitRunner },
+      ),
+    );
+    expect(listPayload).toMatchObject({
+      ok: true,
+      worktrees: [
+        {
+          metadataRecord: {
+            id: "codex-mcp:codex/fcd-900",
+            state: "active",
+          },
+          projectRootExists: true,
+          sourceRootExists: true,
+          worktreeExists: true,
+        },
+      ],
+    });
+
+    const statusPayload = parseToolText(
+      await callPharoNexusMcpTool(
+        "codex_worktree_status",
+        {
+          homePath,
+          id: "codex-mcp:codex/fcd-900",
+        },
+        { gitRunner },
+      ),
+    );
+    expect(statusPayload).toMatchObject({
+      ok: true,
+      worktree: {
+        metadataRecord: {
+          id: "codex-mcp:codex/fcd-900",
+          branchName: "codex/fcd-900",
+        },
+        worktreeExists: true,
       },
     });
 
