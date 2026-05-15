@@ -11,6 +11,7 @@ import {
   type GitRunner,
 } from "./projectService.js";
 import {
+  archiveCodexWorktree,
   CodexWorktreeServiceError,
   codexWorktreeMetadataStorePath,
   prepareCodexWorktree,
@@ -70,6 +71,9 @@ function fakeWorktreeGitRunner(
     calls.push({ args: argsArray, cwd });
     if (argsArray[0] === "worktree" && argsArray[1] === "add") {
       fs.mkdirSync(argsArray[4], { recursive: true });
+    }
+    if (argsArray[0] === "worktree" && argsArray[1] === "remove") {
+      fs.rmSync(argsArray[2], { recursive: true, force: true });
     }
     if (
       argsArray[0] === "rev-parse" &&
@@ -146,6 +150,7 @@ describe("Codex worktree service", () => {
       worktrees: [
         {
           id: "ready:codex/fcd-123",
+          state: "active",
           projectId: "ready",
           branchName: "codex/fcd-123",
           worktreePath: expectedWorktreePath,
@@ -236,5 +241,95 @@ describe("Codex worktree service", () => {
       }),
     ).toThrow(CodexWorktreeServiceError);
     expect(calls).toEqual([]);
+  });
+
+  it("archives worktree metadata without removing the worktree by default", () => {
+    const homePath = makeTempDir("pharo-nexus-home-");
+    initPharoNexusHome({ homePath });
+    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "Archived");
+    createPharoNexusProject({
+      homePath,
+      name: "Archived",
+      root: projectRoot,
+      gitInit: true,
+      gitRunner: fakeProjectGitRunner(),
+    });
+    const calls: Array<{ args: string[]; cwd?: string }> = [];
+    const prepared = prepareCodexWorktree({
+      homePath,
+      project: "archived",
+      branchName: "codex/archive-only",
+      gitRunner: fakeWorktreeGitRunner(calls),
+      now: () => "2026-05-15T10:40:00.000Z",
+    });
+
+    const archived = archiveCodexWorktree({
+      homePath,
+      id: prepared.metadataRecord.id,
+      gitRunner: fakeWorktreeGitRunner(calls),
+      now: () => "2026-05-15T10:45:00.000Z",
+    });
+
+    expect(archived).toMatchObject({
+      removedWorktree: false,
+      metadataRecord: {
+        id: "archived:codex/archive-only",
+        state: "archived",
+        archivedAt: "2026-05-15T10:45:00.000Z",
+        removedAt: null,
+      },
+    });
+    expect(fs.existsSync(prepared.worktreePath)).toBe(true);
+    expect(JSON.parse(fs.readFileSync(prepared.metadataPath, "utf8"))).toMatchObject({
+      worktrees: [
+        {
+          id: "archived:codex/archive-only",
+          state: "archived",
+          archivedAt: "2026-05-15T10:45:00.000Z",
+          removedAt: null,
+        },
+      ],
+    });
+  });
+
+  it("can remove the Git worktree while archiving metadata", () => {
+    const homePath = makeTempDir("pharo-nexus-home-");
+    initPharoNexusHome({ homePath });
+    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "Removed");
+    createPharoNexusProject({
+      homePath,
+      name: "Removed",
+      root: projectRoot,
+      gitInit: true,
+      gitRunner: fakeProjectGitRunner(),
+    });
+    const calls: Array<{ args: string[]; cwd?: string }> = [];
+    const prepared = prepareCodexWorktree({
+      homePath,
+      project: "removed",
+      branchName: "codex/remove",
+      gitRunner: fakeWorktreeGitRunner(calls),
+    });
+
+    const archived = archiveCodexWorktree({
+      homePath,
+      id: prepared.metadataRecord.id,
+      removeWorktree: true,
+      gitRunner: fakeWorktreeGitRunner(calls),
+      now: () => "2026-05-15T10:50:00.000Z",
+    });
+
+    expect(archived).toMatchObject({
+      removedWorktree: true,
+      metadataRecord: {
+        state: "archived",
+        removedAt: "2026-05-15T10:50:00.000Z",
+      },
+    });
+    expect(calls.at(-1)).toEqual({
+      cwd: projectRoot,
+      args: ["worktree", "remove", prepared.worktreePath],
+    });
+    expect(fs.existsSync(prepared.worktreePath)).toBe(false);
   });
 });

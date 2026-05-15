@@ -30,6 +30,14 @@ export interface PrepareCodexWorktreeOptions {
   now?: () => Date | string;
 }
 
+export interface ArchiveCodexWorktreeOptions {
+  homePath: string;
+  id: string;
+  removeWorktree?: boolean;
+  gitRunner?: GitRunner;
+  now?: () => Date | string;
+}
+
 export interface PrepareCodexWorktreeResult {
   homePath: string;
   metadataPath: string;
@@ -48,8 +56,21 @@ export interface PrepareCodexWorktreeResult {
   };
 }
 
+export interface ArchiveCodexWorktreeResult {
+  homePath: string;
+  metadataPath: string;
+  metadataRecord: CodexWorktreeRecord;
+  removedWorktree: boolean;
+  git: {
+    commands: GitCommandResult[];
+  };
+}
+
+export type CodexWorktreeState = "active" | "archived";
+
 export interface CodexWorktreeRecord {
   id: string;
+  state: CodexWorktreeState;
   projectId: string;
   projectRoot: string;
   sourceRoot: string;
@@ -58,6 +79,8 @@ export interface CodexWorktreeRecord {
   baseRef: string | null;
   workItem: WorkItemRef | null;
   createdAt: string;
+  archivedAt: string | null;
+  removedAt: string | null;
   copiedFiles: string[];
   skippedFiles: string[];
   excludedEntries: string[];
@@ -134,6 +157,9 @@ export function prepareCodexWorktree(
     baseRef: options.baseRef ?? null,
     workItem: options.workItem ?? null,
     createdAt,
+    state: "active",
+    archivedAt: null,
+    removedAt: null,
     copiedFiles: copiedFiles.copied,
     skippedFiles: copiedFiles.skipped,
     excludedEntries,
@@ -153,6 +179,52 @@ export function prepareCodexWorktree(
     copiedFiles: copiedFiles.copied,
     skippedFiles: copiedFiles.skipped,
     excludedEntries,
+    git: {
+      commands,
+    },
+  };
+}
+
+export function archiveCodexWorktree(
+  options: ArchiveCodexWorktreeOptions,
+): ArchiveCodexWorktreeResult {
+  const homePath = resolvePharoNexusHome(options.homePath);
+  const metadataPath = codexWorktreeMetadataStorePath(homePath);
+  const archivedAt = nowString(options.now);
+  const store = readCodexWorktreeMetadataStore(metadataPath, archivedAt);
+  const existing = store.worktrees.find((record) => record.id === options.id);
+  if (!existing) {
+    throw new CodexWorktreeServiceError(
+      `Codex worktree metadata record was not found: ${options.id}`,
+    );
+  }
+
+  const gitRunner = options.gitRunner ?? defaultGitRunner;
+  const commands: GitCommandResult[] = [];
+  let removedWorktree = false;
+  if (options.removeWorktree) {
+    runGitCommand(
+      gitRunner,
+      commands,
+      ["worktree", "remove", existing.worktreePath],
+      existing.sourceRoot,
+    );
+    removedWorktree = true;
+  }
+
+  const metadataRecord: CodexWorktreeRecord = {
+    ...existing,
+    state: "archived",
+    archivedAt,
+    removedAt: removedWorktree ? archivedAt : existing.removedAt,
+  };
+  saveCodexWorktreeMetadataRecord(metadataPath, metadataRecord, archivedAt);
+
+  return {
+    homePath,
+    metadataPath,
+    metadataRecord,
+    removedWorktree,
     git: {
       commands,
     },
@@ -367,7 +439,7 @@ function saveCodexWorktreeMetadataRecord(
   record: CodexWorktreeRecord,
   updatedAt: string,
 ): void {
-  const store = loadCodexWorktreeMetadataStore(metadataPath, updatedAt);
+  const store = readCodexWorktreeMetadataStore(metadataPath, updatedAt);
   const existingIndex = store.worktrees.findIndex(
     (candidate) => candidate.id === record.id,
   );
@@ -389,7 +461,7 @@ function saveCodexWorktreeMetadataRecord(
   );
 }
 
-function loadCodexWorktreeMetadataStore(
+function readCodexWorktreeMetadataStore(
   metadataPath: string,
   updatedAt: string,
 ): CodexWorktreeMetadataStore {
@@ -425,7 +497,23 @@ function loadCodexWorktreeMetadataStore(
       typeof record.updatedAt === "string" && record.updatedAt.trim()
         ? record.updatedAt
         : updatedAt,
-    worktrees: record.worktrees as CodexWorktreeRecord[],
+    worktrees: record.worktrees.map(normalizeCodexWorktreeRecord),
+  };
+}
+
+function normalizeCodexWorktreeRecord(value: unknown): CodexWorktreeRecord {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new CodexWorktreeServiceError(
+      "Codex worktree metadata records must be objects",
+    );
+  }
+
+  const record = value as Record<string, unknown>;
+  return {
+    ...(record as unknown as CodexWorktreeRecord),
+    state: record.state === "archived" ? "archived" : "active",
+    archivedAt: typeof record.archivedAt === "string" ? record.archivedAt : null,
+    removedAt: typeof record.removedAt === "string" ? record.removedAt : null,
   };
 }
 
