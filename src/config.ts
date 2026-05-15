@@ -1,36 +1,52 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 import {
+  createDefaultNexusHomeConfigBase,
+  defaultNexusHomePath as defaultDevNexusHomePath,
+  devNexusHomeConfigFileName,
   devNexusProjectConfigFileName,
+  loadNexusHomeConfigFile,
   loadProjectConfig,
+  nexusGeneratedDirectoryName,
+  nexusHomeConfigPath,
+  nexusLogsDirectoryName,
   nexusProjectWorktreesDirectoryName,
   NexusConfigError,
   projectConfigPath,
   projectWorktreesRootPath,
   resolveNexusAgentConfig,
+  resolveNexusHome,
+  resolveNexusHomePath,
   saveProjectConfig,
+  saveNexusHomeConfigFile,
   validateNexusAgentConfig,
+  validateNexusHomeConfigBase,
   validateProjectConfig,
   type NexusAgentConfig,
+  type NexusHomeConfigBase,
   type NexusProjectConfig,
   type NexusProjectExtensionsConfig,
   type NexusProjectKanbanConfig,
   type NexusProjectRepoConfig,
   type NexusProjectRepoKind,
+  type NexusProjectReference,
   type ResolveNexusAgentConfigOptions,
 } from "dev-nexus";
 
 export {
+  devNexusHomeConfigFileName,
   devNexusProjectConfigFileName,
   loadProjectConfig,
+  nexusGeneratedDirectoryName,
+  nexusLogsDirectoryName,
   nexusProjectWorktreesDirectoryName,
   NexusConfigError,
   projectConfigPath,
   projectWorktreesRootPath,
   resolveNexusAgentConfig,
+  resolveNexusHome,
   saveProjectConfig,
   validateNexusAgentConfig,
   validateProjectConfig,
@@ -38,31 +54,22 @@ export {
 
 export type {
   NexusAgentConfig,
+  NexusHomeConfigBase,
   NexusProjectConfig,
   NexusProjectExtensionsConfig,
   NexusProjectKanbanConfig,
   NexusProjectRepoConfig,
   NexusProjectRepoKind,
+  NexusProjectReference,
   ResolveNexusAgentConfigOptions,
 };
 
-export const devNexusHomeConfigFileName = "dev-nexus.home.json";
-export const nexusLogsDirectoryName = "logs";
-export const nexusGeneratedDirectoryName = "generated";
 export const pharoNexusControlProjectDirectoryName = "PharoNexus";
 export const pharoNexusLegacyControlProjectDirectoryName = "control";
 export const pharoNexusControlProjectId = "pharo-nexus-control";
 export const pharoNexusControlProjectName = "PharoNexus";
 export const vibeKanbanPinnedVersion = "0.1.43";
 export const vibeKanbanPinnedPackage = `vibe-kanban@${vibeKanbanPinnedVersion}`;
-
-export interface NexusProjectReference {
-  id: string;
-  name: string;
-  projectRoot: string;
-  vibeKanbanProjectId?: string;
-  vibeKanbanRepoId?: string;
-}
 
 export interface NexusControlProjectReference {
   id: string;
@@ -131,11 +138,8 @@ export type VibeKanbanBackendConfig =
   | VibeKanbanDindBackendConfig
   | VibeKanbanExternalBackendConfig;
 
-export interface NexusHomeConfig {
-  version: 1;
-  paths: {
-    projectsRoot: string;
-    workspacesRoot: string;
+export interface NexusHomeConfig extends Omit<NexusHomeConfigBase, "paths"> {
+  paths: NexusHomeConfigBase["paths"] & {
     plexusStateRoot: string;
   };
   ports: {
@@ -161,9 +165,7 @@ export interface NexusHomeConfig {
       backend: VibeKanbanBackendConfig;
     };
   };
-  agent?: NexusAgentConfig;
   controlProject: NexusControlProjectReference;
-  projects: NexusProjectReference[];
 }
 
 export interface CreateDefaultHomeConfigOptions {
@@ -190,7 +192,10 @@ export interface InitNexusHomeResult {
 }
 
 export function defaultNexusHomePath(): string {
-  return process.env.PHARO_NEXUS_HOME ?? path.join(os.homedir(), ".pharo-nexus");
+  return defaultDevNexusHomePath({
+    envVarName: "PHARO_NEXUS_HOME",
+    directoryName: ".pharo-nexus",
+  });
 }
 
 export function defaultVibeKanbanToolCommand(): NexusToolCommand {
@@ -218,17 +223,7 @@ export function defaultNexusToolCommand(): NexusToolCommand {
   };
 }
 
-export function resolveNexusHome(homePath: string): string {
-  if (!homePath.trim()) {
-    throw new NexusConfigError("Nexus home path is required");
-  }
-
-  return path.resolve(homePath);
-}
-
-export function devNexusHomeConfigPath(homePath: string): string {
-  return path.join(resolveNexusHome(homePath), devNexusHomeConfigFileName);
-}
+export const devNexusHomeConfigPath = nexusHomeConfigPath;
 
 export function controlProjectRootPath(homePath: string): string {
   return path.join(
@@ -256,14 +251,6 @@ export function controlProjectWorktreesRootPath(
     controlProject?.root ?? controlProjectRootPath(homePath),
     nexusProjectWorktreesDirectoryName,
   );
-}
-
-function resolveFromHome(
-  homePath: string,
-  value: string | undefined,
-  fallback: string,
-): string {
-  return path.resolve(homePath, value ?? fallback);
 }
 
 export function defaultVibeKanbanBackendConfig(
@@ -330,20 +317,15 @@ export function createDefaultHomeConfig(
   options: CreateDefaultHomeConfigOptions = {},
 ): NexusHomeConfig {
   const resolvedHomePath = resolveNexusHome(homePath);
+  const baseConfig = createDefaultNexusHomeConfigBase(resolvedHomePath, {
+    projectsRoot: options.projectsRoot,
+    workspacesRoot: options.workspacesRoot,
+  });
   const config: NexusHomeConfig = {
-    version: 1,
+    ...baseConfig,
     paths: {
-      projectsRoot: resolveFromHome(
-        resolvedHomePath,
-        options.projectsRoot,
-        "projects",
-      ),
-      workspacesRoot: resolveFromHome(
-        resolvedHomePath,
-        options.workspacesRoot,
-        "workspaces",
-      ),
-      plexusStateRoot: resolveFromHome(
+      ...baseConfig.paths,
+      plexusStateRoot: resolveNexusHomePath(
         resolvedHomePath,
         options.plexusStateRoot,
         path.join("state", "plexus"),
@@ -382,7 +364,6 @@ export function createDefaultHomeConfig(
       vibeKanbanProjectId: null,
       vibeKanbanRepoId: null,
     },
-    projects: [],
   };
 
   return validateHomeConfig(config, resolvedHomePath);
@@ -516,31 +497,6 @@ function validateToolCommand(
   }
 
   return { command, args };
-}
-
-function validateProjectReference(
-  value: unknown,
-  index: number,
-): NexusProjectReference {
-  const pathName = `projects[${index}]`;
-  const record = assertRecord(value, pathName);
-  const vibeKanbanProjectId = optionalString(
-    record,
-    "vibeKanbanProjectId",
-    pathName,
-  );
-  const vibeKanbanRepoId = optionalString(
-    record,
-    "vibeKanbanRepoId",
-    pathName,
-  );
-  return {
-    id: requiredString(record, "id", pathName),
-    name: requiredString(record, "name", pathName),
-    projectRoot: requiredString(record, "projectRoot", pathName),
-    ...(vibeKanbanProjectId ? { vibeKanbanProjectId } : {}),
-    ...(vibeKanbanRepoId ? { vibeKanbanRepoId } : {}),
-  };
 }
 
 function defaultControlProjectReference(
@@ -909,11 +865,8 @@ export function validateHomeConfig(
   value: unknown,
   homePathForDefaults?: string,
 ): NexusHomeConfig {
+  const baseConfig = validateNexusHomeConfigBase(value, homePathForDefaults);
   const record = assertRecord(value, "config");
-  if (record.version !== 1) {
-    throw new NexusConfigError("config.version must be 1");
-  }
-
   const paths = assertRecord(record.paths, "paths");
   const ports = assertRecord(record.ports, "ports");
   const mcp =
@@ -923,15 +876,10 @@ export function validateHomeConfig(
     record.integrations,
     homePathForDefaults,
   );
-  const agent = validateNexusAgentConfig(record.agent, "agent");
   const controlProject = validateControlProjectReference(
     record.controlProject,
     homePathForDefaults,
   );
-  const projectsValue = record.projects;
-  if (!Array.isArray(projectsValue)) {
-    throw new NexusConfigError("projects must be an array");
-  }
 
   const vibeKanbanPort = requiredPort(ports, "vibeKanban");
   const pharoNexusMcpPort =
@@ -950,21 +898,10 @@ export function validateHomeConfig(
     );
   }
 
-  const projects = projectsValue.map(validateProjectReference);
-  const projectIds = new Set<string>();
-  for (const project of projects) {
-    if (projectIds.has(project.id)) {
-      throw new NexusConfigError(`Project id is duplicated: ${project.id}`);
-    }
-
-    projectIds.add(project.id);
-  }
-
   return {
-    version: 1,
+    ...baseConfig,
     paths: {
-      projectsRoot: requiredString(paths, "projectsRoot", "paths"),
-      workspacesRoot: requiredString(paths, "workspacesRoot", "paths"),
+      ...baseConfig.paths,
       plexusStateRoot: requiredString(paths, "plexusStateRoot", "paths"),
     },
     ports: {
@@ -984,38 +921,22 @@ export function validateHomeConfig(
       plexus: validateToolCommand(tools.plexus, "tools.plexus"),
     },
     integrations,
-    ...(agent ? { agent } : {}),
     controlProject,
-    projects,
   };
 }
 
 export function loadHomeConfig(homePath: string): NexusHomeConfig {
-  const configPath = devNexusHomeConfigPath(homePath);
-  if (!fs.existsSync(configPath)) {
-    throw new NexusConfigError(
+  return loadNexusHomeConfigFile(homePath, validateHomeConfig, {
+    missingMessage: (configPath) =>
       `PharoNexus home is not initialized: ${configPath}. Run "pharo-nexus init" first, or set PHARO_NEXUS_HOME to an initialized home.`,
-    );
-  }
-
-  return validateHomeConfig(
-    JSON.parse(fs.readFileSync(configPath, "utf8").replace(/^\uFEFF/, "")),
-    resolveNexusHome(homePath),
-  );
+  });
 }
 
 export function saveHomeConfig(
   homePath: string,
   config: NexusHomeConfig,
 ): string {
-  const configPath = devNexusHomeConfigPath(homePath);
-  fs.mkdirSync(path.dirname(configPath), { recursive: true });
-  fs.writeFileSync(
-    configPath,
-    `${JSON.stringify(validateHomeConfig(config, homePath), null, 2)}\n`,
-    "utf8",
-  );
-  return configPath;
+  return saveNexusHomeConfigFile(homePath, config, validateHomeConfig);
 }
 
 export function initNexusHome(
