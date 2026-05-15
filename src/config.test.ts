@@ -12,7 +12,6 @@ import {
   defaultVibeKanbanToolCommand,
   ensureControlProject,
   initPharoNexusHome,
-  legacyKanbanFromWorkTracking,
   loadHomeConfig,
   loadProjectConfig,
   pharoNexusControlProjectId,
@@ -27,14 +26,12 @@ import {
   plexusProjectConfigFileName,
   projectPlexusConfigPath,
   projectWorktreesRootPath,
-  resolveProjectWorkTrackingConfig,
   resolvePharoNexusAgentConfig,
   resolvePharoNexusHome,
   saveHomeConfig,
   saveProjectConfig,
   validateHomeConfig,
   validateProjectConfig,
-  workTrackingFromLegacyKanban,
 } from "./config.js";
 
 const tempDirs: string[] = [];
@@ -327,27 +324,6 @@ describe("PharoNexus home config", () => {
     });
   });
 
-  it("resolves legacy Kanban config to provider-neutral work tracking", () => {
-    const legacyConfig = validateProjectConfig({
-      version: 1,
-      id: "legacy-project",
-      name: "Legacy Project",
-      kanban: {
-        provider: "vibe-kanban",
-        projectId: "vk-project",
-      },
-    });
-
-    expect(workTrackingFromLegacyKanban(legacyConfig.kanban)).toEqual({
-      provider: "vibe-kanban",
-      projectId: "vk-project",
-    });
-    expect(resolveProjectWorkTrackingConfig(legacyConfig)).toEqual({
-      provider: "vibe-kanban",
-      projectId: "vk-project",
-    });
-  });
-
   it("accepts provider-neutral local work tracking config", () => {
     const config = validateProjectConfig({
       version: 1,
@@ -367,8 +343,6 @@ describe("PharoNexus home config", () => {
       provider: "local",
       storePath: ".pharo-nexus/work-items.json",
     });
-    expect(resolveProjectWorkTrackingConfig(config)).toEqual(config.workTracking);
-    expect(legacyKanbanFromWorkTracking(config.workTracking!)).toBeUndefined();
   });
 
   it("accepts provider-neutral GitHub work tracking config", () => {
