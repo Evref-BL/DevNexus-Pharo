@@ -153,14 +153,14 @@ export interface NexusHomeConfig {
     host: string;
   };
   tools: {
-    pharoNexus: NexusToolCommand;
+    nexus: NexusToolCommand;
     vibeKanban: NexusToolCommand;
     plexus: NexusToolCommand;
   };
   integrations: {
     vibeKanban: {
       executor: string;
-      pharoNexusMcpServerName: string;
+      nexusMcpServerName: string;
       plexusMcpServerName: string;
       installMcpOnStart: boolean;
       openBrowserOnStart: boolean;
@@ -396,7 +396,7 @@ export function createDefaultHomeConfig(
       host: options.mcpHost ?? "127.0.0.1",
     },
     tools: {
-      pharoNexus: defaultNexusToolCommand(),
+      nexus: defaultNexusToolCommand(),
       vibeKanban: defaultVibeKanbanToolCommand(),
       plexus: {
         command: "plexus-gateway",
@@ -406,7 +406,7 @@ export function createDefaultHomeConfig(
     integrations: {
       vibeKanban: {
         executor: "CODEX",
-        pharoNexusMcpServerName: "pharo_nexus",
+        nexusMcpServerName: "pharo_nexus",
         plexusMcpServerName: "plexus",
         installMcpOnStart: true,
         openBrowserOnStart: true,
@@ -1319,7 +1319,7 @@ function validateVibeKanbanIntegration(
   if (value === undefined) {
     return {
       executor: "CODEX",
-      pharoNexusMcpServerName: "pharo_nexus",
+      nexusMcpServerName: "pharo_nexus",
       plexusMcpServerName: "plexus",
       installMcpOnStart: true,
       openBrowserOnStart: true,
@@ -1351,10 +1351,10 @@ function validateVibeKanbanIntegration(
   return {
     executor:
       optionalString(record, "executor", "integrations.vibeKanban") ?? "CODEX",
-    pharoNexusMcpServerName:
+    nexusMcpServerName:
       optionalString(
         record,
-        "pharoNexusMcpServerName",
+        "nexusMcpServerName",
         "integrations.vibeKanban",
       ) ?? "pharo_nexus",
     plexusMcpServerName:
@@ -1458,9 +1458,9 @@ export function validateHomeConfig(
       host: optionalString(mcp, "host", "mcp") ?? "127.0.0.1",
     },
     tools: {
-      pharoNexus: validateToolCommand(
-        tools.pharoNexus ?? defaultNexusToolCommand(),
-        "tools.pharoNexus",
+      nexus: validateToolCommand(
+        tools.nexus ?? defaultNexusToolCommand(),
+        "tools.nexus",
       ),
       vibeKanban: validateToolCommand(tools.vibeKanban, "tools.vibeKanban"),
       plexus: validateToolCommand(tools.plexus, "tools.plexus"),

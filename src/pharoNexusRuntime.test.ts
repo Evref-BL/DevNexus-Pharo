@@ -215,7 +215,7 @@ function initHomeWithTopLevelTools(
     plexusMcpPort,
   });
   const config = loadHomeConfig(homePath);
-  config.tools.pharoNexus = {
+  config.tools.nexus = {
     command: process.execPath,
     args: ["-e", fakePharoNexusMcpServerScript()],
   };

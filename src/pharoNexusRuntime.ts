@@ -692,8 +692,8 @@ export async function startPharoNexus(
           executor,
           plexusServerName:
             options.serverName ?? config.integrations.vibeKanban.plexusMcpServerName,
-          pharoNexusServerName:
-            config.integrations.vibeKanban.pharoNexusMcpServerName,
+          nexusServerName:
+            config.integrations.vibeKanban.nexusMcpServerName,
           port: config.ports.vibeKanban,
         })
       : undefined;

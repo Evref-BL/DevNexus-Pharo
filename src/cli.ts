@@ -2521,7 +2521,7 @@ async function handleVibeKanbanCommand(argv: string[]): Promise<number> {
     config,
     executor: parsed.executor,
     plexusServerName: parsed.serverName,
-    pharoNexusServerName: config.integrations.vibeKanban.pharoNexusMcpServerName,
+    nexusServerName: config.integrations.vibeKanban.nexusMcpServerName,
     host: parsed.host,
     port: parsed.port ?? config.ports.vibeKanban,
     dryRun: parsed.dryRun,

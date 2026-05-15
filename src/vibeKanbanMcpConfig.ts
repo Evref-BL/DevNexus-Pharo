@@ -71,7 +71,7 @@ export interface InstallPharoNexusAndPlexusMcpConfigOptions
   homePath: string;
   config?: NexusHomeConfig;
   executor: string;
-  pharoNexusServerName?: string;
+  nexusServerName?: string;
   plexusServerName?: string;
   dryRun?: boolean;
 }
@@ -461,9 +461,9 @@ export async function installPharoNexusAndPlexusMcpForExecutor(
   const homePath = resolveNexusHome(options.homePath);
   const config = options.config ?? loadHomeConfig(homePath);
   const executor = normalizeVibeKanbanExecutor(options.executor);
-  const pharoNexusServerName =
-    options.pharoNexusServerName ??
-    config.integrations.vibeKanban.pharoNexusMcpServerName ??
+  const nexusServerName =
+    options.nexusServerName ??
+    config.integrations.vibeKanban.nexusMcpServerName ??
     defaultPharoNexusMcpServerName;
   const plexusServerName =
     options.plexusServerName ??
@@ -479,7 +479,7 @@ export async function installPharoNexusAndPlexusMcpForExecutor(
   const servers = mergeMcpServerConfig(
     mergeMcpServerConfig(
       existing.mcpConfig.servers,
-      pharoNexusServerName,
+      nexusServerName,
       pharoNexusServer,
     ),
     plexusServerName,
@@ -490,7 +490,7 @@ export async function installPharoNexusAndPlexusMcpForExecutor(
     return {
       executor,
       pharoNexus: {
-        serverName: pharoNexusServerName,
+        serverName: nexusServerName,
         server: pharoNexusServer,
       },
       plexus: {
@@ -511,7 +511,7 @@ export async function installPharoNexusAndPlexusMcpForExecutor(
   return {
     executor,
     pharoNexus: {
-      serverName: pharoNexusServerName,
+      serverName: nexusServerName,
       server: pharoNexusServer,
     },
     plexus: {

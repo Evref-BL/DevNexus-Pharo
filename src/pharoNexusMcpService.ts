@@ -307,8 +307,8 @@ export async function startPharoNexusMcp(
   }
 
   const serviceCommand = resolvePharoNexusMcpServiceCommand(
-    config.tools.pharoNexus.command,
-    config.tools.pharoNexus.args,
+    config.tools.nexus.command,
+    config.tools.nexus.args,
   );
   const host = config.mcp.host;
   const port = config.ports.pharoNexusMcp;

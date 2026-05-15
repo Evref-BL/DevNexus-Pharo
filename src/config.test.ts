@@ -89,7 +89,7 @@ describe("PharoNexus home config", () => {
         host: "127.0.0.1",
       },
       tools: {
-        pharoNexus: defaultNexusToolCommand(),
+        nexus: defaultNexusToolCommand(),
         vibeKanban: defaultVibeKanbanToolCommand(),
         plexus: {
           command: "plexus-gateway",
@@ -99,7 +99,7 @@ describe("PharoNexus home config", () => {
       integrations: {
         vibeKanban: {
           executor: "CODEX",
-          pharoNexusMcpServerName: "pharo_nexus",
+          nexusMcpServerName: "pharo_nexus",
           plexusMcpServerName: "plexus",
           installMcpOnStart: true,
           openBrowserOnStart: true,
@@ -159,12 +159,12 @@ describe("PharoNexus home config", () => {
     });
   });
 
-  it("loads older home configs with default PharoNexus MCP HTTP settings", () => {
+  it("loads home configs with default Nexus MCP HTTP settings", () => {
     const config = createDefaultHomeConfig(makeTempDir("pharo-nexus-home-"));
     const legacyConfig = config as unknown as Record<string, unknown>;
     delete (legacyConfig.ports as Record<string, unknown>).pharoNexusMcp;
     delete legacyConfig.mcp;
-    delete (legacyConfig.tools as Record<string, unknown>).pharoNexus;
+    delete (legacyConfig.tools as Record<string, unknown>).nexus;
 
     expect(validateHomeConfig(legacyConfig)).toMatchObject({
       ports: {
@@ -174,7 +174,7 @@ describe("PharoNexus home config", () => {
         host: "127.0.0.1",
       },
       tools: {
-        pharoNexus: defaultNexusToolCommand(),
+        nexus: defaultNexusToolCommand(),
       },
     });
   });
@@ -555,7 +555,7 @@ describe("PharoNexus home config", () => {
       integrations: {
         vibeKanban: {
           executor: "CODEX",
-          pharoNexusMcpServerName: "pharo_nexus",
+          nexusMcpServerName: "pharo_nexus",
           plexusMcpServerName: "plexus",
           installMcpOnStart: true,
           openBrowserOnStart: true,

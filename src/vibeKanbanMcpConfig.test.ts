@@ -343,11 +343,11 @@ describe("Vibe Kanban MCP config adapter", () => {
   it("installs PharoNexus and PLexus MCP configs in one Vibe Kanban update", async () => {
     const homePath = initHome();
     const config = loadHomeConfig(homePath);
-    config.tools.pharoNexus = {
+    config.tools.nexus = {
       command: "pharo-nexus",
       args: ["mcp"],
     };
-    config.integrations.vibeKanban.pharoNexusMcpServerName = "pharo_nexus_local";
+    config.integrations.vibeKanban.nexusMcpServerName = "pharo_nexus_local";
     config.integrations.vibeKanban.plexusMcpServerName = "plexus_local";
     saveHomeConfig(homePath, config);
     const api = await startFakeVibeKanbanApi();

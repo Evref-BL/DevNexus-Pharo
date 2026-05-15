@@ -184,12 +184,12 @@ export function buildCodexMcpServers(
   platform: NodeJS.Platform = process.platform,
 ): Record<string, CodexMcpServerConfig> {
   const host = config.mcp.host;
-  const pharoNexusServerName = config.integrations.vibeKanban.pharoNexusMcpServerName;
+  const nexusServerName = config.integrations.vibeKanban.nexusMcpServerName;
   const plexusServerName = config.integrations.vibeKanban.plexusMcpServerName;
   const vibeKanbanArgs = withVibeKanbanMcpMode(config.tools.vibeKanban.args);
 
   return {
-    [pharoNexusServerName]: {
+    [nexusServerName]: {
       type: "http",
       enabled: true,
       required: true,
@@ -456,12 +456,12 @@ export async function doctorCodexWorkspace(
     });
   }
 
-  const pharoNexusServerName = config.integrations.vibeKanban.pharoNexusMcpServerName;
+  const nexusServerName = config.integrations.vibeKanban.nexusMcpServerName;
   const plexusServerName = config.integrations.vibeKanban.plexusMcpServerName;
   const httpChecks: HttpMcpServerCheck[] = [
     {
-      name: pharoNexusServerName,
-      url: servers[pharoNexusServerName]?.url ?? "",
+      name: nexusServerName,
+      url: servers[nexusServerName]?.url ?? "",
       healthPath: defaultPharoNexusMcpHealthPath,
       expectedTools: [
         "project_create",
