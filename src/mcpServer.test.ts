@@ -152,7 +152,7 @@ describe("PharoNexus MCP server tools", () => {
         id: 2,
       });
       expect(listPayload.result.tools.map((tool) => tool.name)).toContain(
-        "pharo_nexus_project_create",
+        "project_create",
       );
     } finally {
       await server.close();
@@ -185,12 +185,12 @@ describe("PharoNexus MCP server tools", () => {
 
   it("lists project management tools", () => {
     expect(listPharoNexusMcpTools().map((tool) => tool.name)).toEqual([
-      "pharo_nexus_project_create",
-      "pharo_nexus_project_import",
-      "pharo_nexus_project_link_kanban",
-      "pharo_nexus_project_sync_kanban",
-      "pharo_nexus_project_list",
-      "pharo_nexus_project_status",
+      "project_create",
+      "project_import",
+      "project_link_tracker",
+      "project_sync_tracker",
+      "project_list",
+      "project_status",
       "work_item_create",
       "work_item_list",
       "work_item_get",
@@ -209,13 +209,13 @@ describe("PharoNexus MCP server tools", () => {
     initPharoNexusHome({ homePath });
 
     const createResult = await callPharoNexusMcpTool(
-      "pharo_nexus_project_create",
+      "project_create",
       {
         homePath,
         name: "McpProject",
         root: projectRoot,
         gitInit: true,
-        syncVibeKanban: false,
+        syncTracker: false,
       },
       { gitRunner: fakeGitRunner },
     );
@@ -232,7 +232,7 @@ describe("PharoNexus MCP server tools", () => {
     });
 
     const listPayload = parseToolText(
-      await callPharoNexusMcpTool("pharo_nexus_project_list", { homePath }),
+      await callPharoNexusMcpTool("project_list", { homePath }),
     );
     expect(listPayload).toMatchObject({
       ok: true,
@@ -246,10 +246,10 @@ describe("PharoNexus MCP server tools", () => {
     });
 
     const linkPayload = parseToolText(
-      await callPharoNexusMcpTool("pharo_nexus_project_link_kanban", {
+      await callPharoNexusMcpTool("project_link_tracker", {
         homePath,
         project: "mcp-project",
-        vibeKanbanProjectId: "vk-mcp",
+        trackerProjectId: "vk-mcp",
       }),
     );
     expect(linkPayload).toMatchObject({
@@ -262,7 +262,7 @@ describe("PharoNexus MCP server tools", () => {
     });
 
     const statusPayload = parseToolText(
-      await callPharoNexusMcpTool("pharo_nexus_project_status", {
+      await callPharoNexusMcpTool("project_status", {
         homePath,
         project: "mcp-project",
       }),
@@ -282,13 +282,13 @@ describe("PharoNexus MCP server tools", () => {
     const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "Tracked");
     initPharoNexusHome({ homePath });
     const createProject = await callPharoNexusMcpTool(
-      "pharo_nexus_project_create",
+      "project_create",
       {
         homePath,
         name: "Tracked",
         root: projectRoot,
         gitInit: true,
-        syncVibeKanban: false,
+        syncTracker: false,
       },
       { gitRunner: fakeGitRunner },
     );
@@ -416,13 +416,13 @@ describe("PharoNexus MCP server tools", () => {
     const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "Legacy");
     initPharoNexusHome({ homePath });
     const createProject = await callPharoNexusMcpTool(
-      "pharo_nexus_project_create",
+      "project_create",
       {
         homePath,
         name: "Legacy",
         root: projectRoot,
         gitInit: true,
-        syncVibeKanban: false,
+        syncTracker: false,
       },
       { gitRunner: fakeGitRunner },
     );
@@ -447,13 +447,13 @@ describe("PharoNexus MCP server tools", () => {
     initPharoNexusHome({ homePath });
 
     const createResult = await callPharoNexusMcpTool(
-      "pharo_nexus_project_create",
+      "project_create",
       {
         homePath,
         name: "MCP-PL",
         root: projectRoot,
         gitInit: true,
-        syncVibeKanban: false,
+        syncTracker: false,
       },
       { gitRunner: fakeGitRunner },
     );
@@ -466,7 +466,7 @@ describe("PharoNexus MCP server tools", () => {
     });
 
     const statusPayload = parseToolText(
-      await callPharoNexusMcpTool("pharo_nexus_project_status", {
+      await callPharoNexusMcpTool("project_status", {
         homePath,
         project: "pharo-launcher-mcp",
       }),
@@ -489,12 +489,12 @@ describe("PharoNexus MCP server tools", () => {
     const projectRoot = path.join(homePath, "projects", "Imported");
 
     const result = await callPharoNexusMcpTool(
-      "pharo_nexus_project_import",
+      "project_import",
       {
         homePath,
         root: sourceRoot,
         name: "Imported",
-        syncVibeKanban: false,
+        syncTracker: false,
       },
       { gitRunner: fakeGitRunner },
     );
@@ -636,7 +636,7 @@ describe("PharoNexus MCP server tools", () => {
     };
 
     const result = await callPharoNexusMcpTool(
-      "pharo_nexus_project_create",
+      "project_create",
       {
         homePath,
         name: "MyLibrary",
@@ -672,7 +672,7 @@ describe("PharoNexus MCP server tools", () => {
         },
         images: [],
       },
-      vibeKanbanSync: {
+      trackerSync: {
         vibeKanbanProjectId: "board-my-library",
         vibeKanbanRepoId: "repo-my-library",
       },
@@ -707,7 +707,7 @@ describe("PharoNexus MCP server tools", () => {
   });
 
   it("returns tool errors as MCP error results", async () => {
-    const result = await callPharoNexusMcpTool("pharo_nexus_project_status", {});
+    const result = await callPharoNexusMcpTool("project_status", {});
 
     expect(result.isError).toBe(true);
     expect(parseToolText(result)).toMatchObject({

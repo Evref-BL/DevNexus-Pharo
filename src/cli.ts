@@ -33,16 +33,16 @@ import {
   createPharoNexusProject,
   getPharoNexusProjectStatus,
   importPharoNexusProject,
-  linkPharoNexusProjectKanban,
+  linkPharoNexusProjectTracker,
   listPharoNexusProjects,
-  syncPharoNexusProjectKanban,
+  syncPharoNexusProjectTracker,
   type CreatePharoNexusProjectResult,
   type GetPharoNexusProjectStatusResult,
   type ImportPharoNexusProjectResult,
-  type LinkPharoNexusProjectKanbanResult,
+  type LinkPharoNexusProjectTrackerResult,
   type ListPharoNexusProjectsResult,
   type PharoNexusProjectStatus,
-  type SyncPharoNexusProjectKanbanResult,
+  type SyncPharoNexusProjectTrackerResult,
 } from "./projectService.js";
 import {
   runPharoNexusMcpServer,
@@ -74,8 +74,8 @@ export function usage(): string {
     "  pharo-nexus codex doctor <workspace> [options]",
     "  pharo-nexus project create <name> [--from <git-url> | --git-init] [options]",
     "  pharo-nexus project import <path> [--name <name>] [options]",
-    "  pharo-nexus project link-kanban <id-or-path> --vibe-project-id <id> [options]",
-    "  pharo-nexus project sync-kanban <id-or-path> [options]",
+    "  pharo-nexus project link-tracker <id-or-path> --tracker-project-id <id> [options]",
+    "  pharo-nexus project sync-tracker <id-or-path> [options]",
     "  pharo-nexus project list [options]",
     "  pharo-nexus project status <id-or-path> [options]",
     "  pharo-nexus plexus-gateway start <home> [--force]",
@@ -131,8 +131,8 @@ export function usage(): string {
     "  --from <git-url>",
     "  --git-init",
     "  --root <path>",
-    "  --vibe-project-id <id>",
-    "  --sync-vibe-kanban",
+    "  --tracker-project-id <id>",
+    "  --sync-tracker",
     "  --vibe-host <host>",
     "  --vibe-port <port>",
     "  --home <path>",
@@ -141,19 +141,19 @@ export function usage(): string {
     "Options for project import:",
     "  --name <name>",
     "  --project-root <path>",
-    "  --vibe-project-id <id>",
-    "  --sync-vibe-kanban",
+    "  --tracker-project-id <id>",
+    "  --sync-tracker",
     "  --vibe-host <host>",
     "  --vibe-port <port>",
     "  --home <path>",
     "  --json",
     "",
-    "Options for project link-kanban:",
-    "  --vibe-project-id <id>",
+    "Options for project link-tracker:",
+    "  --tracker-project-id <id>",
     "  --home <path>",
     "  --json",
     "",
-    "Options for project sync-kanban:",
+    "Options for project sync-tracker:",
     "  --vibe-host <host>",
     "  --vibe-port <port>",
     "  --home <path>",
@@ -817,8 +817,8 @@ interface ParsedProjectCreateCommand {
   from?: string;
   gitInit?: boolean;
   root?: string;
-  vibeKanbanProjectId?: string;
-  syncVibeKanban?: boolean;
+  trackerProjectId?: string;
+  syncTracker?: boolean;
   vibeHost?: string;
   vibePort?: number;
   json?: boolean;
@@ -829,21 +829,21 @@ interface ParsedProjectImportCommand {
   root: string;
   projectRoot?: string;
   name?: string;
-  vibeKanbanProjectId?: string;
-  syncVibeKanban?: boolean;
+  trackerProjectId?: string;
+  syncTracker?: boolean;
   vibeHost?: string;
   vibePort?: number;
   json?: boolean;
 }
 
-interface ParsedProjectLinkKanbanCommand {
+interface ParsedProjectLinkTrackerCommand {
   homePath: string;
   project: string;
-  vibeKanbanProjectId: string;
+  trackerProjectId: string;
   json?: boolean;
 }
 
-interface ParsedProjectSyncKanbanCommand {
+interface ParsedProjectSyncTrackerCommand {
   homePath: string;
   project: string;
   vibeHost?: string;
@@ -897,11 +897,11 @@ function parseProjectCreateCommand(argv: string[]): ParsedProjectCreateCommand {
       case "--root":
         parsed.root = next();
         break;
-      case "--vibe-project-id":
-        parsed.vibeKanbanProjectId = next();
+      case "--tracker-project-id":
+        parsed.trackerProjectId = next();
         break;
-      case "--sync-vibe-kanban":
-        parsed.syncVibeKanban = true;
+      case "--sync-tracker":
+        parsed.syncTracker = true;
         break;
       case "--vibe-host":
         parsed.vibeHost = next();
@@ -920,8 +920,8 @@ function parseProjectCreateCommand(argv: string[]): ParsedProjectCreateCommand {
     }
   }
 
-  if (parsed.syncVibeKanban && parsed.vibeKanbanProjectId) {
-    throw new Error("--sync-vibe-kanban and --vibe-project-id are mutually exclusive");
+  if (parsed.syncTracker && parsed.trackerProjectId) {
+    throw new Error("--sync-tracker and --tracker-project-id are mutually exclusive");
   }
 
   return parsed as ParsedProjectCreateCommand;
@@ -959,11 +959,11 @@ function parseProjectImportCommand(argv: string[]): ParsedProjectImportCommand {
       case "--project-root":
         parsed.projectRoot = next();
         break;
-      case "--vibe-project-id":
-        parsed.vibeKanbanProjectId = next();
+      case "--tracker-project-id":
+        parsed.trackerProjectId = next();
         break;
-      case "--sync-vibe-kanban":
-        parsed.syncVibeKanban = true;
+      case "--sync-tracker":
+        parsed.syncTracker = true;
         break;
       case "--vibe-host":
         parsed.vibeHost = next();
@@ -982,26 +982,26 @@ function parseProjectImportCommand(argv: string[]): ParsedProjectImportCommand {
     }
   }
 
-  if (parsed.syncVibeKanban && parsed.vibeKanbanProjectId) {
-    throw new Error("--sync-vibe-kanban and --vibe-project-id are mutually exclusive");
+  if (parsed.syncTracker && parsed.trackerProjectId) {
+    throw new Error("--sync-tracker and --tracker-project-id are mutually exclusive");
   }
 
   return parsed as ParsedProjectImportCommand;
 }
 
-function parseProjectLinkKanbanCommand(
+function parseProjectLinkTrackerCommand(
   argv: string[],
-): ParsedProjectLinkKanbanCommand {
+): ParsedProjectLinkTrackerCommand {
   const [, command, project, ...rest] = argv;
-  if (command !== "link-kanban") {
-    throw new Error("project requires link-kanban");
+  if (command !== "link-tracker") {
+    throw new Error("project requires link-tracker");
   }
 
   if (!project || project.startsWith("--")) {
-    throw new Error("project link-kanban requires a project id or path");
+    throw new Error("project link-tracker requires a project id or path");
   }
 
-  const parsed: Partial<ParsedProjectLinkKanbanCommand> = {
+  const parsed: Partial<ParsedProjectLinkTrackerCommand> = {
     homePath: defaultHomePath(),
     project,
   };
@@ -1017,8 +1017,8 @@ function parseProjectLinkKanbanCommand(
     };
 
     switch (arg) {
-      case "--vibe-project-id":
-        parsed.vibeKanbanProjectId = next();
+      case "--tracker-project-id":
+        parsed.trackerProjectId = next();
         break;
       case "--home":
         parsed.homePath = next();
@@ -1027,30 +1027,30 @@ function parseProjectLinkKanbanCommand(
         parsed.json = true;
         break;
       default:
-        throw new Error(`Unknown project link-kanban option: ${arg}`);
+        throw new Error(`Unknown project link-tracker option: ${arg}`);
     }
   }
 
-  if (!parsed.vibeKanbanProjectId) {
-    throw new Error("--vibe-project-id is required");
+  if (!parsed.trackerProjectId) {
+    throw new Error("--tracker-project-id is required");
   }
 
-  return parsed as ParsedProjectLinkKanbanCommand;
+  return parsed as ParsedProjectLinkTrackerCommand;
 }
 
-function parseProjectSyncKanbanCommand(
+function parseProjectSyncTrackerCommand(
   argv: string[],
-): ParsedProjectSyncKanbanCommand {
+): ParsedProjectSyncTrackerCommand {
   const [, command, project, ...rest] = argv;
-  if (command !== "sync-kanban") {
-    throw new Error("project requires sync-kanban");
+  if (command !== "sync-tracker") {
+    throw new Error("project requires sync-tracker");
   }
 
   if (!project || project.startsWith("--")) {
-    throw new Error("project sync-kanban requires a project id or path");
+    throw new Error("project sync-tracker requires a project id or path");
   }
 
-  const parsed: Partial<ParsedProjectSyncKanbanCommand> = {
+  const parsed: Partial<ParsedProjectSyncTrackerCommand> = {
     homePath: defaultHomePath(),
     project,
   };
@@ -1079,17 +1079,17 @@ function parseProjectSyncKanbanCommand(
         parsed.json = true;
         break;
       default:
-        throw new Error(`Unknown project sync-kanban option: ${arg}`);
+        throw new Error(`Unknown project sync-tracker option: ${arg}`);
     }
   }
 
-  return parsed as ParsedProjectSyncKanbanCommand;
+  return parsed as ParsedProjectSyncTrackerCommand;
 }
 
 function parseProjectListCommand(argv: string[]): ParsedProjectListCommand {
   const [, command, ...rest] = argv;
   if (command !== "list") {
-    throw new Error("project requires create, import, link-kanban, sync-kanban, list, or status");
+    throw new Error("project requires create, import, link-tracker, sync-tracker, list, or status");
   }
 
   const parsed: Partial<ParsedProjectListCommand> = {
@@ -1124,7 +1124,7 @@ function parseProjectListCommand(argv: string[]): ParsedProjectListCommand {
 function parseProjectStatusCommand(argv: string[]): ParsedProjectStatusCommand {
   const [, command, project, ...rest] = argv;
   if (command !== "status") {
-    throw new Error("project requires create, import, link-kanban, sync-kanban, list, or status");
+    throw new Error("project requires create, import, link-tracker, sync-tracker, list, or status");
   }
 
   if (!project || project.startsWith("--")) {
@@ -1163,13 +1163,13 @@ function parseProjectStatusCommand(argv: string[]): ParsedProjectStatusCommand {
 
 function printProjectCreateResult(
   result: CreatePharoNexusProjectResult,
-  syncResult: SyncPharoNexusProjectKanbanResult | undefined,
+  syncResult: SyncPharoNexusProjectTrackerResult | undefined,
   json: boolean | undefined,
 ): void {
   const payload = {
     ok: true,
     ...result,
-    ...(syncResult ? { vibeKanbanSync: syncResult } : {}),
+    ...(syncResult ? { trackerSync: syncResult } : {}),
   };
   if (json) {
     console.log(JSON.stringify(payload, null, 2));
@@ -1194,8 +1194,8 @@ function printProjectCreateResult(
     console.log(`  Vibe Kanban project: ${result.projectConfig.kanban.projectId}`);
   }
   if (syncResult) {
-    console.log(`  Synced Vibe Kanban board: ${syncResult.vibeKanbanProjectId}`);
-    console.log(`  Synced Vibe Kanban repo: ${syncResult.vibeKanbanRepoId}`);
+    console.log(`  Synced tracker board: ${syncResult.vibeKanbanProjectId}`);
+    console.log(`  Synced tracker repo: ${syncResult.vibeKanbanRepoId}`);
   }
   console.log("");
   console.log("JSON:");
@@ -1204,13 +1204,13 @@ function printProjectCreateResult(
 
 function printProjectImportResult(
   result: ImportPharoNexusProjectResult,
-  syncResult: SyncPharoNexusProjectKanbanResult | undefined,
+  syncResult: SyncPharoNexusProjectTrackerResult | undefined,
   json: boolean | undefined,
 ): void {
   const payload = {
     ok: true,
     ...result,
-    ...(syncResult ? { vibeKanbanSync: syncResult } : {}),
+    ...(syncResult ? { trackerSync: syncResult } : {}),
   };
   if (json) {
     console.log(JSON.stringify(payload, null, 2));
@@ -1234,16 +1234,16 @@ function printProjectImportResult(
     console.log(`  Vibe Kanban project: ${result.projectConfig.kanban.projectId}`);
   }
   if (syncResult) {
-    console.log(`  Synced Vibe Kanban board: ${syncResult.vibeKanbanProjectId}`);
-    console.log(`  Synced Vibe Kanban repo: ${syncResult.vibeKanbanRepoId}`);
+    console.log(`  Synced tracker board: ${syncResult.vibeKanbanProjectId}`);
+    console.log(`  Synced tracker repo: ${syncResult.vibeKanbanRepoId}`);
   }
   console.log("");
   console.log("JSON:");
   console.log(JSON.stringify(payload, null, 2));
 }
 
-function printProjectLinkKanbanResult(
-  result: LinkPharoNexusProjectKanbanResult,
+function printProjectLinkTrackerResult(
+  result: LinkPharoNexusProjectTrackerResult,
   json: boolean | undefined,
 ): void {
   const payload = { ok: true, ...result };
@@ -1252,11 +1252,11 @@ function printProjectLinkKanbanResult(
     return;
   }
 
-  console.log("PharoNexus project linked to Vibe Kanban.");
+  console.log("PharoNexus project linked to tracker.");
   console.log(`  Project: ${result.project.id} (${result.project.name})`);
-  console.log(`  Vibe Kanban project: ${result.vibeKanbanProjectId}`);
+  console.log(`  Tracker project: ${result.vibeKanbanProjectId}`);
   if (result.vibeKanbanRepoId) {
-    console.log(`  Vibe Kanban repo: ${result.vibeKanbanRepoId}`);
+    console.log(`  Tracker repo: ${result.vibeKanbanRepoId}`);
   }
   console.log(`  Config: ${result.projectConfigPath}`);
   console.log(`  PLexus config: ${result.plexusProjectConfigPath}`);
@@ -1265,8 +1265,8 @@ function printProjectLinkKanbanResult(
   console.log(JSON.stringify(payload, null, 2));
 }
 
-function printProjectSyncKanbanResult(
-  result: SyncPharoNexusProjectKanbanResult,
+function printProjectSyncTrackerResult(
+  result: SyncPharoNexusProjectTrackerResult,
   json: boolean | undefined,
 ): void {
   const payload = { ok: true, ...result };
@@ -1275,10 +1275,10 @@ function printProjectSyncKanbanResult(
     return;
   }
 
-  console.log("PharoNexus project synced to Vibe Kanban.");
+  console.log("PharoNexus project synced to tracker.");
   console.log(`  Project: ${result.project.id} (${result.project.name})`);
-  console.log(`  Vibe Kanban board: ${result.vibeKanbanProjectId}`);
-  console.log(`  Vibe Kanban repo: ${result.vibeKanbanRepoId}`);
+  console.log(`  Tracker board: ${result.vibeKanbanProjectId}`);
+  console.log(`  Tracker repo: ${result.vibeKanbanRepoId}`);
   console.log(`  Config: ${result.projectConfigPath}`);
   console.log(`  PLexus config: ${result.plexusProjectConfigPath}`);
   console.log("");
@@ -1343,11 +1343,14 @@ async function handleProjectCommand(argv: string[]): Promise<number> {
   const command = argv[1];
   if (command === "create") {
     const parsed = parseProjectCreateCommand(argv);
-    const result = createPharoNexusProject(parsed);
-    let syncResult: SyncPharoNexusProjectKanbanResult | undefined;
-    if (parsed.syncVibeKanban) {
+    const result = createPharoNexusProject({
+      ...parsed,
+      vibeKanbanProjectId: parsed.trackerProjectId,
+    });
+    let syncResult: SyncPharoNexusProjectTrackerResult | undefined;
+    if (parsed.syncTracker) {
       try {
-        syncResult = await syncPharoNexusProjectKanban({
+        syncResult = await syncPharoNexusProjectTracker({
           homePath: parsed.homePath,
           project: result.projectRoot,
           host: parsed.vibeHost,
@@ -1357,7 +1360,7 @@ async function handleProjectCommand(argv: string[]): Promise<number> {
         result.plexusProjectConfig = syncResult.plexusProjectConfig;
       } catch (error) {
         throw new Error(
-          `Project was created locally at ${result.projectRoot}, but Vibe Kanban sync failed: ${
+          `Project was created locally at ${result.projectRoot}, but tracker sync failed: ${
             error instanceof Error ? error.message : String(error)
           }`,
         );
@@ -1369,11 +1372,14 @@ async function handleProjectCommand(argv: string[]): Promise<number> {
 
   if (command === "import") {
     const parsed = parseProjectImportCommand(argv);
-    const result = importPharoNexusProject(parsed);
-    let syncResult: SyncPharoNexusProjectKanbanResult | undefined;
-    if (parsed.syncVibeKanban) {
+    const result = importPharoNexusProject({
+      ...parsed,
+      vibeKanbanProjectId: parsed.trackerProjectId,
+    });
+    let syncResult: SyncPharoNexusProjectTrackerResult | undefined;
+    if (parsed.syncTracker) {
       try {
-        syncResult = await syncPharoNexusProjectKanban({
+        syncResult = await syncPharoNexusProjectTracker({
           homePath: parsed.homePath,
           project: result.projectRoot,
           host: parsed.vibeHost,
@@ -1383,7 +1389,7 @@ async function handleProjectCommand(argv: string[]): Promise<number> {
         result.plexusProjectConfig = syncResult.plexusProjectConfig;
       } catch (error) {
         throw new Error(
-          `Project was imported locally at ${result.projectRoot}, but Vibe Kanban sync failed: ${
+          `Project was imported locally at ${result.projectRoot}, but tracker sync failed: ${
             error instanceof Error ? error.message : String(error)
           }`,
         );
@@ -1393,22 +1399,22 @@ async function handleProjectCommand(argv: string[]): Promise<number> {
     return 0;
   }
 
-  if (command === "link-kanban") {
-    const parsed = parseProjectLinkKanbanCommand(argv);
-    const result = linkPharoNexusProjectKanban(parsed);
-    printProjectLinkKanbanResult(result, parsed.json);
+  if (command === "link-tracker") {
+    const parsed = parseProjectLinkTrackerCommand(argv);
+    const result = linkPharoNexusProjectTracker(parsed);
+    printProjectLinkTrackerResult(result, parsed.json);
     return 0;
   }
 
-  if (command === "sync-kanban") {
-    const parsed = parseProjectSyncKanbanCommand(argv);
-    const result = await syncPharoNexusProjectKanban({
+  if (command === "sync-tracker") {
+    const parsed = parseProjectSyncTrackerCommand(argv);
+    const result = await syncPharoNexusProjectTracker({
       homePath: parsed.homePath,
       project: parsed.project,
       host: parsed.vibeHost,
       port: parsed.vibePort,
     });
-    printProjectSyncKanbanResult(result, parsed.json);
+    printProjectSyncTrackerResult(result, parsed.json);
     return 0;
   }
 
@@ -1426,7 +1432,7 @@ async function handleProjectCommand(argv: string[]): Promise<number> {
     return 0;
   }
 
-  throw new Error("project requires create, import, link-kanban, sync-kanban, list, or status");
+  throw new Error("project requires create, import, link-tracker, sync-tracker, list, or status");
 }
 
 async function handlePlexusGatewayCommand(argv: string[]): Promise<number> {

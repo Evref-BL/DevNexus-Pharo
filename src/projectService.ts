@@ -144,13 +144,13 @@ export interface GetPharoNexusProjectStatusResult {
   project: PharoNexusProjectStatus;
 }
 
-export interface LinkPharoNexusProjectKanbanOptions {
+export interface LinkPharoNexusProjectTrackerOptions {
   homePath: string;
   project: string;
-  vibeKanbanProjectId: string;
+  trackerProjectId: string;
 }
 
-export interface LinkPharoNexusProjectKanbanResult {
+export interface LinkPharoNexusProjectTrackerResult {
   homePath: string;
   vibeKanbanProjectId: string;
   vibeKanbanRepoId: string | null;
@@ -160,7 +160,7 @@ export interface LinkPharoNexusProjectKanbanResult {
   plexusProjectConfig: PlexusProjectConfig;
 }
 
-export interface SyncPharoNexusProjectKanbanOptions {
+export interface SyncPharoNexusProjectTrackerOptions {
   homePath: string;
   project: string;
   host?: string;
@@ -168,8 +168,8 @@ export interface SyncPharoNexusProjectKanbanOptions {
   fetch?: typeof fetch;
 }
 
-export interface SyncPharoNexusProjectKanbanResult
-  extends LinkPharoNexusProjectKanbanResult {
+export interface SyncPharoNexusProjectTrackerResult
+  extends LinkPharoNexusProjectTrackerResult {
   vibeKanbanRepoId: string;
   vibeKanbanRepo: RegisterVibeKanbanProjectResult;
   vibeKanbanRepoSetup: UpdateVibeKanbanProjectResult;
@@ -1136,16 +1136,16 @@ export function getPharoNexusProjectStatus(
   };
 }
 
-export function linkPharoNexusProjectKanban(
-  options: LinkPharoNexusProjectKanbanOptions,
-): LinkPharoNexusProjectKanbanResult {
+export function linkPharoNexusProjectTracker(
+  options: LinkPharoNexusProjectTrackerOptions,
+): LinkPharoNexusProjectTrackerResult {
   assertNonEmptyString(options.project, "project");
   const vibeKanbanProjectId = optionalNonEmptyString(
-    options.vibeKanbanProjectId,
-    "vibeKanbanProjectId",
+    options.trackerProjectId,
+    "trackerProjectId",
   );
   if (!vibeKanbanProjectId) {
-    throw new PharoNexusProjectError("vibeKanbanProjectId must be a non-empty string");
+    throw new PharoNexusProjectError("trackerProjectId must be a non-empty string");
   }
 
   const homePath = resolvePharoNexusHome(options.homePath);
@@ -1190,9 +1190,9 @@ export function linkPharoNexusProjectKanban(
   };
 }
 
-export async function syncPharoNexusProjectKanban(
-  options: SyncPharoNexusProjectKanbanOptions,
-): Promise<SyncPharoNexusProjectKanbanResult> {
+export async function syncPharoNexusProjectTracker(
+  options: SyncPharoNexusProjectTrackerOptions,
+): Promise<SyncPharoNexusProjectTrackerResult> {
   assertNonEmptyString(options.project, "project");
 
   const homePath = resolvePharoNexusHome(options.homePath);
@@ -1242,10 +1242,10 @@ export async function syncPharoNexusProjectKanban(
   });
   const vibeKanbanBoardRef = await vibeProvider.ensureBoard(trackerContext);
   const vibeKanbanBoard = vibeKanbanBoardRef.vibeKanbanBoard;
-  const linked = linkPharoNexusProjectKanban({
+  const linked = linkPharoNexusProjectTracker({
     homePath,
     project: status.projectRoot,
-    vibeKanbanProjectId: vibeKanbanBoardRef.id,
+    trackerProjectId: vibeKanbanBoardRef.id,
   });
   const updatedHomeConfig = loadHomeConfig(homePath);
   const projectConfig = loadProjectConfig(status.projectRoot);

@@ -15,10 +15,10 @@ import {
   createPharoNexusProject,
   getPharoNexusProjectStatus,
   importPharoNexusProject,
-  linkPharoNexusProjectKanban,
+  linkPharoNexusProjectTracker,
   listPharoNexusProjects,
   PharoNexusProjectError,
-  syncPharoNexusProjectKanban,
+  syncPharoNexusProjectTracker,
   type GitCommandResult,
   type GitRunner,
 } from "./projectService.js";
@@ -406,10 +406,10 @@ describe("PharoNexus project service", () => {
       gitRunner: fakeGitRunner([], { branch: "main" }),
     });
 
-    const result = linkPharoNexusProjectKanban({
+    const result = linkPharoNexusProjectTracker({
       homePath,
       project: "linkable",
-      vibeKanbanProjectId: "vk-linkable",
+      trackerProjectId: "vk-linkable",
     });
 
     expect(result.project.vibeKanbanProjectId).toBe("vk-linkable");
@@ -463,10 +463,10 @@ describe("PharoNexus project service", () => {
       "utf8",
     );
 
-    linkPharoNexusProjectKanban({
+    linkPharoNexusProjectTracker({
       homePath,
       project: projectRoot,
-      vibeKanbanProjectId: "vk-unregistered",
+      trackerProjectId: "vk-unregistered",
     });
 
     expect(loadHomeConfig(homePath).projects).toEqual([
@@ -587,7 +587,7 @@ describe("PharoNexus project service", () => {
       },
     );
 
-    const result = await syncPharoNexusProjectKanban({
+    const result = await syncPharoNexusProjectTracker({
       homePath,
       project: "synced",
       fetch: fetchMock,
@@ -741,7 +741,7 @@ describe("PharoNexus project service", () => {
       },
     );
 
-    const result = await syncPharoNexusProjectKanban({
+    const result = await syncPharoNexusProjectTracker({
       homePath,
       project: "imported-synced",
       fetch: fetchMock,

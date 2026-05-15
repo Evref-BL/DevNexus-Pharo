@@ -269,9 +269,9 @@ describe("Codex config", () => {
 
   it("checks configured HTTP MCP endpoints and expected tool names", async () => {
     const pharo = await startFakeMcpServer([
-      "pharo_nexus_project_create",
-      "pharo_nexus_project_import",
-      "pharo_nexus_project_status",
+      "project_create",
+      "project_import",
+      "project_status",
     ]);
     const plexus = await startFakeMcpServer([
       "plexus_project_open",

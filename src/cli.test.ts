@@ -40,8 +40,8 @@ describe("pharo-nexus cli", () => {
     expect(usage()).toContain("pharo-nexus codex init <workspace>");
     expect(usage()).toContain("pharo-nexus codex doctor <workspace>");
     expect(usage()).toContain("pharo-nexus project create <name>");
-    expect(usage()).toContain("pharo-nexus project link-kanban <id-or-path>");
-    expect(usage()).toContain("pharo-nexus project sync-kanban <id-or-path>");
+    expect(usage()).toContain("pharo-nexus project link-tracker <id-or-path>");
+    expect(usage()).toContain("pharo-nexus project sync-tracker <id-or-path>");
     expect(usage()).toContain("pharo-nexus vibe-kanban start <home>");
     expect(usage()).toContain("pharo-nexus vibe-kanban status <home>");
     expect(usage()).toContain("pharo-nexus vibe-kanban stop <home>");
@@ -50,8 +50,8 @@ describe("pharo-nexus cli", () => {
     expect(usage()).toContain("pharo-nexus vibe-backend stop <home>");
     expect(usage()).toContain("pharo-nexus vibe-kanban mcp-config install");
     expect(usage()).toContain("--interactive");
-    expect(usage()).toContain("--vibe-project-id");
-    expect(usage()).toContain("--sync-vibe-kanban");
+    expect(usage()).toContain("--tracker-project-id");
+    expect(usage()).toContain("--sync-tracker");
     expect(usage()).toContain("--no-open-browser");
     expect(usage()).toContain("--json");
   });
@@ -399,11 +399,11 @@ describe("pharo-nexus cli", () => {
     await expect(
       main([
         "project",
-        "link-kanban",
+        "link-tracker",
         "linked",
         "--home",
         homePath,
-        "--vibe-project-id",
+        "--tracker-project-id",
         "vk-linked",
         "--json",
       ]),
@@ -552,7 +552,7 @@ describe("pharo-nexus cli", () => {
     await expect(
       main([
         "project",
-        "sync-kanban",
+        "sync-tracker",
         "synced",
         "--home",
         homePath,

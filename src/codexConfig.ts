@@ -464,9 +464,9 @@ export async function doctorCodexWorkspace(
       url: servers[pharoNexusServerName]?.url ?? "",
       healthPath: defaultPharoNexusMcpHealthPath,
       expectedTools: [
-        "pharo_nexus_project_create",
-        "pharo_nexus_project_import",
-        "pharo_nexus_project_status",
+        "project_create",
+        "project_import",
+        "project_status",
       ],
     },
     {

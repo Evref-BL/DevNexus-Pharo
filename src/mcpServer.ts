@@ -6,11 +6,11 @@ import {
   createPharoNexusProject,
   getPharoNexusProjectStatus,
   importPharoNexusProject,
-  linkPharoNexusProjectKanban,
+  linkPharoNexusProjectTracker,
   listPharoNexusProjects,
-  syncPharoNexusProjectKanban,
+  syncPharoNexusProjectTracker,
   type GitRunner,
-  type SyncPharoNexusProjectKanbanResult,
+  type SyncPharoNexusProjectTrackerResult,
 } from "./projectService.js";
 import { createWorkItemService } from "./workItemService.js";
 import type {
@@ -67,7 +67,7 @@ export interface PharoNexusMcpToolContext {
 
 const tools: McpTool[] = [
   {
-    name: "pharo_nexus_project_create",
+    name: "project_create",
     description: "Create a PharoNexus project from scratch or by cloning a Git repository.",
     inputSchema: {
       type: "object",
@@ -78,8 +78,8 @@ const tools: McpTool[] = [
         remoteUrl: { type: "string" },
         from: { type: "string" },
         gitInit: { type: "boolean" },
-        vibeKanbanProjectId: { type: "string" },
-        syncVibeKanban: { type: "boolean" },
+        trackerProjectId: { type: "string" },
+        syncTracker: { type: "boolean" },
         vibeHost: { type: "string" },
         vibePort: { type: "number" },
       },
@@ -88,7 +88,7 @@ const tools: McpTool[] = [
     },
   },
   {
-    name: "pharo_nexus_project_import",
+    name: "project_import",
     description: "Import an existing local Git repository as a PharoNexus project without writing PharoNexus metadata into the source checkout.",
     inputSchema: {
       type: "object",
@@ -97,8 +97,8 @@ const tools: McpTool[] = [
         root: { type: "string" },
         projectRoot: { type: "string" },
         name: { type: "string" },
-        vibeKanbanProjectId: { type: "string" },
-        syncVibeKanban: { type: "boolean" },
+        trackerProjectId: { type: "string" },
+        syncTracker: { type: "boolean" },
         vibeHost: { type: "string" },
         vibePort: { type: "number" },
       },
@@ -107,22 +107,22 @@ const tools: McpTool[] = [
     },
   },
   {
-    name: "pharo_nexus_project_link_kanban",
-    description: "Link a PharoNexus project to an existing Vibe Kanban project id.",
+    name: "project_link_tracker",
+    description: "Link a PharoNexus project to an existing tracker project id.",
     inputSchema: {
       type: "object",
       properties: {
         homePath: { type: "string" },
         project: { type: "string" },
-        vibeKanbanProjectId: { type: "string" },
+        trackerProjectId: { type: "string" },
       },
-      required: ["project", "vibeKanbanProjectId"],
+      required: ["project", "trackerProjectId"],
       additionalProperties: false,
     },
   },
   {
-    name: "pharo_nexus_project_sync_kanban",
-    description: "Register a PharoNexus project as a local Vibe repo and ensure its Vibe Kanban board exists.",
+    name: "project_sync_tracker",
+    description: "Register a PharoNexus project with its configured tracker provider.",
     inputSchema: {
       type: "object",
       properties: {
@@ -136,7 +136,7 @@ const tools: McpTool[] = [
     },
   },
   {
-    name: "pharo_nexus_project_list",
+    name: "project_list",
     description: "List registered PharoNexus projects.",
     inputSchema: {
       type: "object",
@@ -147,7 +147,7 @@ const tools: McpTool[] = [
     },
   },
   {
-    name: "pharo_nexus_project_status",
+    name: "project_status",
     description: "Show one PharoNexus project by registered id or filesystem path.",
     inputSchema: {
       type: "object",
@@ -595,13 +595,13 @@ export function listPharoNexusMcpTools(): McpTool[] {
   return tools;
 }
 
-function shouldSyncVibeKanban(args: Record<string, unknown>): boolean {
-  const requested = optionalBoolean(args, "syncVibeKanban", "arguments");
+function shouldSyncTracker(args: Record<string, unknown>): boolean {
+  const requested = optionalBoolean(args, "syncTracker", "arguments");
   if (requested !== undefined) {
     return requested;
   }
 
-  return !optionalString(args, "vibeKanbanProjectId", "arguments");
+  return !optionalString(args, "trackerProjectId", "arguments");
 }
 
 async function syncProjectForMcp(
@@ -609,12 +609,12 @@ async function syncProjectForMcp(
   context: PharoNexusMcpToolContext,
   homePath: string,
   projectRoot: string,
-): Promise<SyncPharoNexusProjectKanbanResult | undefined> {
-  if (!shouldSyncVibeKanban(args)) {
+): Promise<SyncPharoNexusProjectTrackerResult | undefined> {
+  if (!shouldSyncTracker(args)) {
     return undefined;
   }
 
-  return syncPharoNexusProjectKanban({
+  return syncPharoNexusProjectTracker({
     homePath,
     project: projectRoot,
     host: optionalString(args, "vibeHost", "arguments"),
@@ -634,7 +634,7 @@ export async function callPharoNexusMcpTool(
   try {
     const args = argsValue === undefined ? {} : asRecord(argsValue, "arguments");
     switch (name) {
-      case "pharo_nexus_project_create": {
+      case "project_create": {
         const homePath = homePathFromArgs(args);
         const created = createPharoNexusProject({
           homePath,
@@ -644,14 +644,14 @@ export async function callPharoNexusMcpTool(
           gitInit: optionalBoolean(args, "gitInit", "arguments"),
           vibeKanbanProjectId: optionalString(
             args,
-            "vibeKanbanProjectId",
+            "trackerProjectId",
             "arguments",
           ),
           gitRunner: context.gitRunner,
         });
-        let vibeKanbanSync: SyncPharoNexusProjectKanbanResult | undefined;
+        let trackerSync: SyncPharoNexusProjectTrackerResult | undefined;
         try {
-          vibeKanbanSync = await syncProjectForMcp(
+          trackerSync = await syncProjectForMcp(
             args,
             context,
             homePath,
@@ -659,7 +659,7 @@ export async function callPharoNexusMcpTool(
           );
         } catch (error) {
           throw new Error(
-            `Project was created locally at ${created.projectRoot}, but Vibe Kanban sync failed: ${
+            `Project was created locally at ${created.projectRoot}, but tracker sync failed: ${
               error instanceof Error ? error.message : String(error)
             }`,
           );
@@ -668,15 +668,15 @@ export async function callPharoNexusMcpTool(
         return toolResult({
           ok: true,
           ...created,
-          projectConfig: vibeKanbanSync
+          projectConfig: trackerSync
             ? loadProjectConfig(created.projectRoot)
             : created.projectConfig,
           plexusProjectConfig:
-            vibeKanbanSync?.plexusProjectConfig ?? created.plexusProjectConfig,
-          ...(vibeKanbanSync ? { vibeKanbanSync } : {}),
+            trackerSync?.plexusProjectConfig ?? created.plexusProjectConfig,
+          ...(trackerSync ? { trackerSync } : {}),
         });
       }
-      case "pharo_nexus_project_import": {
+      case "project_import": {
         const homePath = homePathFromArgs(args);
         const imported = importPharoNexusProject({
           homePath,
@@ -685,14 +685,14 @@ export async function callPharoNexusMcpTool(
           name: optionalString(args, "name", "arguments"),
           vibeKanbanProjectId: optionalString(
             args,
-            "vibeKanbanProjectId",
+            "trackerProjectId",
             "arguments",
           ),
           gitRunner: context.gitRunner,
         });
-        let vibeKanbanSync: SyncPharoNexusProjectKanbanResult | undefined;
+        let trackerSync: SyncPharoNexusProjectTrackerResult | undefined;
         try {
-          vibeKanbanSync = await syncProjectForMcp(
+          trackerSync = await syncProjectForMcp(
             args,
             context,
             homePath,
@@ -700,7 +700,7 @@ export async function callPharoNexusMcpTool(
           );
         } catch (error) {
           throw new Error(
-            `Project was imported locally at ${imported.projectRoot}, but Vibe Kanban sync failed: ${
+            `Project was imported locally at ${imported.projectRoot}, but tracker sync failed: ${
               error instanceof Error ? error.message : String(error)
             }`,
           );
@@ -709,31 +709,31 @@ export async function callPharoNexusMcpTool(
         return toolResult({
           ok: true,
           ...imported,
-          projectConfig: vibeKanbanSync
+          projectConfig: trackerSync
             ? loadProjectConfig(imported.projectRoot)
             : imported.projectConfig,
           plexusProjectConfig:
-            vibeKanbanSync?.plexusProjectConfig ?? imported.plexusProjectConfig,
-          ...(vibeKanbanSync ? { vibeKanbanSync } : {}),
+            trackerSync?.plexusProjectConfig ?? imported.plexusProjectConfig,
+          ...(trackerSync ? { trackerSync } : {}),
         });
       }
-      case "pharo_nexus_project_link_kanban":
+      case "project_link_tracker":
         return toolResult({
           ok: true,
-          ...linkPharoNexusProjectKanban({
+          ...linkPharoNexusProjectTracker({
             homePath: homePathFromArgs(args),
             project: requiredString(args, "project", "arguments"),
-            vibeKanbanProjectId: requiredString(
+            trackerProjectId: requiredString(
               args,
-              "vibeKanbanProjectId",
+              "trackerProjectId",
               "arguments",
             ),
           }),
         });
-      case "pharo_nexus_project_sync_kanban":
+      case "project_sync_tracker":
         return toolResult({
           ok: true,
-          ...(await syncPharoNexusProjectKanban({
+          ...(await syncPharoNexusProjectTracker({
             homePath: homePathFromArgs(args),
             project: requiredString(args, "project", "arguments"),
             host: optionalString(args, "vibeHost", "arguments"),
@@ -741,14 +741,14 @@ export async function callPharoNexusMcpTool(
             fetch: context.fetch,
           })),
         });
-      case "pharo_nexus_project_list":
+      case "project_list":
         return toolResult({
           ok: true,
           ...listPharoNexusProjects({
             homePath: homePathFromArgs(args),
           }),
         });
-      case "pharo_nexus_project_status":
+      case "project_status":
         return toolResult({
           ok: true,
           ...getPharoNexusProjectStatus({
