@@ -2,9 +2,15 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import {
+  ensureVibeKanbanBoard,
+  listVibeKanbanProjects,
   openBrowser as defaultBrowserOpener,
+  registerVibeKanbanProject,
   type BrowserOpenResult,
   type BrowserOpener,
+  type EnsureVibeKanbanBoardResult,
+  type ListVibeKanbanProjectsResult,
+  type RegisterVibeKanbanProjectResult,
 } from "dev-nexus";
 import {
   ensureControlProject,
@@ -48,16 +54,6 @@ import {
   ensureVibeKanbanSelfHostedLogin,
   type VibeKanbanAutoLoginResult,
 } from "./vibeKanbanAuth.js";
-import {
-  ensureVibeKanbanBoard,
-  type EnsureVibeKanbanBoardResult,
-} from "./vibeKanbanBoardAdapter.js";
-import {
-  listVibeKanbanProjects,
-  registerVibeKanbanProject,
-  type ListVibeKanbanProjectsResult,
-  type RegisterVibeKanbanProjectResult,
-} from "./vibeKanbanProjectAdapter.js";
 import {
   getVibeKanbanStatus,
   startVibeKanban,

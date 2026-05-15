@@ -2,16 +2,15 @@ import type {
   NexusProjectConfig,
   NexusProjectKanbanConfig,
 } from "./config.js";
-import type { VibeKanbanApiOptions } from "./vibeKanbanMcpConfig.js";
 import {
   createWorkTrackerProvider as createDevNexusWorkTrackerProvider,
   WorkTrackingProviderServiceError,
   type CreateWorkTrackerProviderOptions as DevNexusWorkTrackerProviderOptions,
+  type VibeKanbanApiOptions,
   VibeKanbanWorkTrackingConfig,
   WorkTrackingConfig,
   WorkTrackerProvider,
 } from "dev-nexus";
-import { createVibeWorkTrackerProvider } from "./workTrackingVibeProvider.js";
 
 export interface CreateWorkTrackerProviderOptions {
   projectRoot?: string;
@@ -61,23 +60,11 @@ export function createWorkTrackerProvider(
   config: WorkTrackingConfig,
   options: CreateWorkTrackerProviderOptions = {},
 ): WorkTrackerProvider {
-  if (config.provider === "vibe-kanban") {
-    if (!options.vibeKanban) {
-      throw new WorkTrackingServiceError(
-        "Vibe Kanban provider requires Vibe Kanban API options",
-      );
-    }
-
-    return createVibeWorkTrackerProvider({
-      ...options.vibeKanban,
-      config,
-    });
-  }
-
   try {
     return createDevNexusWorkTrackerProvider(config, {
       projectRoot: options.projectRoot,
       now: options.now,
+      vibeKanban: options.vibeKanban,
       github: options.github,
       gitlab: options.gitlab,
       jira: options.jira,
