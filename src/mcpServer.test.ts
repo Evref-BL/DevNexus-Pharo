@@ -8,6 +8,7 @@ import {
   loadHomeConfig,
   loadProjectConfig,
   plexusProjectConfigFileName,
+  saveProjectConfig,
 } from "./config.js";
 import {
   callPharoNexusMcpTool,
@@ -263,6 +264,46 @@ describe("PharoNexus MCP server tools", () => {
         id: "mcp-project",
         projectRoot,
         vibeKanbanProjectId: "vk-mcp",
+      },
+    });
+  });
+
+  it("resolves project status by managed config id before MCP path fallback", async () => {
+    const homePath = makeTempDir("pharo-nexus-home-");
+    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "MCP-PL");
+    initPharoNexusHome({ homePath });
+
+    const createResult = await callPharoNexusMcpTool(
+      "pharo_nexus_project_create",
+      {
+        homePath,
+        name: "MCP-PL",
+        root: projectRoot,
+        gitInit: true,
+        syncVibeKanban: false,
+      },
+      { gitRunner: fakeGitRunner },
+    );
+    expect(createResult.isError).toBeUndefined();
+    expect(projectRoot.startsWith(process.cwd())).toBe(false);
+    saveProjectConfig(projectRoot, {
+      ...loadProjectConfig(projectRoot),
+      id: "pharo-launcher-mcp",
+      name: "pharo-launcher-mcp",
+    });
+
+    const statusPayload = parseToolText(
+      await callPharoNexusMcpTool("pharo_nexus_project_status", {
+        homePath,
+        project: "pharo-launcher-mcp",
+      }),
+    );
+
+    expect(statusPayload).toMatchObject({
+      ok: true,
+      project: {
+        id: "pharo-launcher-mcp",
+        projectRoot,
       },
     });
   });

@@ -699,7 +699,13 @@ function findProjectReferenceById(
   config: PharoNexusHomeConfig,
   id: string,
 ): PharoNexusProjectReference | undefined {
-  return config.projects.find((project) => project.id === id);
+  return (
+    config.projects.find((project) => project.id === id) ??
+    config.projects.find(
+      (project) =>
+        loadProjectConfigIfExists(path.resolve(project.plexusProjectRoot))?.id === id,
+    )
+  );
 }
 
 function findProjectReferenceByPath(
