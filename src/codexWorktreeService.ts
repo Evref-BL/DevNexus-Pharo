@@ -14,6 +14,20 @@ import {
   type GitCommandResult,
   type GitRunner,
 } from "./nexusProjectService.js";
+import {
+  applyWorktreeExecutionUpdate,
+  emptyWorktreeExecutionMetadata,
+  normalizeWorktreeExecutionMetadata,
+  WorktreeExecutionMetadataError,
+  type WorktreeExecutionUpdate,
+  type WorktreeExecutionMetadata,
+  type WorktreePublicationDecision,
+  type WorktreePublicationDecisionInput,
+  type WorktreePublicationDecisionType,
+  type WorktreeVerificationInput,
+  type WorktreeVerificationRecord,
+  type WorktreeVerificationStatus,
+} from "./worktreeExecutionMetadata.js";
 import type { WorkItemRef } from "./workTrackingTypes.js";
 
 export const codexWorktreeMetadataFileName = "codex-worktrees.json";
@@ -114,50 +128,15 @@ export interface RecordCodexWorktreeExecutionResult {
 }
 
 export type CodexWorktreeState = "active" | "archived";
-export type CodexWorktreeVerificationStatus = "passed" | "failed" | "not_run";
+export type CodexWorktreeVerificationStatus = WorktreeVerificationStatus;
 export type CodexWorktreePublicationDecisionType =
-  | "not_decided"
-  | "local_only"
-  | "direct_integration"
-  | "review_handoff"
-  | "blocked";
-
-export interface CodexWorktreeVerificationInput {
-  command: string;
-  status?: CodexWorktreeVerificationStatus;
-  summary?: string | null;
-}
-
-export interface CodexWorktreeVerificationRecord {
-  command: string;
-  status: CodexWorktreeVerificationStatus;
-  summary: string | null;
-  recordedAt: string;
-}
-
-export interface CodexWorktreePublicationDecisionInput {
-  type: CodexWorktreePublicationDecisionType;
-  targetBranch?: string | null;
-  remote?: string | null;
-  prUrl?: string | null;
-  reason?: string | null;
-}
-
-export interface CodexWorktreePublicationDecision {
-  type: CodexWorktreePublicationDecisionType;
-  targetBranch: string | null;
-  remote: string | null;
-  prUrl: string | null;
-  reason: string | null;
-  decidedAt: string;
-}
-
-export interface CodexWorktreeExecutionMetadata {
-  commitIds: string[];
-  verification: CodexWorktreeVerificationRecord[];
-  publicationDecision: CodexWorktreePublicationDecision | null;
-  updatedAt: string | null;
-}
+  WorktreePublicationDecisionType;
+export type CodexWorktreeVerificationInput = WorktreeVerificationInput;
+export type CodexWorktreeVerificationRecord = WorktreeVerificationRecord;
+export type CodexWorktreePublicationDecisionInput =
+  WorktreePublicationDecisionInput;
+export type CodexWorktreePublicationDecision = WorktreePublicationDecision;
+export type CodexWorktreeExecutionMetadata = WorktreeExecutionMetadata;
 
 export interface CodexWorktreeRecord {
   id: string;
@@ -255,7 +234,7 @@ export function prepareCodexWorktree(
     copiedFiles: copiedFiles.copied,
     skippedFiles: copiedFiles.skipped,
     excludedEntries,
-    execution: emptyCodexWorktreeExecution(),
+    execution: emptyWorktreeExecutionMetadata(),
   };
   saveCodexWorktreeMetadataRecord(metadataPath, metadataRecord, createdAt);
 
@@ -388,58 +367,15 @@ export function recordCodexWorktreeExecution(
     );
   }
 
-  const hasCommitIds = Boolean(options.commitIds?.length);
-  const hasVerification = Boolean(options.verification);
-  const hasPublicationDecision = Boolean(options.publicationDecision);
-  if (!hasCommitIds && !hasVerification && !hasPublicationDecision) {
-    throw new CodexWorktreeServiceError(
-      "At least one execution field is required",
-    );
-  }
-
-  const execution = normalizeCodexWorktreeExecution(existing.execution);
-  const commitIds = [...execution.commitIds];
-  for (const commitId of options.commitIds ?? []) {
-    const normalized = requiredNonEmptyString(commitId, "commitId");
-    if (!commitIds.includes(normalized)) {
-      commitIds.push(normalized);
-    }
-  }
-
-  const verification = [...execution.verification];
-  if (options.verification) {
-    verification.push({
-      command: requiredNonEmptyString(
-        options.verification.command,
-        "verification.command",
-      ),
-      status: options.verification.status ?? "passed",
-      summary: optionalNullableString(options.verification.summary) ?? null,
-      recordedAt: updatedAt,
-    });
-  }
-
-  const publicationDecision = options.publicationDecision
-    ? {
-        type: options.publicationDecision.type,
-        targetBranch:
-          optionalNullableString(options.publicationDecision.targetBranch) ??
-          null,
-        remote: optionalNullableString(options.publicationDecision.remote) ?? null,
-        prUrl: optionalNullableString(options.publicationDecision.prUrl) ?? null,
-        reason: optionalNullableString(options.publicationDecision.reason) ?? null,
-        decidedAt: updatedAt,
-      }
-    : execution.publicationDecision;
+  const execution = applyCodexWorktreeExecutionUpdate(existing.execution, {
+    commitIds: options.commitIds,
+    verification: options.verification,
+    publicationDecision: options.publicationDecision,
+  }, updatedAt);
 
   const metadataRecord: CodexWorktreeRecord = {
     ...existing,
-    execution: {
-      commitIds,
-      verification,
-      publicationDecision,
-      updatedAt,
-    },
+    execution,
   };
   saveCodexWorktreeMetadataRecord(metadataPath, metadataRecord, updatedAt);
 
@@ -744,169 +680,24 @@ function normalizeCodexWorktreeRecord(value: unknown): CodexWorktreeRecord {
     state: record.state === "archived" ? "archived" : "active",
     archivedAt: typeof record.archivedAt === "string" ? record.archivedAt : null,
     removedAt: typeof record.removedAt === "string" ? record.removedAt : null,
-    execution: normalizeCodexWorktreeExecution(record.execution),
+    execution: normalizeWorktreeExecutionMetadata(record.execution),
   };
 }
 
-function emptyCodexWorktreeExecution(): CodexWorktreeExecutionMetadata {
-  return {
-    commitIds: [],
-    verification: [],
-    publicationDecision: null,
-    updatedAt: null,
-  };
-}
-
-function normalizeCodexWorktreeExecution(
-  value: unknown,
+function applyCodexWorktreeExecutionUpdate(
+  existing: unknown,
+  update: WorktreeExecutionUpdate,
+  updatedAt: string,
 ): CodexWorktreeExecutionMetadata {
-  if (value === undefined || value === null) {
-    return emptyCodexWorktreeExecution();
-  }
-  if (typeof value !== "object" || Array.isArray(value)) {
-    throw new CodexWorktreeServiceError(
-      "Codex worktree execution metadata must be an object",
-    );
-  }
-
-  const record = value as Record<string, unknown>;
-  return {
-    commitIds: normalizeStringArray(record.commitIds, "execution.commitIds"),
-    verification: normalizeVerificationRecords(record.verification),
-    publicationDecision: normalizePublicationDecision(record.publicationDecision),
-    updatedAt:
-      typeof record.updatedAt === "string" && record.updatedAt.trim()
-        ? record.updatedAt
-        : null,
-  };
-}
-
-function normalizeVerificationRecords(
-  value: unknown,
-): CodexWorktreeVerificationRecord[] {
-  if (value === undefined || value === null) {
-    return [];
-  }
-  if (!Array.isArray(value)) {
-    throw new CodexWorktreeServiceError(
-      "execution.verification must be an array",
-    );
-  }
-
-  return value.map((item, index) => {
-    if (!item || typeof item !== "object" || Array.isArray(item)) {
-      throw new CodexWorktreeServiceError(
-        `execution.verification[${index}] must be an object`,
-      );
+  try {
+    return applyWorktreeExecutionUpdate(existing, update, updatedAt);
+  } catch (error) {
+    if (error instanceof WorktreeExecutionMetadataError) {
+      throw new CodexWorktreeServiceError(error.message);
     }
-    const record = item as Record<string, unknown>;
-    return {
-      command: requiredNonEmptyString(
-        record.command,
-        `execution.verification[${index}].command`,
-      ),
-      status: normalizeVerificationStatus(
-        record.status,
-        `execution.verification[${index}].status`,
-      ),
-      summary: optionalNullableString(record.summary) ?? null,
-      recordedAt: requiredNonEmptyString(
-        record.recordedAt,
-        `execution.verification[${index}].recordedAt`,
-      ),
-    };
-  });
-}
 
-function normalizePublicationDecision(
-  value: unknown,
-): CodexWorktreePublicationDecision | null {
-  if (value === undefined || value === null) {
-    return null;
+    throw error;
   }
-  if (typeof value !== "object" || Array.isArray(value)) {
-    throw new CodexWorktreeServiceError(
-      "execution.publicationDecision must be an object or null",
-    );
-  }
-
-  const record = value as Record<string, unknown>;
-  return {
-    type: normalizePublicationDecisionType(
-      record.type,
-      "execution.publicationDecision.type",
-    ),
-    targetBranch: optionalNullableString(record.targetBranch) ?? null,
-    remote: optionalNullableString(record.remote) ?? null,
-    prUrl: optionalNullableString(record.prUrl) ?? null,
-    reason: optionalNullableString(record.reason) ?? null,
-    decidedAt: requiredNonEmptyString(
-      record.decidedAt,
-      "execution.publicationDecision.decidedAt",
-    ),
-  };
-}
-
-function normalizeStringArray(value: unknown, name: string): string[] {
-  if (value === undefined || value === null) {
-    return [];
-  }
-  if (!Array.isArray(value)) {
-    throw new CodexWorktreeServiceError(`${name} must be an array`);
-  }
-
-  return value.map((item, index) =>
-    requiredNonEmptyString(item, `${name}[${index}]`),
-  );
-}
-
-function normalizeVerificationStatus(
-  value: unknown,
-  name: string,
-): CodexWorktreeVerificationStatus {
-  if (value === "passed" || value === "failed" || value === "not_run") {
-    return value;
-  }
-
-  throw new CodexWorktreeServiceError(`${name} must be passed, failed, or not_run`);
-}
-
-function normalizePublicationDecisionType(
-  value: unknown,
-  name: string,
-): CodexWorktreePublicationDecisionType {
-  if (
-    value === "not_decided" ||
-    value === "local_only" ||
-    value === "direct_integration" ||
-    value === "review_handoff" ||
-    value === "blocked"
-  ) {
-    return value;
-  }
-
-  throw new CodexWorktreeServiceError(
-    `${name} must be not_decided, local_only, direct_integration, review_handoff, or blocked`,
-  );
-}
-
-function optionalNullableString(value: unknown): string | null | undefined {
-  if (value === undefined) {
-    return undefined;
-  }
-  if (value === null) {
-    return null;
-  }
-
-  return requiredNonEmptyString(value, "value");
-}
-
-function requiredNonEmptyString(value: unknown, name: string): string {
-  if (typeof value !== "string" || value.trim().length === 0) {
-    throw new CodexWorktreeServiceError(`${name} must be a non-empty string`);
-  }
-
-  return value.trim();
 }
 
 function defaultGitRunner(

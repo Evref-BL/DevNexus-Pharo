@@ -21,6 +21,7 @@ export * from "./vibeKanbanMcpConfig.js";
 export * from "./vibeKanbanProjectAdapter.js";
 export * from "./vibeKanbanService.js";
 export * from "./workItemService.js";
+export * from "./worktreeExecutionMetadata.js";
 export * from "./workTrackingGitHubProvider.js";
 export * from "./workTrackingGitLabProvider.js";
 export * from "./workTrackingJiraProvider.js";
