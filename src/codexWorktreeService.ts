@@ -1,4 +1,3 @@
-import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { codexConfigPath } from "./codexConfig.js";
@@ -9,6 +8,15 @@ import {
   resolveNexusHome,
   type NexusProjectConfig,
 } from "./config.js";
+import {
+  defaultGitRunner,
+  GitWorktreeServiceError,
+  normalizeBranchName,
+  prepareGitWorktree,
+  removeGitWorktree,
+  runGitCommand,
+  safeDirectoryName,
+} from "./gitWorktreeService.js";
 import {
   getNexusProjectStatus,
   type GitCommandResult,
@@ -183,38 +191,27 @@ export function prepareCodexWorktree(
   const sourceRoot = resolveProjectSourceRoot(projectRoot, projectConfig);
   const worktreesRoot = projectWorktreesRootPath(projectRoot, projectConfig);
   const branchName = resolveBranchName(status.id, options);
-  const worktreeName = options.worktreeName ?? safeDirectoryName(branchName);
-  const worktreePath = path.join(worktreesRoot, worktreeName);
-
-  assertSafeWorktreePath(worktreesRoot, worktreePath);
-  if (fs.existsSync(worktreePath)) {
-    throw new CodexWorktreeServiceError(
-      `Worktree path already exists: ${worktreePath}`,
-    );
-  }
-
   const gitRunner = options.gitRunner ?? defaultGitRunner;
-  const commands: GitCommandResult[] = [];
-  fs.mkdirSync(worktreesRoot, { recursive: true });
-  runGitCommand(
-    gitRunner,
-    commands,
-    [
-      "worktree",
-      "add",
-      "-b",
+  const preparedGit = runGitWorktreeOperation(() =>
+    prepareGitWorktree({
+      sourceRoot,
+      worktreesRoot,
       branchName,
-      worktreePath,
-      ...(options.baseRef ? [options.baseRef] : []),
-    ],
-    sourceRoot,
+      worktreeName: options.worktreeName,
+      baseRef: options.baseRef,
+      gitRunner,
+    }),
   );
+  const commands: GitCommandResult[] = [...preparedGit.git.commands];
 
-  const copiedFiles = copyCodexWorktreeSupportFiles(projectRoot, worktreePath);
+  const copiedFiles = copyCodexWorktreeSupportFiles(
+    projectRoot,
+    preparedGit.worktreePath,
+  );
   const excludedEntries = ensureSupportFileExcludes(
     gitRunner,
     commands,
-    worktreePath,
+    preparedGit.worktreePath,
   );
   const createdAt = nowString(options.now);
   const metadataPath = codexWorktreeMetadataStorePath(homePath);
@@ -223,7 +220,7 @@ export function prepareCodexWorktree(
     projectId: status.id,
     projectRoot,
     sourceRoot,
-    worktreePath,
+    worktreePath: preparedGit.worktreePath,
     branchName,
     baseRef: options.baseRef ?? null,
     workItem: options.workItem ?? null,
@@ -244,8 +241,8 @@ export function prepareCodexWorktree(
     metadataRecord,
     projectRoot,
     sourceRoot,
-    worktreesRoot,
-    worktreePath,
+    worktreesRoot: preparedGit.worktreesRoot,
+    worktreePath: preparedGit.worktreePath,
     branchName,
     baseRef: options.baseRef ?? null,
     copiedFiles: copiedFiles.copied,
@@ -275,12 +272,14 @@ export function archiveCodexWorktree(
   const commands: GitCommandResult[] = [];
   let removedWorktree = false;
   if (options.removeWorktree) {
-    runGitCommand(
-      gitRunner,
-      commands,
-      ["worktree", "remove", existing.worktreePath],
-      existing.sourceRoot,
+    const removed = runGitWorktreeOperation(() =>
+      removeGitWorktree({
+        sourceRoot: existing.sourceRoot,
+        worktreePath: existing.worktreePath,
+        gitRunner,
+      }),
     );
+    commands.push(...removed.git.commands);
     removedWorktree = true;
   }
 
@@ -424,7 +423,7 @@ function resolveBranchName(
   options: Pick<PrepareCodexWorktreeOptions, "branchName" | "workItem" | "now">,
 ): string {
   if (options.branchName?.trim()) {
-    return normalizeBranchName(options.branchName);
+    return runGitWorktreeOperation(() => normalizeBranchName(options.branchName!));
   }
 
   const workItemId =
@@ -433,7 +432,9 @@ function resolveBranchName(
     options.workItem?.externalRef?.itemId ??
     timestampSuffix(options.now);
 
-  return normalizeBranchName(`codex/${projectId}/${safeBranchSegment(workItemId)}`);
+  return runGitWorktreeOperation(() =>
+    normalizeBranchName(`codex/${projectId}/${safeBranchSegment(workItemId)}`),
+  );
 }
 
 function timestampSuffix(optionsNow: PrepareCodexWorktreeOptions["now"]): string {
@@ -445,54 +446,8 @@ function nowString(optionsNow: PrepareCodexWorktreeOptions["now"]): string {
   return typeof value === "string" ? value : value.toISOString();
 }
 
-function normalizeBranchName(value: string): string {
-  const trimmed = value.trim().replaceAll("\\", "/");
-  if (trimmed.length === 0) {
-    throw new CodexWorktreeServiceError("branchName must be non-empty");
-  }
-  if (
-    trimmed.startsWith("/") ||
-    trimmed.endsWith("/") ||
-    trimmed.includes("..") ||
-    trimmed.includes("//") ||
-    /[\u0000-\u001F ~^:?*[\\]/u.test(trimmed)
-  ) {
-    throw new CodexWorktreeServiceError(`Invalid branchName: ${value}`);
-  }
-
-  return trimmed;
-}
-
 function safeBranchSegment(value: string): string {
-  return safeDirectoryName(value).replaceAll(".", "-");
-}
-
-function safeDirectoryName(value: string): string {
-  const sanitized = value
-    .trim()
-    .replace(/([a-z0-9])([A-Z])/g, "$1-$2")
-    .replace(/[^A-Za-z0-9._-]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .toLowerCase();
-
-  if (!sanitized) {
-    throw new CodexWorktreeServiceError(
-      "Worktree name must contain at least one filesystem-safe character",
-    );
-  }
-
-  return sanitized;
-}
-
-function assertSafeWorktreePath(worktreesRoot: string, worktreePath: string): void {
-  const resolvedRoot = path.resolve(worktreesRoot);
-  const resolvedTarget = path.resolve(worktreePath);
-  const relative = path.relative(resolvedRoot, resolvedTarget);
-  if (!relative || relative.startsWith("..") || path.isAbsolute(relative)) {
-    throw new CodexWorktreeServiceError(
-      `Worktree path must be inside worktrees root: ${resolvedTarget}`,
-    );
-  }
+  return runGitWorktreeOperation(() => safeDirectoryName(value)).replaceAll(".", "-");
 }
 
 function copyCodexWorktreeSupportFiles(
@@ -569,7 +524,7 @@ function ensureSupportFileExcludes(
     return [];
   }
 
-  const excludePathResult = runGitCommand(
+  const excludePathResult = runCodexGitCommand(
     gitRunner,
     commands,
     ["rev-parse", "--git-path", "info/exclude"],
@@ -700,47 +655,25 @@ function applyCodexWorktreeExecutionUpdate(
   }
 }
 
-function defaultGitRunner(
-  args: readonly string[],
-  cwd?: string,
-): GitCommandResult {
-  const result = spawnSync("git", [...args], {
-    cwd,
-    encoding: "utf8",
-    shell: false,
-    windowsHide: true,
-  });
-
-  if (result.error) {
-    throw new CodexWorktreeServiceError(
-      `Failed to run git ${args.join(" ")}: ${result.error.message}`,
-    );
-  }
-
-  return {
-    args: [...args],
-    stdout: result.stdout ?? "",
-    stderr: result.stderr ?? "",
-    exitCode: result.status,
-  };
-}
-
-function runGitCommand(
+function runCodexGitCommand(
   gitRunner: GitRunner,
   commands: GitCommandResult[],
   args: readonly string[],
   cwd?: string,
 ): GitCommandResult {
-  const result = gitRunner(args, cwd);
-  commands.push(result);
+  return runGitWorktreeOperation(() =>
+    runGitCommand(gitRunner, commands, args, cwd),
+  );
+}
 
-  if (result.exitCode !== 0) {
-    throw new CodexWorktreeServiceError(
-      `git ${args.join(" ")} failed with exit code ${result.exitCode}: ${
-        result.stderr.trim() || result.stdout.trim()
-      }`,
-    );
+function runGitWorktreeOperation<T>(operation: () => T): T {
+  try {
+    return operation();
+  } catch (error) {
+    if (error instanceof GitWorktreeServiceError) {
+      throw new CodexWorktreeServiceError(error.message);
+    }
+
+    throw error;
   }
-
-  return result;
 }
