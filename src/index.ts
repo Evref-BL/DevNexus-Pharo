@@ -13,5 +13,6 @@ export * from "./vibeKanbanBackendService.js";
 export * from "./vibeKanbanMcpConfig.js";
 export * from "./vibeKanbanProjectAdapter.js";
 export * from "./vibeKanbanService.js";
+export * from "./workTrackingLocalProvider.js";
 export * from "./workTrackingService.js";
 export * from "./workTrackingTypes.js";
