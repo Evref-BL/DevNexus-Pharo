@@ -1,4 +1,3 @@
-import path from "node:path";
 import {
   assertFileDoesNotExist,
   assertGitRepository,
@@ -6,8 +5,8 @@ import {
   buildProjectConfig,
   buildNexusProjectStatus,
   buildNexusProjectStatusForPath,
-  configureNexusProjectTrackerInRegistry,
-  createNexusProjectInRegistry,
+  configureNexusProjectTracker as configureNexusProjectTrackerFromHome,
+  createNexusProject as createNexusProjectFromHome,
   defaultImportedProjectRoot,
   defaultProjectGitRunner,
   defaultSourceCheckoutDirectoryName,
@@ -18,8 +17,11 @@ import {
   findNexusProjectReference,
   findNexusProjectReferenceById,
   findNexusProjectReferenceByPath,
-  importNexusProjectInRegistry,
+  getNexusProjectStatus as getNexusProjectStatusFromHome,
+  importNexusProject as importNexusProjectFromHome,
   loadProjectConfigIfExists,
+  linkNexusProjectTrackerInRegistry,
+  listNexusProjects as listNexusProjectsFromHome,
   NexusProjectError,
   optionalNonEmptyString,
   pathForProjectConfig,
@@ -30,19 +32,20 @@ import {
   samePath,
   scaffoldNexusProject,
   slugify,
+  statusForNexusProjectReference,
   upsertNexusProjectReference,
   type ConfigureNexusProjectTrackerProvider,
   type NexusExtension,
+  type NexusProjectHomeStore,
+  type NexusProjectStatusBase,
   type ProjectGitCommandResult,
   type ProjectGitRunner,
   type WorkTrackingConfig,
 } from "dev-nexus";
 import {
   loadHomeConfig,
-  loadProjectConfig,
   resolveNexusHome,
   saveHomeConfig,
-  saveProjectConfig,
   type NexusHomeConfig,
   type NexusProjectConfig,
   type NexusProjectReference,
@@ -51,6 +54,13 @@ import {
 const defaultGitRunner = defaultProjectGitRunner;
 const runGitCommand = runProjectGitCommand;
 const safeDirectoryName = safeProjectDirectoryName;
+
+const nexusProjectHomeStore: NexusProjectHomeStore = {
+  resolveHomePath: resolveNexusHome,
+  loadHomeConfig: (homePath) => loadHomeConfig(homePath),
+  saveHomeConfig: (homePath, registry) =>
+    saveHomeConfig(homePath, registry as NexusHomeConfig),
+};
 
 export type GitCommandResult = ProjectGitCommandResult;
 export type GitRunner = ProjectGitRunner;
@@ -310,13 +320,16 @@ function projectTrackerLinkExtensionContribution(
 export function statusForProjectReference(
   reference: NexusProjectReference,
 ): NexusProjectStatus {
-  const projectRoot = path.resolve(reference.projectRoot);
-  const config = loadProjectConfigIfExists(projectRoot);
-  const baseStatus = buildNexusProjectStatus(reference, {
-    projectConfig: config,
-  });
+  const baseStatus = statusForNexusProjectReference(reference);
+  return statusForProjectStatusBase(baseStatus);
+}
+
+function statusForProjectStatusBase(
+  baseStatus: NexusProjectStatusBase,
+): NexusProjectStatus {
+  const config = loadProjectConfigIfExists(baseStatus.projectRoot);
   const statusContribution = projectStatusExtensionContribution(
-    projectRoot,
+    baseStatus.projectRoot,
     config,
   );
 
@@ -325,21 +338,6 @@ export function statusForProjectReference(
     plexusProjectConfigPath: statusContribution.plexusProjectConfigPath,
     plexusProjectConfigExists: statusContribution.plexusProjectConfigExists,
   };
-}
-
-function statusForProjectPath(projectRoot: string): NexusProjectStatus {
-  const baseStatus = buildNexusProjectStatusForPath(projectRoot);
-  return statusForProjectReference({
-    id: baseStatus.id,
-    name: baseStatus.name,
-    projectRoot: baseStatus.projectRoot,
-    ...(baseStatus.vibeKanbanProjectId
-      ? { vibeKanbanProjectId: baseStatus.vibeKanbanProjectId }
-      : {}),
-    ...(baseStatus.vibeKanbanRepoId
-      ? { vibeKanbanRepoId: baseStatus.vibeKanbanRepoId }
-      : {}),
-  });
 }
 
 export function upsertProjectReference(
@@ -358,11 +356,9 @@ export function upsertProjectReference(
 export function createNexusProject(
   options: CreateNexusProjectOptions,
 ): CreateNexusProjectResult {
-  const homePath = resolveNexusHome(options.homePath);
-  const homeConfig = loadHomeConfig(homePath);
-  const result = createNexusProjectInRegistry({
-    homePath,
-    registry: homeConfig,
+  const result = createNexusProjectFromHome({
+    homePath: options.homePath,
+    homeStore: nexusProjectHomeStore,
     name: options.name,
     ...(options.root !== undefined ? { root: options.root } : {}),
     ...(options.from !== undefined ? { from: options.from } : {}),
@@ -372,10 +368,9 @@ export function createNexusProject(
       : {}),
     ...(options.gitRunner ? { gitRunner: options.gitRunner } : {}),
   });
-  saveHomeConfig(homePath, homeConfig);
 
   return {
-    homePath,
+    homePath: result.homePath,
     projectRoot: result.projectRoot,
     projectConfigPath: result.projectConfigPath,
     worktreesRoot: result.worktreesRoot,
@@ -387,11 +382,9 @@ export function createNexusProject(
 export function importNexusProject(
   options: ImportNexusProjectOptions,
 ): ImportNexusProjectResult {
-  const homePath = resolveNexusHome(options.homePath);
-  const homeConfig = loadHomeConfig(homePath);
-  const result = importNexusProjectInRegistry({
-    homePath,
-    registry: homeConfig,
+  const result = importNexusProjectFromHome({
+    homePath: options.homePath,
+    homeStore: nexusProjectHomeStore,
     root: options.root,
     ...(options.projectRoot !== undefined ? { projectRoot: options.projectRoot } : {}),
     ...(options.name !== undefined ? { name: options.name } : {}),
@@ -400,10 +393,9 @@ export function importNexusProject(
       : {}),
     ...(options.gitRunner ? { gitRunner: options.gitRunner } : {}),
   });
-  saveHomeConfig(homePath, homeConfig);
 
   return {
-    homePath,
+    homePath: result.homePath,
     projectRoot: result.projectRoot,
     projectConfigPath: result.projectConfigPath,
     worktreesRoot: result.worktreesRoot,
@@ -415,48 +407,29 @@ export function importNexusProject(
 export function listNexusProjects(
   options: ListNexusProjectsOptions,
 ): ListNexusProjectsResult {
-  const homePath = resolveNexusHome(options.homePath);
-  const homeConfig = loadHomeConfig(homePath);
+  const result = listNexusProjectsFromHome({
+    homePath: options.homePath,
+    homeStore: nexusProjectHomeStore,
+  });
 
   return {
-    homePath,
-    projects: homeConfig.projects.map(statusForProjectReference),
+    homePath: result.homePath,
+    projects: result.projects.map(statusForProjectStatusBase),
   };
 }
 
 export function getNexusProjectStatus(
   options: GetNexusProjectStatusOptions,
 ): GetNexusProjectStatusResult {
-  assertNonEmptyString(options.project, "project");
-
-  const homePath = resolveNexusHome(options.homePath);
-  const homeConfig = loadHomeConfig(homePath);
-  const projectSelector = options.project.trim();
-  const reference =
-    findNexusProjectReferenceById(homeConfig, projectSelector) ??
-    findNexusProjectReferenceByPath(homeConfig, projectSelector);
-  let project: NexusProjectStatus;
-  if (reference) {
-    project = statusForProjectReference(reference);
-  } else {
-    const projectRoot = projectRootFromInput(projectSelector);
-    try {
-      project = statusForProjectPath(projectRoot);
-    } catch (error) {
-      if (error instanceof NexusProjectError) {
-        throw new NexusProjectError(
-          `No registered project matched "${projectSelector}". ` +
-            `Path fallback checked "${projectRoot}" and failed: ${error.message}`,
-        );
-      }
-
-      throw error;
-    }
-  }
+  const result = getNexusProjectStatusFromHome({
+    homePath: options.homePath,
+    homeStore: nexusProjectHomeStore,
+    project: options.project,
+  });
 
   return {
-    homePath,
-    project,
+    homePath: result.homePath,
+    project: statusForProjectStatusBase(result.project),
   };
 }
 
@@ -464,49 +437,27 @@ export function linkNexusProjectTracker(
   options: LinkNexusProjectTrackerOptions,
 ): LinkNexusProjectTrackerResult {
   assertNonEmptyString(options.project, "project");
-  const vibeKanbanProjectId = optionalNonEmptyString(
-    options.trackerProjectId,
-    "trackerProjectId",
-  );
-  if (!vibeKanbanProjectId) {
-    throw new NexusProjectError("trackerProjectId must be a non-empty string");
-  }
 
   const homePath = resolveNexusHome(options.homePath);
   const homeConfig = loadHomeConfig(homePath);
-  const existingReference = findNexusProjectReference(homeConfig, options.project);
-  const projectRoot = existingReference
-    ? path.resolve(existingReference.projectRoot)
-    : projectRootFromInput(options.project);
-  const projectConfig = loadProjectConfig(projectRoot);
-  const updatedProjectConfig: NexusProjectConfig = {
-    ...projectConfig,
-    kanban: {
-      ...projectConfig.kanban,
-      projectId: vibeKanbanProjectId,
-    },
-  };
-  const projectConfigFilePath = saveProjectConfig(projectRoot, updatedProjectConfig);
+  const linked = linkNexusProjectTrackerInRegistry({
+    registry: homeConfig,
+    project: options.project,
+    trackerProjectId: options.trackerProjectId,
+  });
   const trackerLinkContribution = projectTrackerLinkExtensionContribution(
-    projectRoot,
-    updatedProjectConfig,
-    vibeKanbanProjectId,
-  );
-
-  const reference = upsertProjectReference(
-    homeConfig,
-    projectRoot,
-    updatedProjectConfig,
-    vibeKanbanProjectId,
+    linked.projectRoot,
+    linked.projectConfig,
+    linked.vibeKanbanProjectId,
   );
   saveHomeConfig(homePath, homeConfig);
 
   return {
     homePath,
-    vibeKanbanProjectId,
-    vibeKanbanRepoId: reference.vibeKanbanRepoId ?? null,
-    project: statusForProjectReference(reference),
-    projectConfigPath: projectConfigFilePath,
+    vibeKanbanProjectId: linked.vibeKanbanProjectId,
+    vibeKanbanRepoId: linked.vibeKanbanRepoId,
+    project: statusForProjectReference(linked.reference),
+    projectConfigPath: linked.projectConfigPath,
     plexusProjectConfigPath: trackerLinkContribution.plexusProjectConfigPath,
     plexusProjectConfig: trackerLinkContribution.plexusProjectConfig,
   };
@@ -515,13 +466,9 @@ export function linkNexusProjectTracker(
 export function configureNexusProjectTracker(
   options: ConfigureNexusProjectTrackerOptions,
 ): ConfigureNexusProjectTrackerResult {
-  assertNonEmptyString(options.project, "project");
-  assertNonEmptyString(options.provider, "provider");
-
-  const homePath = resolveNexusHome(options.homePath);
-  const homeConfig = loadHomeConfig(homePath);
-  const result = configureNexusProjectTrackerInRegistry({
-    registry: homeConfig,
+  const result = configureNexusProjectTrackerFromHome({
+    homePath: options.homePath,
+    homeStore: nexusProjectHomeStore,
     project: options.project,
     provider: options.provider,
     ...(options.host !== undefined ? { host: options.host } : {}),
@@ -538,11 +485,10 @@ export function configureNexusProjectTracker(
     ...(options.issueType !== undefined ? { issueType: options.issueType } : {}),
     ...(options.storePath !== undefined ? { storePath: options.storePath } : {}),
   });
-  saveHomeConfig(homePath, homeConfig);
 
   return {
-    homePath,
-    project: statusForProjectReference(result.reference),
+    homePath: result.homePath,
+    project: statusForProjectStatusBase(result.project),
     projectConfigPath: result.projectConfigPath,
     plexusProjectConfigPath: projectStatusExtensionContribution(
       result.projectRoot,
