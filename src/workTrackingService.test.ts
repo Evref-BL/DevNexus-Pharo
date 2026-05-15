@@ -182,15 +182,34 @@ describe("work tracking service", () => {
     expect(provider.capabilities.board).toBe(false);
   });
 
-  it("reports unsupported work tracking providers before MCP tools use them", () => {
-    expect(() =>
-      createWorkTrackerProvider({
+  it("creates a GitLab work tracker provider from direct config", () => {
+    const provider = createWorkTrackerProvider(
+      {
         provider: "gitlab",
         repository: {
           id: "example/project",
         },
+      },
+      {
+        gitlab: {
+          fetch: async () => new Response(),
+          env: {},
+        },
+      },
+    );
+
+    expect(provider.provider).toBe("gitlab");
+    expect(provider.capabilities.createItem).toBe(true);
+    expect(provider.capabilities.board).toBe(false);
+  });
+
+  it("reports unsupported work tracking providers before MCP tools use them", () => {
+    expect(() =>
+      createWorkTrackerProvider({
+        provider: "jira",
+        projectKey: "FCD",
       }),
-    ).toThrow(/not implemented yet: gitlab/);
+    ).toThrow(/not implemented yet: jira/);
 
     const legacyVibeConfig = validateProjectConfig({
       version: 1,

@@ -7,10 +7,15 @@ import {
   createGitHubWorkTrackerProvider,
   type GitHubWorkTrackerProviderOptions,
 } from "./workTrackingGitHubProvider.js";
+import {
+  createGitLabWorkTrackerProvider,
+  type GitLabWorkTrackerProviderOptions,
+} from "./workTrackingGitLabProvider.js";
 import { createLocalWorkTrackerProvider } from "./workTrackingLocalProvider.js";
 import { createVibeWorkTrackerProvider } from "./workTrackingVibeProvider.js";
 import type {
   GitHubWorkTrackingConfig,
+  GitLabWorkTrackingConfig,
   VibeKanbanWorkTrackingConfig,
   WorkTrackingConfig,
   WorkTrackerProvider,
@@ -21,6 +26,7 @@ export interface CreateWorkTrackerProviderOptions {
   now?: () => Date | string;
   vibeKanban?: VibeKanbanApiOptions;
   github?: Omit<GitHubWorkTrackerProviderOptions, "config">;
+  gitlab?: Omit<GitLabWorkTrackerProviderOptions, "config">;
 }
 
 export class WorkTrackingServiceError extends Error {
@@ -87,6 +93,13 @@ export function createWorkTrackerProvider(
     return createGitHubWorkTrackerProvider({
       ...options.github,
       config: config as GitHubWorkTrackingConfig,
+    });
+  }
+
+  if (config.provider === "gitlab") {
+    return createGitLabWorkTrackerProvider({
+      ...options.gitlab,
+      config: config as GitLabWorkTrackingConfig,
     });
   }
 

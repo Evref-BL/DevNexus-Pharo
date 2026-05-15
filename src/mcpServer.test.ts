@@ -472,6 +472,50 @@ describe("PharoNexus MCP server tools", () => {
     );
   });
 
+  it("configures GitLab work tracking through neutral MCP tool calls", async () => {
+    const homePath = makeTempDir("pharo-nexus-home-");
+    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "GitLabMcp");
+    initPharoNexusHome({ homePath });
+    await callPharoNexusMcpTool(
+      "project_create",
+      {
+        homePath,
+        name: "GitLabMcp",
+        root: projectRoot,
+        gitInit: true,
+        syncTracker: false,
+      },
+      { gitRunner: fakeGitRunner },
+    );
+
+    const configurePayload = parseToolText(
+      await callPharoNexusMcpTool("project_configure_tracker", {
+        homePath,
+        project: "git-lab-mcp",
+        provider: "gitlab",
+        host: "gitlab.enterprise.test",
+        repositoryId: "example/project",
+      }),
+    );
+
+    expect(configurePayload).toMatchObject({
+      ok: true,
+      workTracking: {
+        provider: "gitlab",
+        host: "gitlab.enterprise.test",
+        repository: {
+          id: "example/project",
+        },
+      },
+      project: {
+        id: "git-lab-mcp",
+        workTracking: {
+          provider: "gitlab",
+        },
+      },
+    });
+  });
+
   it("reports unsupported work tracking providers through neutral MCP tools", async () => {
     const homePath = makeTempDir("pharo-nexus-home-");
     const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "Legacy");

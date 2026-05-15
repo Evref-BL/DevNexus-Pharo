@@ -154,7 +154,10 @@ export interface LinkPharoNexusProjectTrackerOptions {
   trackerProjectId: string;
 }
 
-export type ConfigurePharoNexusProjectTrackerProvider = "local" | "github";
+export type ConfigurePharoNexusProjectTrackerProvider =
+  | "local"
+  | "github"
+  | "gitlab";
 
 export interface ConfigurePharoNexusProjectTrackerOptions {
   homePath: string;
@@ -163,6 +166,7 @@ export interface ConfigurePharoNexusProjectTrackerOptions {
   host?: string;
   repositoryOwner?: string;
   repositoryName?: string;
+  repositoryId?: string;
   storePath?: string;
 }
 
@@ -870,6 +874,24 @@ function buildConfiguredWorkTracking(
       repository: {
         owner,
         name,
+      },
+    };
+  }
+
+  if (options.provider === "gitlab") {
+    const id = optionalNonEmptyString(options.repositoryId, "repositoryId");
+    if (!id) {
+      throw new PharoNexusProjectError(
+        "repositoryId is required for gitlab tracker configuration",
+      );
+    }
+
+    const host = optionalNonEmptyString(options.host, "host");
+    return {
+      provider: "gitlab",
+      ...(host !== undefined ? { host } : {}),
+      repository: {
+        id,
       },
     };
   }

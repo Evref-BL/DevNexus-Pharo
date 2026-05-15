@@ -168,6 +168,8 @@ Configure provider-neutral work tracking for a project:
 pharo-nexus project configure-tracker MyProject --provider local --store-path .pharo-nexus\work-items.json
 pharo-nexus project configure-tracker MyProject --provider github --repository-owner example --repository-name MyProject
 pharo-nexus project configure-tracker MyProject --provider github --host github.enterprise.test --repository-owner example --repository-name MyProject
+pharo-nexus project configure-tracker MyProject --provider gitlab --repository-id example/MyProject
+pharo-nexus project configure-tracker MyProject --provider gitlab --host gitlab.enterprise.test --repository-id example/MyProject
 ```
 
 The GitHub provider uses the GitHub Issues REST API. It reads credentials in
@@ -211,6 +213,14 @@ Status field, configure the field node id and option ids:
 GitHub requires those Project v2 project, field, and option node ids for GraphQL
 updates. If `statusOptions` does not include a status, PharoNexus still adds
 the issue to the project but skips the status-field update for that status.
+
+The GitLab provider uses the GitLab project Issues and Notes REST APIs under
+`/api/v4`. Configure `repository.id` as the GitLab project id or namespace path,
+such as `example/MyProject`. It reads credentials in this order: explicit
+provider token from code, `GITLAB_TOKEN`, `GL_TOKEN`, then `git credential fill`.
+Credential-helper lookup is also non-interactive by default. GitLab write
+operations that set assignees or milestones currently require numeric GitLab
+assignee and milestone ids.
 
 Existing local Vibe Kanban installations can still be used as a tracker
 provider for board/repo registration:

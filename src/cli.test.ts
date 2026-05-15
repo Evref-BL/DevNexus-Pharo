@@ -64,6 +64,7 @@ describe("pharo-nexus cli", () => {
     expect(usage()).toContain("--sync-tracker");
     expect(usage()).toContain("--repository-owner");
     expect(usage()).toContain("--repository-name");
+    expect(usage()).toContain("--repository-id");
     expect(usage()).toContain("--no-open-browser");
     expect(usage()).toContain("--state <active|archived>");
     expect(usage()).toContain("--id <worktree-id>");
@@ -807,6 +808,73 @@ describe("pharo-nexus cli", () => {
         id: "github-tracked",
         workTracking: {
           provider: "github",
+        },
+      },
+    });
+    expect(loadProjectConfig(projectRoot).workTracking).toEqual(payload.workTracking);
+  });
+
+  it("configures GitLab work tracking from the CLI", async () => {
+    const homePath = path.join(makeTempDir("pharo-nexus-parent-"), "home");
+    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "GitLabTracked");
+    initHome(homePath);
+    const homeConfig = loadHomeConfig(homePath);
+    homeConfig.projects.push({
+      id: "gitlab-tracked",
+      name: "GitLabTracked",
+      plexusProjectRoot: projectRoot,
+    });
+    saveHomeConfig(homePath, homeConfig);
+    saveProjectConfig(projectRoot, {
+      version: 1,
+      id: "gitlab-tracked",
+      name: "GitLabTracked",
+      home: null,
+      repo: {
+        kind: "git",
+        remoteUrl: "https://gitlab.com/example/project.git",
+        defaultBranch: "main",
+      },
+      plexusProjectConfig: plexusProjectConfigFileName,
+      worktreesRoot: "worktrees",
+      kanban: {
+        provider: "vibe-kanban",
+        projectId: null,
+      },
+    });
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+
+    await expect(
+      main([
+        "project",
+        "configure-tracker",
+        "gitlab-tracked",
+        "--home",
+        homePath,
+        "--provider",
+        "gitlab",
+        "--host",
+        "gitlab.enterprise.test",
+        "--repository-id",
+        "example/project",
+        "--json",
+      ]),
+    ).resolves.toBe(0);
+
+    const payload = JSON.parse(String(log.mock.calls[0]?.[0]));
+    expect(payload).toMatchObject({
+      ok: true,
+      workTracking: {
+        provider: "gitlab",
+        host: "gitlab.enterprise.test",
+        repository: {
+          id: "example/project",
+        },
+      },
+      project: {
+        id: "gitlab-tracked",
+        workTracking: {
+          provider: "gitlab",
         },
       },
     });
