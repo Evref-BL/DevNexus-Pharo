@@ -3,7 +3,6 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { NexusExtension } from "./nexusExtension.js";
 import {
-  projectPlexusConfigPath,
   type PharoNexusProjectConfig,
 } from "./config.js";
 
@@ -21,6 +20,13 @@ export interface PharoNexusProjectFiles {
   suggestedFirstPromptPath: string;
   plexusProjectConfigPath: string;
   plexusProjectConfig: PlexusProjectConfig;
+}
+
+export const plexusProjectConfigFileName = "plexus.project.json";
+export const pharoNexusProjectExtensionConfigKey = "pharo-nexus";
+
+export interface PharoNexusProjectExtensionConfig {
+  plexusProjectConfig?: string;
 }
 
 export interface InstallPharoNexusProjectFilesOptions {
@@ -54,6 +60,46 @@ function saveJsonFile(filePath: string, value: unknown): void {
 
 function readJsonFile<T>(filePath: string): T {
   return JSON.parse(fs.readFileSync(filePath, "utf8").replace(/^\uFEFF/u, "")) as T;
+}
+
+function resolveFromProject(projectRootPath: string, value: string): string {
+  return path.resolve(projectRootPath, value);
+}
+
+export function pharoNexusProjectExtensionConfig(
+  projectConfig: Pick<PharoNexusProjectConfig, "extensions">,
+): PharoNexusProjectExtensionConfig {
+  const value = projectConfig.extensions?.[pharoNexusProjectExtensionConfigKey];
+  if (value === undefined) {
+    return {};
+  }
+
+  const plexusProjectConfig = value.plexusProjectConfig;
+  if (
+    plexusProjectConfig !== undefined &&
+    typeof plexusProjectConfig !== "string"
+  ) {
+    throw new Error(
+      `extensions.${pharoNexusProjectExtensionConfigKey}.plexusProjectConfig must be a string`,
+    );
+  }
+
+  return {
+    ...(plexusProjectConfig ? { plexusProjectConfig } : {}),
+  };
+}
+
+export function projectPlexusConfigPath(
+  projectRootPath: string,
+  config?: Pick<PharoNexusProjectConfig, "extensions">,
+): string {
+  const extensionConfig = config
+    ? pharoNexusProjectExtensionConfig(config)
+    : {};
+  return resolveFromProject(
+    projectRootPath,
+    extensionConfig.plexusProjectConfig ?? plexusProjectConfigFileName,
+  );
 }
 
 function installDefaultAgentsFile(projectRoot: string): string {

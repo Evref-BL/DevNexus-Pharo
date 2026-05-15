@@ -112,17 +112,23 @@ Each managed project has a `dev-nexus.project.json` file:
     "remoteUrl": null,
     "defaultBranch": null
   },
-  "plexusProjectConfig": "plexus.project.json",
   "worktreesRoot": "worktrees",
   "kanban": {
     "provider": "vibe-kanban",
     "projectId": null
+  },
+  "extensions": {
+    "pharo-nexus": {
+      "plexusProjectConfig": "plexus.project.json"
+    }
   }
 }
 ```
 
-Relative paths such as `plexusProjectConfig` and `worktreesRoot` resolve from
-the directory containing `dev-nexus.project.json`.
+Generic relative paths such as `worktreesRoot` resolve from the directory
+containing `dev-nexus.project.json`. Pharo/PLexus-specific paths such as
+`extensions.pharo-nexus.plexusProjectConfig` are interpreted by the PharoNexus
+extension, not by the generic project config loader.
 
 For imported or cloned source repositories, `repo.sourceRoot` points from the
 managed project root to the source checkout. The source checkout should not

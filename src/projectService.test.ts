@@ -9,9 +9,9 @@ import {
   loadHomeConfig,
   loadProjectConfig,
   devNexusProjectConfigFileName,
-  plexusProjectConfigFileName,
   saveProjectConfig,
 } from "./config.js";
+import { plexusProjectConfigFileName } from "./pharoNexusExtension.js";
 import {
   configurePharoNexusProjectTracker,
   createPharoNexusProject,
@@ -155,7 +155,6 @@ describe("PharoNexus project service", () => {
         remoteUrl: null,
         defaultBranch: "main",
       },
-      plexusProjectConfig: plexusProjectConfigFileName,
       worktreesRoot: "worktrees",
       kanban: {
         provider: "vibe-kanban",
@@ -453,7 +452,6 @@ describe("PharoNexus project service", () => {
             remoteUrl: null,
             defaultBranch: "main",
           },
-          plexusProjectConfig: plexusProjectConfigFileName,
           worktreesRoot: "worktrees",
           kanban: {
             provider: "vibe-kanban",
@@ -628,7 +626,6 @@ describe("PharoNexus project service", () => {
         remoteUrl: null,
         defaultBranch: "main",
       },
-      plexusProjectConfig: plexusProjectConfigFileName,
       worktreesRoot: "worktrees",
       kanban: {
         provider: "vibe-kanban",
@@ -1051,7 +1048,6 @@ describe("PharoNexus project service", () => {
         remoteUrl: null,
         defaultBranch: "dev",
       },
-      plexusProjectConfig: plexusProjectConfigFileName,
       worktreesRoot: "worktrees",
       kanban: {
         provider: "vibe-kanban" as const,

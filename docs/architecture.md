@@ -212,17 +212,23 @@ Each PharoNexus project has a `dev-nexus.project.json` file:
     "remoteUrl": null,
     "defaultBranch": null
   },
-  "plexusProjectConfig": "plexus.project.json",
   "worktreesRoot": "worktrees",
   "kanban": {
     "provider": "vibe-kanban",
     "projectId": null
+  },
+  "extensions": {
+    "pharo-nexus": {
+      "plexusProjectConfig": "plexus.project.json"
+    }
   }
 }
 ```
 
-Relative project paths, such as `plexusProjectConfig` and `worktreesRoot`,
-resolve from the directory containing `dev-nexus.project.json`.
+Generic relative project paths, such as `worktreesRoot`, resolve from the
+directory containing `dev-nexus.project.json`. Pharo/PLexus paths, such as
+`extensions.pharo-nexus.plexusProjectConfig`, are interpreted by the
+PharoNexus extension.
 
 ## Project Creation
 

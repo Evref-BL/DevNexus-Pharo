@@ -11,11 +11,14 @@ import {
   loadHomeConfig,
   loadProjectConfig,
   devNexusProjectConfigFileName,
-  plexusProjectConfigFileName,
-  projectPlexusConfigPath,
   projectWorktreesRootPath,
   validateProjectConfig,
 } from "./config.js";
+import {
+  pharoNexusProjectExtensionConfigKey,
+  plexusProjectConfigFileName,
+  projectPlexusConfigPath,
+} from "./pharoNexusExtension.js";
 import {
   createPharoNexusProject,
   importPharoNexusProject,
@@ -120,7 +123,6 @@ describe("PharoNexus focused project lifecycle contracts", () => {
         remoteUrl: null,
         defaultBranch: null,
       },
-      plexusProjectConfig: plexusProjectConfigFileName,
       worktreesRoot: "worktrees",
       kanban: {
         provider: "vibe-kanban",
@@ -241,11 +243,15 @@ describe("PharoNexus focused project lifecycle contracts", () => {
         remoteUrl: null,
         defaultBranch: null,
       },
-      plexusProjectConfig: path.join("config", "plexus.project.json"),
       worktreesRoot: path.join(".nexus", "worktrees"),
       kanban: {
         provider: "vibe-kanban",
         projectId: null,
+      },
+      extensions: {
+        [pharoNexusProjectExtensionConfigKey]: {
+          plexusProjectConfig: path.join("config", "plexus.project.json"),
+        },
       },
     });
 

@@ -8,6 +8,7 @@ import {
 import {
   pharoNexusExtension,
   pharoNexusProjectFilesFromExtensionResult,
+  projectPlexusConfigPath,
   updatePlexusProjectKanban,
   type PlexusProjectConfig,
 } from "./pharoNexusExtension.js";
@@ -17,9 +18,7 @@ import {
   loadProjectConfig,
   devNexusProjectConfigFileName,
   pharoNexusProjectWorktreesDirectoryName,
-  plexusProjectConfigFileName,
   projectConfigPath,
-  projectPlexusConfigPath,
   projectWorktreesRootPath,
   resolvePharoNexusHome,
   saveHomeConfig,
@@ -694,7 +693,6 @@ function buildProjectConfig(
       defaultBranch,
       ...(sourceRoot ? { sourceRoot } : {}),
     },
-    plexusProjectConfig: plexusProjectConfigFileName,
     worktreesRoot: pharoNexusProjectWorktreesDirectoryName,
     kanban: {
       provider: "vibe-kanban",

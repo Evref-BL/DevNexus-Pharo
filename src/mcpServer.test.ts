@@ -7,9 +7,9 @@ import {
   initPharoNexusHome,
   loadHomeConfig,
   loadProjectConfig,
-  plexusProjectConfigFileName,
   saveProjectConfig,
 } from "./config.js";
+import { plexusProjectConfigFileName } from "./pharoNexusExtension.js";
 import {
   callPharoNexusMcpTool,
   listPharoNexusMcpTools,

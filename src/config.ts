@@ -17,7 +17,6 @@ import type {
 
 export const devNexusHomeConfigFileName = "dev-nexus.home.json";
 export const devNexusProjectConfigFileName = "dev-nexus.project.json";
-export const plexusProjectConfigFileName = "plexus.project.json";
 export const pharoNexusLogsDirectoryName = "logs";
 export const pharoNexusGeneratedDirectoryName = "generated";
 export const pharoNexusControlProjectDirectoryName = "PharoNexus";
@@ -64,16 +63,18 @@ export interface PharoNexusProjectKanbanConfig {
   projectId: string | null;
 }
 
+export type NexusProjectExtensionsConfig = Record<string, Record<string, unknown>>;
+
 export interface PharoNexusProjectConfig {
   version: 1;
   id: string;
   name: string;
   home: string | null;
   repo: PharoNexusProjectRepoConfig;
-  plexusProjectConfig: string;
   worktreesRoot: string;
   kanban: PharoNexusProjectKanbanConfig;
   workTracking?: WorkTrackingConfig;
+  extensions?: NexusProjectExtensionsConfig;
   agent?: PharoNexusAgentConfig;
 }
 
@@ -269,16 +270,6 @@ export function projectConfigPath(projectRootPath: string): string {
 
 function resolveFromProject(projectRootPath: string, value: string): string {
   return path.resolve(projectRootPath, value);
-}
-
-export function projectPlexusConfigPath(
-  projectRootPath: string,
-  config?: Pick<PharoNexusProjectConfig, "plexusProjectConfig">,
-): string {
-  return resolveFromProject(
-    projectRootPath,
-    config?.plexusProjectConfig ?? plexusProjectConfigFileName,
-  );
 }
 
 export function projectWorktreesRootPath(
@@ -729,6 +720,37 @@ function validateKanbanConfig(value: unknown): PharoNexusProjectKanbanConfig {
   };
 }
 
+function validateProjectExtensionsConfig(
+  value: unknown,
+): NexusProjectExtensionsConfig | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  const record = assertRecord(value, "project config.extensions");
+  const extensions: NexusProjectExtensionsConfig = {};
+  for (const [key, extensionValue] of Object.entries(record)) {
+    if (!key.trim()) {
+      throw new PharoNexusConfigError(
+        "project config.extensions keys must be non-empty strings",
+      );
+    }
+    if (
+      !extensionValue ||
+      typeof extensionValue !== "object" ||
+      Array.isArray(extensionValue)
+    ) {
+      throw new PharoNexusConfigError(
+        `project config.extensions.${key} must be an object`,
+      );
+    }
+
+    extensions[key] = { ...(extensionValue as Record<string, unknown>) };
+  }
+
+  return extensions;
+}
+
 function validateWorkTrackingProviderName(
   value: unknown,
 ): WorkTrackingProviderName {
@@ -1164,6 +1186,7 @@ export function validateProjectConfig(value: unknown): PharoNexusProjectConfig {
   }
   const agent = validateAgentConfig(record.agent, "project config.agent");
   const workTracking = validateWorkTrackingConfig(record.workTracking);
+  const extensions = validateProjectExtensionsConfig(record.extensions);
 
   return {
     version: 1,
@@ -1171,14 +1194,12 @@ export function validateProjectConfig(value: unknown): PharoNexusProjectConfig {
     name: requiredString(record, "name", "project config"),
     home: nullableString(record, "home", "project config"),
     repo: validateRepoConfig(record.repo),
-    plexusProjectConfig:
-      optionalString(record, "plexusProjectConfig", "project config") ??
-      plexusProjectConfigFileName,
     worktreesRoot:
       optionalString(record, "worktreesRoot", "project config") ??
       pharoNexusProjectWorktreesDirectoryName,
     kanban: validateKanbanConfig(record.kanban),
     ...(workTracking ? { workTracking } : {}),
+    ...(extensions ? { extensions } : {}),
     ...(agent ? { agent } : {}),
   };
 }
@@ -1198,7 +1219,6 @@ export function createControlProjectConfig(
       remoteUrl: null,
       defaultBranch: null,
     },
-    plexusProjectConfig: plexusProjectConfigFileName,
     worktreesRoot: pharoNexusProjectWorktreesDirectoryName,
     kanban: {
       provider: "vibe-kanban",

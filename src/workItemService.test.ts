@@ -64,7 +64,6 @@ function writeProject(
       remoteUrl: null,
       defaultBranch: null,
     },
-    plexusProjectConfig: "plexus.project.json",
     worktreesRoot: "worktrees",
     kanban: {
       provider: "vibe-kanban",

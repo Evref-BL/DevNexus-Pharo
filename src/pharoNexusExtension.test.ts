@@ -9,9 +9,12 @@ import {
 import { scaffoldNexusProject } from "./nexusProjectScaffold.js";
 import {
   pharoNexusProjectWorktreesDirectoryName,
-  plexusProjectConfigFileName,
   type PharoNexusProjectConfig,
 } from "./config.js";
+import {
+  pharoNexusProjectExtensionConfigKey,
+  plexusProjectConfigFileName,
+} from "./pharoNexusExtension.js";
 
 const tempDirs: string[] = [];
 
@@ -33,7 +36,6 @@ function projectConfig(overrides: Partial<PharoNexusProjectConfig> = {}): PharoN
       defaultBranch: "main",
       sourceRoot: "git",
     },
-    plexusProjectConfig: plexusProjectConfigFileName,
     worktreesRoot: pharoNexusProjectWorktreesDirectoryName,
     kanban: {
       provider: "vibe-kanban",
@@ -92,5 +94,34 @@ describe("PharoNexus extension", () => {
       },
       images: [],
     });
+  });
+
+  it("reads PLexus metadata paths from PharoNexus extension config", () => {
+    const homePath = makeTempDir("pharo-nexus-home-");
+    const projectRoot = path.join(makeTempDir("pharo-nexus-project-"), "Project");
+    const worktreesRoot = path.join(projectRoot, "worktrees");
+    const config = projectConfig({
+      extensions: {
+        [pharoNexusProjectExtensionConfigKey]: {
+          plexusProjectConfig: path.join("config", "plexus.project.json"),
+        },
+      },
+    });
+
+    const scaffold = scaffoldNexusProject({
+      homePath,
+      projectRoot,
+      worktreesRoot,
+      projectConfig: config,
+      extensions: [pharoNexusExtension],
+    });
+    const files = pharoNexusProjectFilesFromExtensionResult(
+      scaffold.extensionResults[pharoNexusExtension.id],
+    );
+
+    expect(files.plexusProjectConfigPath).toBe(
+      path.join(projectRoot, "config", "plexus.project.json"),
+    );
+    expect(fs.existsSync(files.plexusProjectConfigPath)).toBe(true);
   });
 });

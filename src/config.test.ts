@@ -23,8 +23,6 @@ import {
   devNexusProjectConfigFileName,
   pharoNexusProjectWorktreesDirectoryName,
   PharoNexusConfigError,
-  plexusProjectConfigFileName,
-  projectPlexusConfigPath,
   projectWorktreesRootPath,
   resolvePharoNexusAgentConfig,
   resolvePharoNexusHome,
@@ -33,6 +31,10 @@ import {
   validateHomeConfig,
   validateProjectConfig,
 } from "./config.js";
+import {
+  pharoNexusProjectExtensionConfigKey,
+  projectPlexusConfigPath,
+} from "./pharoNexusExtension.js";
 
 const tempDirs: string[] = [];
 
@@ -149,7 +151,6 @@ describe("PharoNexus home config", () => {
         remoteUrl: null,
         defaultBranch: null,
       },
-      plexusProjectConfig: plexusProjectConfigFileName,
       worktreesRoot: pharoNexusProjectWorktreesDirectoryName,
       kanban: {
         provider: "vibe-kanban",
@@ -201,7 +202,6 @@ describe("PharoNexus home config", () => {
         remoteUrl: "https://github.com/example/my-project.git",
         defaultBranch: "main",
       },
-      plexusProjectConfig: "plexus.project.json",
       worktreesRoot: "worktrees",
       kanban: {
         provider: "vibe-kanban" as const,
@@ -315,7 +315,6 @@ describe("PharoNexus home config", () => {
         remoteUrl: null,
         defaultBranch: null,
       },
-      plexusProjectConfig: plexusProjectConfigFileName,
       worktreesRoot: "worktrees",
       kanban: {
         provider: "vibe-kanban",
@@ -484,11 +483,15 @@ describe("PharoNexus home config", () => {
         remoteUrl: null,
         defaultBranch: null,
       },
-      plexusProjectConfig: path.join("config", "plexus.project.json"),
       worktreesRoot: path.join(".nexus", "worktrees"),
       kanban: {
         provider: "vibe-kanban",
         projectId: null,
+      },
+      extensions: {
+        [pharoNexusProjectExtensionConfigKey]: {
+          plexusProjectConfig: path.join("config", "plexus.project.json"),
+        },
       },
     });
 

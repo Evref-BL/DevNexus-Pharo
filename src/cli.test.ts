@@ -10,10 +10,10 @@ import {
   loadProjectConfig,
   loadHomeConfig,
   devNexusProjectConfigFileName,
-  plexusProjectConfigFileName,
   saveHomeConfig,
   saveProjectConfig,
 } from "./config.js";
+import { plexusProjectConfigFileName } from "./pharoNexusExtension.js";
 import type { GitCommandResult, GitRunner } from "./projectService.js";
 import { createWorkItemService } from "./workItemService.js";
 
@@ -206,7 +206,6 @@ describe("pharo-nexus cli", () => {
         remoteUrl: null,
         defaultBranch: "main",
       },
-      plexusProjectConfig: plexusProjectConfigFileName,
       worktreesRoot: "worktrees",
       kanban: {
         provider: "vibe-kanban",
@@ -618,7 +617,6 @@ describe("pharo-nexus cli", () => {
         remoteUrl: "https://github.com/example/listed.git",
         defaultBranch: "main",
       },
-      plexusProjectConfig: plexusProjectConfigFileName,
       worktreesRoot: "worktrees",
       kanban: {
         provider: "vibe-kanban",
@@ -692,7 +690,6 @@ describe("pharo-nexus cli", () => {
         remoteUrl: null,
         defaultBranch: "main",
       },
-      plexusProjectConfig: plexusProjectConfigFileName,
       worktreesRoot: "worktrees",
       kanban: {
         provider: "vibe-kanban",
@@ -765,7 +762,6 @@ describe("pharo-nexus cli", () => {
         remoteUrl: "https://github.com/example/project.git",
         defaultBranch: "main",
       },
-      plexusProjectConfig: plexusProjectConfigFileName,
       worktreesRoot: "worktrees",
       kanban: {
         provider: "vibe-kanban",
@@ -835,7 +831,6 @@ describe("pharo-nexus cli", () => {
         remoteUrl: "https://gitlab.com/example/project.git",
         defaultBranch: "main",
       },
-      plexusProjectConfig: plexusProjectConfigFileName,
       worktreesRoot: "worktrees",
       kanban: {
         provider: "vibe-kanban",
@@ -902,7 +897,6 @@ describe("pharo-nexus cli", () => {
         remoteUrl: "https://example.com/jira-tracked.git",
         defaultBranch: "main",
       },
-      plexusProjectConfig: plexusProjectConfigFileName,
       worktreesRoot: "worktrees",
       kanban: {
         provider: "vibe-kanban",
@@ -971,7 +965,6 @@ describe("pharo-nexus cli", () => {
         remoteUrl: null,
         defaultBranch: "main",
       },
-      plexusProjectConfig: plexusProjectConfigFileName,
       worktreesRoot: "worktrees",
       kanban: {
         provider: "vibe-kanban",
