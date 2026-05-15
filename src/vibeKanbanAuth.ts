@@ -1,9 +1,9 @@
 import fs from "node:fs";
-import type { NexusHomeConfig, VibeKanbanBackendConfig } from "./config.js";
 import {
   vibeKanbanApiBaseUrl,
   type VibeKanbanApiOptions,
-} from "./vibeKanbanMcpConfig.js";
+} from "dev-nexus";
+import type { NexusHomeConfig, VibeKanbanBackendConfig } from "./config.js";
 
 export interface VibeKanbanLocalAuthCredentials {
   email: string;

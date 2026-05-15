@@ -4,6 +4,14 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  getVibeKanbanMcpConfig,
+  mergeMcpServerConfig,
+  normalizeVibeKanbanExecutor,
+  updateVibeKanbanMcpConfig,
+  vibeKanbanApiBaseUrl,
+  VibeKanbanApiError,
+} from "dev-nexus";
+import {
   initNexusHome,
   loadHomeConfig,
   saveHomeConfig,
@@ -11,14 +19,8 @@ import {
 import {
   buildPharoNexusMcpServerConfig,
   buildPlexusMcpServerConfig,
-  getVibeKanbanMcpConfig,
   installPharoNexusAndPlexusMcpForExecutor,
   installPlexusMcpForExecutor,
-  mergeMcpServerConfig,
-  normalizeVibeKanbanExecutor,
-  updateVibeKanbanMcpConfig,
-  vibeKanbanApiBaseUrl,
-  VibeKanbanMcpConfigError,
 } from "./vibeKanbanMcpConfig.js";
 
 const tempDirs: string[] = [];
@@ -150,7 +152,7 @@ describe("Vibe Kanban MCP config adapter", () => {
 
     for (const port of [0, -1, 65_536, 3.14]) {
       expect(() => vibeKanbanApiBaseUrl({ port })).toThrow(
-        VibeKanbanMcpConfigError,
+        VibeKanbanApiError,
       );
     }
   });
