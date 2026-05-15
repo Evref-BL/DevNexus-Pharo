@@ -11,11 +11,16 @@ import {
   createGitLabWorkTrackerProvider,
   type GitLabWorkTrackerProviderOptions,
 } from "./workTrackingGitLabProvider.js";
+import {
+  createJiraWorkTrackerProvider,
+  type JiraWorkTrackerProviderOptions,
+} from "./workTrackingJiraProvider.js";
 import { createLocalWorkTrackerProvider } from "./workTrackingLocalProvider.js";
 import { createVibeWorkTrackerProvider } from "./workTrackingVibeProvider.js";
 import type {
   GitHubWorkTrackingConfig,
   GitLabWorkTrackingConfig,
+  JiraWorkTrackingConfig,
   VibeKanbanWorkTrackingConfig,
   WorkTrackingConfig,
   WorkTrackerProvider,
@@ -27,6 +32,7 @@ export interface CreateWorkTrackerProviderOptions {
   vibeKanban?: VibeKanbanApiOptions;
   github?: Omit<GitHubWorkTrackerProviderOptions, "config">;
   gitlab?: Omit<GitLabWorkTrackerProviderOptions, "config">;
+  jira?: Omit<JiraWorkTrackerProviderOptions, "config">;
 }
 
 export class WorkTrackingServiceError extends Error {
@@ -103,8 +109,16 @@ export function createWorkTrackerProvider(
     });
   }
 
+  if (config.provider === "jira") {
+    return createJiraWorkTrackerProvider({
+      ...options.jira,
+      config: config as JiraWorkTrackingConfig,
+    });
+  }
+
+  const unsupportedConfig = config as { provider: string };
   throw new WorkTrackingServiceError(
-    `Work tracking provider is not implemented yet: ${config.provider}`,
+    `Work tracking provider is not implemented yet: ${unsupportedConfig.provider}`,
   );
 }
 

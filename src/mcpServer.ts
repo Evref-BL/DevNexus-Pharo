@@ -146,6 +146,8 @@ const tools: McpTool[] = [
         repositoryOwner: { type: "string" },
         repositoryName: { type: "string" },
         repositoryId: { type: "string" },
+        projectKey: { type: "string" },
+        issueType: { type: "string" },
         storePath: { type: "string" },
       },
       required: ["project", "provider"],
@@ -556,13 +558,18 @@ function requiredString(
 
 function trackerProviderFromArgs(
   record: Record<string, unknown>,
-): "local" | "github" | "gitlab" {
+): "local" | "github" | "gitlab" | "jira" {
   const value = requiredString(record, "provider", "arguments");
-  if (value === "local" || value === "github" || value === "gitlab") {
+  if (
+    value === "local" ||
+    value === "github" ||
+    value === "gitlab" ||
+    value === "jira"
+  ) {
     return value;
   }
 
-  throw new Error("arguments.provider must be local, github, or gitlab");
+  throw new Error("arguments.provider must be local, github, gitlab, or jira");
 }
 
 const workStatuses = new Set<WorkStatus>([
@@ -981,6 +988,8 @@ export async function callPharoNexusMcpTool(
               "arguments",
             ),
             repositoryId: optionalString(args, "repositoryId", "arguments"),
+            projectKey: optionalString(args, "projectKey", "arguments"),
+            issueType: optionalString(args, "issueType", "arguments"),
             storePath: optionalString(args, "storePath", "arguments"),
           }),
         });

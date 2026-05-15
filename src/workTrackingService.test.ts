@@ -203,14 +203,28 @@ describe("work tracking service", () => {
     expect(provider.capabilities.board).toBe(false);
   });
 
-  it("reports unsupported work tracking providers before MCP tools use them", () => {
-    expect(() =>
-      createWorkTrackerProvider({
+  it("creates a Jira work tracker provider from direct config", () => {
+    const provider = createWorkTrackerProvider(
+      {
         provider: "jira",
+        host: "example.atlassian.net",
         projectKey: "FCD",
-      }),
-    ).toThrow(/not implemented yet: jira/);
+      },
+      {
+        jira: {
+          fetch: async () => new Response(),
+          env: {},
+          credentialRunner: false,
+        },
+      },
+    );
 
+    expect(provider.provider).toBe("jira");
+    expect(provider.capabilities.createItem).toBe(true);
+    expect(provider.capabilities.milestones).toBe(false);
+  });
+
+  it("reports missing Vibe options before MCP tools use legacy work tracking", () => {
     const legacyVibeConfig = validateProjectConfig({
       version: 1,
       id: "legacy-project",

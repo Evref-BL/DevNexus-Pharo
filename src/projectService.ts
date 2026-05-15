@@ -157,7 +157,8 @@ export interface LinkPharoNexusProjectTrackerOptions {
 export type ConfigurePharoNexusProjectTrackerProvider =
   | "local"
   | "github"
-  | "gitlab";
+  | "gitlab"
+  | "jira";
 
 export interface ConfigurePharoNexusProjectTrackerOptions {
   homePath: string;
@@ -167,6 +168,8 @@ export interface ConfigurePharoNexusProjectTrackerOptions {
   repositoryOwner?: string;
   repositoryName?: string;
   repositoryId?: string;
+  projectKey?: string;
+  issueType?: string;
   storePath?: string;
 }
 
@@ -893,6 +896,29 @@ function buildConfiguredWorkTracking(
       repository: {
         id,
       },
+    };
+  }
+
+  if (options.provider === "jira") {
+    const host = optionalNonEmptyString(options.host, "host");
+    const projectKey = optionalNonEmptyString(options.projectKey, "projectKey");
+    const issueType = optionalNonEmptyString(options.issueType, "issueType");
+    if (!host) {
+      throw new PharoNexusProjectError(
+        "host is required for jira tracker configuration",
+      );
+    }
+    if (!projectKey) {
+      throw new PharoNexusProjectError(
+        "projectKey is required for jira tracker configuration",
+      );
+    }
+
+    return {
+      provider: "jira",
+      host,
+      projectKey,
+      ...(issueType !== undefined ? { issueType } : {}),
     };
   }
 

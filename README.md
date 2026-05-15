@@ -170,6 +170,7 @@ pharo-nexus project configure-tracker MyProject --provider github --repository-o
 pharo-nexus project configure-tracker MyProject --provider github --host github.enterprise.test --repository-owner example --repository-name MyProject
 pharo-nexus project configure-tracker MyProject --provider gitlab --repository-id example/MyProject
 pharo-nexus project configure-tracker MyProject --provider gitlab --host gitlab.enterprise.test --repository-id example/MyProject
+pharo-nexus project configure-tracker MyProject --provider jira --host example.atlassian.net --project-key FCD
 ```
 
 The GitHub provider uses the GitHub Issues REST API. It reads credentials in
@@ -221,6 +222,44 @@ provider token from code, `GITLAB_TOKEN`, `GL_TOKEN`, then `git credential fill`
 Credential-helper lookup is also non-interactive by default. GitLab write
 operations that set assignees or milestones currently require numeric GitLab
 assignee and milestone ids.
+
+The Jira provider uses the Jira Cloud REST API v3 under `/rest/api/3`.
+Configure `host` as the Jira site host, such as `example.atlassian.net`, and
+`projectKey` as the Jira project key. It reads credentials in this order:
+explicit provider OAuth bearer token from code, `JIRA_TOKEN`, explicit
+email/API-token credentials from code, `JIRA_EMAIL` plus `JIRA_API_TOKEN`
+or `ATLASSIAN_EMAIL` plus `ATLASSIAN_API_TOKEN`, then `git credential fill`.
+Credential-helper lookup is non-interactive by default, so Git Credential
+Manager can supply cached Jira site credentials without hanging automation.
+Jira issue descriptions and comments are sent as Atlassian Document Format.
+Assignees are Jira account ids, and Jira milestones are intentionally not
+mapped yet.
+
+Jira workflow transitions are project-specific. To let PharoNexus move Jira
+issues through the real Jira workflow when setting a neutral status, configure
+transition ids in `workTracking.board.statusOptions` with
+`kind: "jira-workflow"`:
+
+```json
+{
+  "workTracking": {
+    "provider": "jira",
+    "host": "example.atlassian.net",
+    "projectKey": "FCD",
+    "board": {
+      "kind": "jira-workflow",
+      "statusOptions": {
+        "blocked": "31",
+        "done": "41"
+      }
+    }
+  }
+}
+```
+
+When no transition id is configured for a status, PharoNexus still records the
+neutral status with a `status:<name>` Jira label and skips the workflow
+transition.
 
 Existing local Vibe Kanban installations can still be used as a tracker
 provider for board/repo registration:

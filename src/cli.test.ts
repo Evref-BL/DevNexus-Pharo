@@ -881,6 +881,74 @@ describe("pharo-nexus cli", () => {
     expect(loadProjectConfig(projectRoot).workTracking).toEqual(payload.workTracking);
   });
 
+  it("configures Jira work tracking from the CLI", async () => {
+    const homePath = path.join(makeTempDir("pharo-nexus-parent-"), "home");
+    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "JiraTracked");
+    initHome(homePath);
+    const homeConfig = loadHomeConfig(homePath);
+    homeConfig.projects.push({
+      id: "jira-tracked",
+      name: "JiraTracked",
+      plexusProjectRoot: projectRoot,
+    });
+    saveHomeConfig(homePath, homeConfig);
+    saveProjectConfig(projectRoot, {
+      version: 1,
+      id: "jira-tracked",
+      name: "JiraTracked",
+      home: null,
+      repo: {
+        kind: "git",
+        remoteUrl: "https://example.com/jira-tracked.git",
+        defaultBranch: "main",
+      },
+      plexusProjectConfig: plexusProjectConfigFileName,
+      worktreesRoot: "worktrees",
+      kanban: {
+        provider: "vibe-kanban",
+        projectId: null,
+      },
+    });
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+
+    await expect(
+      main([
+        "project",
+        "configure-tracker",
+        "jira-tracked",
+        "--home",
+        homePath,
+        "--provider",
+        "jira",
+        "--host",
+        "example.atlassian.net",
+        "--project-key",
+        "FCD",
+        "--issue-type",
+        "Bug",
+        "--json",
+      ]),
+    ).resolves.toBe(0);
+
+    const payload = JSON.parse(String(log.mock.calls[0]?.[0]));
+    expect(payload).toMatchObject({
+      ok: true,
+      workTracking: {
+        provider: "jira",
+        host: "example.atlassian.net",
+        projectKey: "FCD",
+        issueType: "Bug",
+      },
+      project: {
+        id: "jira-tracked",
+        workTracking: {
+          provider: "jira",
+        },
+      },
+    });
+    expect(loadProjectConfig(projectRoot).workTracking).toEqual(payload.workTracking);
+  });
+
   it("syncs a project repo and board to Vibe Kanban from the CLI", async () => {
     const homePath = path.join(makeTempDir("pharo-nexus-parent-"), "home");
     const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "Synced");

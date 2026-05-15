@@ -105,7 +105,7 @@ export function usage(): string {
     "  pharo-nexus codex worktree archive <id> [options]",
     "  pharo-nexus project create <name> [--from <git-url> | --git-init] [options]",
     "  pharo-nexus project import <path> [--name <name>] [options]",
-    "  pharo-nexus project configure-tracker <id-or-path> --provider <local|github|gitlab> [options]",
+    "  pharo-nexus project configure-tracker <id-or-path> --provider <local|github|gitlab|jira> [options]",
     "  pharo-nexus project link-tracker <id-or-path> --tracker-project-id <id> [options]",
     "  pharo-nexus project sync-tracker <id-or-path> [options]",
     "  pharo-nexus project list [options]",
@@ -230,11 +230,13 @@ export function usage(): string {
     "  --json",
     "",
     "Options for project configure-tracker:",
-    "  --provider <local|github|gitlab>",
+    "  --provider <local|github|gitlab|jira>",
     "  --repository-owner <owner>    required for GitHub",
     "  --repository-name <name>      required for GitHub",
     "  --repository-id <id-or-path>  required for GitLab",
-    "  --host <host>                 optional GitHub Enterprise or GitLab host",
+    "  --project-key <key>           required for Jira",
+    "  --issue-type <name>           optional Jira issue type, default Task",
+    "  --host <host>                 optional GitHub Enterprise/GitLab host, required for Jira",
     "  --store-path <path>           optional local provider store path",
     "  --home <path>",
     "  --json",
@@ -1541,6 +1543,8 @@ interface ParsedProjectConfigureTrackerCommand {
   repositoryOwner?: string;
   repositoryName?: string;
   repositoryId?: string;
+  projectKey?: string;
+  issueType?: string;
   storePath?: string;
   json?: boolean;
 }
@@ -1738,6 +1742,12 @@ function parseProjectConfigureTrackerCommand(
       case "--repository-id":
         parsed.repositoryId = next();
         break;
+      case "--project-key":
+        parsed.projectKey = next();
+        break;
+      case "--issue-type":
+        parsed.issueType = next();
+        break;
       case "--host":
         parsed.host = next();
         break;
@@ -1765,11 +1775,16 @@ function parseProjectConfigureTrackerCommand(
 function parseTrackerProvider(
   value: string,
 ): ConfigurePharoNexusProjectTrackerProvider {
-  if (value === "local" || value === "github" || value === "gitlab") {
+  if (
+    value === "local" ||
+    value === "github" ||
+    value === "gitlab" ||
+    value === "jira"
+  ) {
     return value;
   }
 
-  throw new Error("--provider must be local, github, or gitlab");
+  throw new Error("--provider must be local, github, gitlab, or jira");
 }
 
 function parseProjectLinkTrackerCommand(
@@ -2074,6 +2089,13 @@ function printProjectConfigureTrackerResult(
   if (result.workTracking.provider === "gitlab") {
     console.log(`  Repository: ${result.workTracking.repository.id}`);
     console.log(`  Host: ${result.workTracking.host ?? "gitlab.com"}`);
+  }
+  if (result.workTracking.provider === "jira") {
+    console.log(`  Jira project: ${result.workTracking.projectKey}`);
+    console.log(`  Host: ${result.workTracking.host}`);
+    if (result.workTracking.issueType) {
+      console.log(`  Issue type: ${result.workTracking.issueType}`);
+    }
   }
   if (result.workTracking.provider === "local" && result.workTracking.storePath) {
     console.log(`  Store: ${result.workTracking.storePath}`);

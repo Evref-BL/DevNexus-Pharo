@@ -516,6 +516,50 @@ describe("PharoNexus MCP server tools", () => {
     });
   });
 
+  it("configures Jira work tracking through neutral MCP tool calls", async () => {
+    const homePath = makeTempDir("pharo-nexus-home-");
+    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "JiraMcp");
+    initPharoNexusHome({ homePath });
+    await callPharoNexusMcpTool(
+      "project_create",
+      {
+        homePath,
+        name: "JiraMcp",
+        root: projectRoot,
+        gitInit: true,
+        syncTracker: false,
+      },
+      { gitRunner: fakeGitRunner },
+    );
+
+    const configurePayload = parseToolText(
+      await callPharoNexusMcpTool("project_configure_tracker", {
+        homePath,
+        project: "jira-mcp",
+        provider: "jira",
+        host: "example.atlassian.net",
+        projectKey: "FCD",
+        issueType: "Bug",
+      }),
+    );
+
+    expect(configurePayload).toMatchObject({
+      ok: true,
+      workTracking: {
+        provider: "jira",
+        host: "example.atlassian.net",
+        projectKey: "FCD",
+        issueType: "Bug",
+      },
+      project: {
+        id: "jira-mcp",
+        workTracking: {
+          provider: "jira",
+        },
+      },
+    });
+  });
+
   it("reports unsupported work tracking providers through neutral MCP tools", async () => {
     const homePath = makeTempDir("pharo-nexus-home-");
     const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "Legacy");

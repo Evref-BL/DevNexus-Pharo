@@ -398,6 +398,45 @@ describe("PharoNexus home config", () => {
     });
   });
 
+  it("accepts provider-neutral Jira work tracking config", () => {
+    const config = validateProjectConfig({
+      version: 1,
+      id: "jira-tracked-project",
+      name: "Jira Tracked Project",
+      kanban: {
+        provider: "vibe-kanban",
+        projectId: null,
+      },
+      workTracking: {
+        provider: "jira",
+        host: "example.atlassian.net",
+        projectKey: "FCD",
+        issueType: "Bug",
+        board: {
+          kind: "jira-workflow",
+          statusOptions: {
+            blocked: "31",
+            done: "41",
+          },
+        },
+      },
+    });
+
+    expect(config.workTracking).toEqual({
+      provider: "jira",
+      host: "example.atlassian.net",
+      projectKey: "FCD",
+      issueType: "Bug",
+      board: {
+        kind: "jira-workflow",
+        statusOptions: {
+          blocked: "31",
+          done: "41",
+        },
+      },
+    });
+  });
+
   it("rejects invalid provider-neutral work tracking config", () => {
     expect(() =>
       validateProjectConfig({

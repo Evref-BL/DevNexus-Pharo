@@ -575,6 +575,44 @@ describe("PharoNexus project service", () => {
     });
   });
 
+  it("configures Jira work tracking without changing PLexus Kanban metadata", () => {
+    const homePath = makeTempDir("pharo-nexus-home-");
+    initPharoNexusHome({ homePath });
+    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "JiraTracked");
+    createPharoNexusProject({
+      homePath,
+      name: "JiraTracked",
+      root: projectRoot,
+      vibeKanbanProjectId: "vk-existing",
+      gitRunner: fakeGitRunner([], { branch: "main" }),
+    });
+
+    const result = configurePharoNexusProjectTracker({
+      homePath,
+      project: projectRoot,
+      provider: "jira",
+      host: "example.atlassian.net",
+      projectKey: "FCD",
+      issueType: "Bug",
+    });
+
+    expect(result.workTracking).toEqual({
+      provider: "jira",
+      host: "example.atlassian.net",
+      projectKey: "FCD",
+      issueType: "Bug",
+    });
+    expect(loadProjectConfig(projectRoot).workTracking).toEqual(result.workTracking);
+    expect(
+      JSON.parse(fs.readFileSync(result.plexusProjectConfigPath, "utf8")),
+    ).toMatchObject({
+      kanban: {
+        provider: "vibe-kanban",
+        projectId: "vk-existing",
+      },
+    });
+  });
+
   it("configures local work tracking for an initialized path and registers it", () => {
     const homePath = makeTempDir("pharo-nexus-home-");
     const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "LocalTracked");
