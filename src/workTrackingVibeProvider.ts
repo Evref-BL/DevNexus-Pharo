@@ -10,7 +10,7 @@ import {
 import type { VibeKanbanApiOptions } from "./vibeKanbanMcpConfig.js";
 import type {
   CreateWorkItemInput,
-  PharoNexusProjectContext,
+  NexusProjectContext,
   TrackerBoardRef,
   TrackerCapabilities,
   TrackerProjectRef,
@@ -76,7 +76,7 @@ export class VibeWorkTrackerProvider implements WorkTrackerProvider {
   }
 
   async ensureProject(
-    context: PharoNexusProjectContext,
+    context: NexusProjectContext,
   ): Promise<VibeTrackerProjectRef> {
     const projectRoot = sourceRootFor(context);
     const result = await registerVibeKanbanProject({
@@ -103,7 +103,7 @@ export class VibeWorkTrackerProvider implements WorkTrackerProvider {
   }
 
   async ensureBoard(
-    context: PharoNexusProjectContext,
+    context: NexusProjectContext,
   ): Promise<VibeTrackerBoardRef> {
     const result = await ensureVibeKanbanBoard({
       ...this.vibeBoardOptions(),
@@ -172,7 +172,7 @@ export class VibeWorkTrackerProvider implements WorkTrackerProvider {
   }
 }
 
-function sourceRootFor(context: PharoNexusProjectContext): string {
+function sourceRootFor(context: NexusProjectContext): string {
   const projectRoot = context.sourceRoot ?? context.projectRoot;
   if (projectRoot.trim().length === 0) {
     throw new VibeWorkTrackerProviderError("projectRoot is required");

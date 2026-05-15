@@ -5,7 +5,7 @@ import type {
   DetectedTracker,
   DetectTrackerInput,
   LocalWorkTrackingConfig,
-  PharoNexusProjectContext,
+  NexusProjectContext,
   TrackerCapabilities,
   TrackerProjectRef,
   WorkComment,
@@ -133,7 +133,7 @@ export class LocalWorkTrackerProvider implements WorkTrackerProvider {
   }
 
   async ensureProject(
-    context: PharoNexusProjectContext,
+    context: NexusProjectContext,
   ): Promise<TrackerProjectRef> {
     const projectRoot = this.resolveProjectRoot(context.projectRoot);
     const store = this.loadStore(projectRoot);

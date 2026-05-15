@@ -14,7 +14,7 @@ import {
 } from "./workTrackingService.js";
 import type {
   CreateWorkItemInput,
-  PharoNexusProjectContext,
+  NexusProjectContext,
   WorkComment,
   WorkItem,
   WorkItemPatch,
@@ -63,7 +63,7 @@ export interface ResolvedWorkItemProviderContext {
   projectRoot: string;
   projectStatus: PharoNexusProjectStatus;
   projectConfig: PharoNexusProjectConfig;
-  projectContext: PharoNexusProjectContext;
+  projectContext: NexusProjectContext;
   workTracking: WorkTrackingConfig;
   provider: WorkTrackerProvider;
 }
@@ -101,7 +101,7 @@ export class WorkItemService {
     const projectRoot = projectStatus.projectRoot;
     const projectConfig = loadProjectConfig(projectRoot);
     const workTracking = resolveProjectWorkTrackingConfig(projectConfig);
-    const projectContext: PharoNexusProjectContext = {
+    const projectContext: NexusProjectContext = {
       homePath: this.homePath,
       projectRoot,
       projectId: projectConfig.id,

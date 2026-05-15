@@ -1,11 +1,17 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import {
   initCodexWorkspace,
   type InitCodexWorkspaceResult,
 } from "./codexConfig.js";
+import {
+  pharoNexusExtension,
+  pharoNexusProjectFilesFromExtensionResult,
+  updatePlexusProjectKanban,
+  type PlexusProjectConfig,
+} from "./pharoNexusExtension.js";
+import { scaffoldNexusProject } from "./nexusProjectScaffold.js";
 import {
   loadHomeConfig,
   loadProjectConfig,
@@ -32,18 +38,9 @@ import {
 } from "./vibeKanbanProjectAdapter.js";
 import { createVibeWorkTrackerProvider } from "./workTrackingVibeProvider.js";
 import type {
-  PharoNexusProjectContext,
+  NexusProjectContext,
   WorkTrackingConfig,
 } from "./workTrackingTypes.js";
-
-export interface PlexusProjectConfig {
-  name: string;
-  kanban: {
-    provider: "vibe-kanban";
-    projectId: string;
-  };
-  images: unknown[];
-}
 
 export interface GitCommandResult {
   args: string[];
@@ -289,40 +286,6 @@ function assertFileDoesNotExist(filePath: string): void {
 }
 
 const defaultSourceCheckoutDirectoryName = "git";
-const suggestedFirstPromptFileName = "suggestedFirstPrompt.md";
-
-function packageRootPath(): string {
-  return path.dirname(path.dirname(fileURLToPath(import.meta.url)));
-}
-
-function defaultAgentsTemplatePath(): string {
-  return path.join(packageRootPath(), "AGENTS.md");
-}
-
-function projectAgentsPath(projectRoot: string): string {
-  return path.join(projectRoot, "AGENTS.md");
-}
-
-function projectSuggestedFirstPromptPath(projectRoot: string): string {
-  return path.join(projectRoot, suggestedFirstPromptFileName);
-}
-
-function installDefaultAgentsFile(projectRoot: string): string {
-  const agentsPath = projectAgentsPath(projectRoot);
-  if (fs.existsSync(agentsPath)) {
-    return agentsPath;
-  }
-
-  const templatePath = defaultAgentsTemplatePath();
-  if (!fs.existsSync(templatePath)) {
-    throw new PharoNexusProjectError(
-      `Default AGENTS.md template is missing: ${templatePath}`,
-    );
-  }
-
-  fs.copyFileSync(templatePath, agentsPath);
-  return agentsPath;
-}
 
 function resolveProjectSourceRoot(
   projectRoot: string,
@@ -445,56 +408,6 @@ export function buildVibeKanbanWorkspaceSetupScript(
   return platform === "win32"
     ? buildWindowsVibeKanbanWorkspaceSetupScript(managedRoot, sourceRoot)
     : buildPosixVibeKanbanWorkspaceSetupScript(managedRoot, sourceRoot);
-}
-
-function formatPromptValue(value: string | null | undefined): string {
-  return value && value.trim().length > 0 ? value : "(not known yet)";
-}
-
-function buildSuggestedFirstPrompt(
-  projectRoot: string,
-  projectConfig: PharoNexusProjectConfig,
-): string {
-  const sourceRoot = resolveProjectSourceRoot(projectRoot, projectConfig);
-  const kanbanProjectId = projectConfig.kanban.projectId;
-
-  return [
-    `This is a Codex and PharoNexus project for ${projectConfig.name}.`,
-    "",
-    "Use the local AGENTS.md as the workflow contract. Then make this local project yours:",
-    "",
-    `- Inspect the PharoNexus project root at ${projectRoot}.`,
-    `- Inspect the source checkout at ${sourceRoot}.`,
-    "- Check the matching Vibe Kanban board and current issues with the available PharoNexus and Vibe Kanban MCP tools.",
-    "- Record durable local context in NOTES.md, including the Kanban board id and any source/workflow details future agents should know.",
-    "- Edit AGENTS.md only when this project needs workflow guidance beyond the default PharoNexus contract.",
-    "- When changes are complete and verified, commit them in the relevant source repository unless the user explicitly asks not to. Push only when requested or when project instructions say to publish.",
-    "",
-    "Known at prompt generation time:",
-    "",
-    `- PharoNexus project id: ${projectConfig.id}`,
-    `- Kanban project id: ${formatPromptValue(kanbanProjectId)}`,
-    `- Source remote: ${formatPromptValue(projectConfig.repo.remoteUrl)}`,
-    `- Default branch: ${formatPromptValue(projectConfig.repo.defaultBranch)}`,
-    "",
-  ].join("\n");
-}
-
-function installSuggestedFirstPrompt(
-  projectRoot: string,
-  projectConfig: PharoNexusProjectConfig,
-): string {
-  const suggestedFirstPromptPath = projectSuggestedFirstPromptPath(projectRoot);
-  if (fs.existsSync(suggestedFirstPromptPath)) {
-    return suggestedFirstPromptPath;
-  }
-
-  fs.writeFileSync(
-    suggestedFirstPromptPath,
-    buildSuggestedFirstPrompt(projectRoot, projectConfig),
-    "utf8",
-  );
-  return suggestedFirstPromptPath;
 }
 
 function defaultGitRunner(args: readonly string[], cwd?: string): GitCommandResult {
@@ -761,15 +674,6 @@ function findProjectReference(
   );
 }
 
-function saveJsonFile(filePath: string, value: unknown): void {
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`, "utf8");
-}
-
-function readJsonFile<T>(filePath: string): T {
-  return JSON.parse(fs.readFileSync(filePath, "utf8").replace(/^\uFEFF/, "")) as T;
-}
-
 function buildProjectConfig(
   name: string,
   projectId: string,
@@ -797,49 +701,6 @@ function buildProjectConfig(
       projectId: vibeKanbanProjectId,
     },
   };
-}
-
-function buildPlexusProjectConfig(
-  name: string,
-  projectId: string,
-  vibeKanbanProjectId: string | null = null,
-): PlexusProjectConfig {
-  return {
-    name,
-    kanban: {
-      provider: "vibe-kanban",
-      projectId: vibeKanbanProjectId ?? projectId,
-    },
-    images: [],
-  };
-}
-
-function updatePlexusProjectKanban(
-  plexusConfigPath: string,
-  projectName: string,
-  projectId: string,
-  vibeKanbanProjectId: string,
-): PlexusProjectConfig {
-  const existing = fs.existsSync(plexusConfigPath)
-    ? readJsonFile<Record<string, unknown>>(plexusConfigPath)
-    : buildPlexusProjectConfig(projectName, projectId, vibeKanbanProjectId);
-  const existingKanban =
-    existing.kanban && typeof existing.kanban === "object" && !Array.isArray(existing.kanban)
-      ? (existing.kanban as Record<string, unknown>)
-      : {};
-  const updated = {
-    ...existing,
-    name: typeof existing.name === "string" ? existing.name : projectName,
-    kanban: {
-      ...existingKanban,
-      provider: "vibe-kanban",
-      projectId: vibeKanbanProjectId,
-    },
-    images: Array.isArray(existing.images) ? existing.images : [],
-  } as unknown as PlexusProjectConfig;
-
-  saveJsonFile(plexusConfigPath, updated);
-  return updated;
 }
 
 function buildConfiguredWorkTracking(
@@ -1026,11 +887,6 @@ export function createPharoNexusProject(
     vibeKanbanProjectId,
     sourceRoot ? pathForProjectConfig(projectRoot, sourceRoot) : null,
   );
-  const plexusProjectConfig = buildPlexusProjectConfig(
-    options.name,
-    projectId,
-    vibeKanbanProjectId,
-  );
   const pharoNexusProjectConfigPath = projectConfigPath(projectRoot);
   const plexusConfigPath = projectPlexusConfigPath(projectRoot, projectConfig);
   const worktreesRoot = projectWorktreesRootPath(projectRoot, projectConfig);
@@ -1038,18 +894,21 @@ export function createPharoNexusProject(
   assertFileDoesNotExist(pharoNexusProjectConfigPath);
   assertFileDoesNotExist(plexusConfigPath);
   saveProjectConfig(projectRoot, projectConfig);
-  saveJsonFile(plexusConfigPath, plexusProjectConfig);
-  fs.mkdirSync(worktreesRoot, { recursive: true });
+  const scaffold = scaffoldNexusProject({
+    homePath,
+    projectRoot,
+    worktreesRoot,
+    projectConfig,
+    extensions: [pharoNexusExtension],
+  });
+  const pharoFiles = pharoNexusProjectFilesFromExtensionResult(
+    scaffold.extensionResults[pharoNexusExtension.id],
+  );
   const codex = initCodexWorkspace({
     homePath,
     workspacePath: projectRoot,
     config: homeConfig,
   });
-  const agentsPath = installDefaultAgentsFile(projectRoot);
-  const suggestedFirstPromptPath = installSuggestedFirstPrompt(
-    projectRoot,
-    projectConfig,
-  );
 
   homeConfig.projects.push({
     id: projectId,
@@ -1063,13 +922,13 @@ export function createPharoNexusProject(
     homePath,
     projectRoot,
     projectConfigPath: pharoNexusProjectConfigPath,
-    plexusProjectConfigPath: plexusConfigPath,
+    plexusProjectConfigPath: pharoFiles.plexusProjectConfigPath,
     worktreesRoot,
-    agentsPath,
-    suggestedFirstPromptPath,
+    agentsPath: pharoFiles.agentsPath,
+    suggestedFirstPromptPath: pharoFiles.suggestedFirstPromptPath,
     codexConfigPath: codex.configPath,
     projectConfig,
-    plexusProjectConfig,
+    plexusProjectConfig: pharoFiles.plexusProjectConfig,
     codex,
     git: {
       operation: creatingFromRemote ? "clone" : "init",
@@ -1143,37 +1002,22 @@ export function importPharoNexusProject(
     saveProjectConfig(projectRoot, projectConfig);
   }
 
-  const plexusConfigPath = projectPlexusConfigPath(projectRoot, projectConfig);
-  let plexusProjectConfig = fs.existsSync(plexusConfigPath)
-    ? readJsonFile<PlexusProjectConfig>(plexusConfigPath)
-    : buildPlexusProjectConfig(
-        projectConfig.name,
-        projectConfig.id,
-        projectConfig.kanban.projectId,
-      );
-  if (!fs.existsSync(plexusConfigPath)) {
-    saveJsonFile(plexusConfigPath, plexusProjectConfig);
-  } else if (vibeKanbanProjectId) {
-    plexusProjectConfig = updatePlexusProjectKanban(
-      plexusConfigPath,
-      projectConfig.name,
-      projectConfig.id,
-      vibeKanbanProjectId,
-    );
-  }
-
   const worktreesRoot = projectWorktreesRootPath(projectRoot, projectConfig);
-  fs.mkdirSync(worktreesRoot, { recursive: true });
+  const scaffold = scaffoldNexusProject({
+    homePath,
+    projectRoot,
+    worktreesRoot,
+    projectConfig,
+    extensions: [pharoNexusExtension],
+  });
+  const pharoFiles = pharoNexusProjectFilesFromExtensionResult(
+    scaffold.extensionResults[pharoNexusExtension.id],
+  );
   const codex = initCodexWorkspace({
     homePath,
     workspacePath: projectRoot,
     config: homeConfig,
   });
-  const agentsPath = installDefaultAgentsFile(projectRoot);
-  const suggestedFirstPromptPath = installSuggestedFirstPrompt(
-    projectRoot,
-    projectConfig,
-  );
 
   homeConfig.projects.push({
     id: projectConfig.id,
@@ -1189,13 +1033,13 @@ export function importPharoNexusProject(
     homePath,
     projectRoot,
     projectConfigPath: pharoNexusProjectConfigPath,
-    plexusProjectConfigPath: plexusConfigPath,
+    plexusProjectConfigPath: pharoFiles.plexusProjectConfigPath,
     worktreesRoot,
-    agentsPath,
-    suggestedFirstPromptPath,
+    agentsPath: pharoFiles.agentsPath,
+    suggestedFirstPromptPath: pharoFiles.suggestedFirstPromptPath,
     codexConfigPath: codex.configPath,
     projectConfig,
-    plexusProjectConfig,
+    plexusProjectConfig: pharoFiles.plexusProjectConfig,
     codex,
     git: {
       operation: "import",
@@ -1378,7 +1222,7 @@ export async function syncPharoNexusProjectTracker(
       projectId: initialProjectConfig.kanban.projectId,
     },
   });
-  const trackerContext: PharoNexusProjectContext = {
+  const trackerContext: NexusProjectContext = {
     homePath,
     projectRoot: status.projectRoot,
     projectId: initialProjectConfig.id,

@@ -199,7 +199,7 @@ export interface DetectTrackerInput {
   remoteUrl?: string | null;
 }
 
-export interface PharoNexusProjectContext {
+export interface NexusProjectContext {
   homePath: string;
   projectRoot: string;
   projectId: string;
@@ -212,8 +212,8 @@ export interface WorkTrackerProvider {
   provider: WorkTrackingProviderName | string;
   capabilities: TrackerCapabilities;
   detect?(input: DetectTrackerInput): Promise<DetectedTracker | undefined>;
-  ensureProject?(context: PharoNexusProjectContext): Promise<TrackerProjectRef>;
-  ensureBoard?(context: PharoNexusProjectContext): Promise<TrackerBoardRef>;
+  ensureProject?(context: NexusProjectContext): Promise<TrackerProjectRef>;
+  ensureBoard?(context: NexusProjectContext): Promise<TrackerBoardRef>;
   createWorkItem(input: CreateWorkItemInput): Promise<WorkItem>;
   listWorkItems(query: WorkItemQuery): Promise<WorkItem[]>;
   getWorkItem(ref: WorkItemRef): Promise<WorkItem>;
