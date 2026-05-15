@@ -77,14 +77,14 @@ pharo-nexus vibe-kanban mcp-config install C:\dev\pharo-nexus --executor CODEX
 
 ## Generated Home Shape
 
-`pharo-nexus init` creates `pharo-nexus.home.json` and the initial runtime
+`pharo-nexus init` creates `dev-nexus.home.json` and the initial runtime
 directories:
 
 ```text
 <home>\
-  pharo-nexus.home.json
+  dev-nexus.home.json
   PharoNexus\
-    pharo-nexus.project.json
+    dev-nexus.project.json
     plexus.project.json
     worktrees\
   projects\
@@ -99,7 +99,7 @@ Pharo application project.
 
 ## Project Config Shape
 
-Each managed project has a `pharo-nexus.project.json` file:
+Each managed project has a `dev-nexus.project.json` file:
 
 ```json
 {
@@ -122,7 +122,7 @@ Each managed project has a `pharo-nexus.project.json` file:
 ```
 
 Relative paths such as `plexusProjectConfig` and `worktreesRoot` resolve from
-the directory containing `pharo-nexus.project.json`.
+the directory containing `dev-nexus.project.json`.
 
 For imported or cloned source repositories, `repo.sourceRoot` points from the
 managed project root to the source checkout. The source checkout should not
@@ -132,7 +132,7 @@ receive PharoNexus metadata unless it is already a managed PharoNexus project.
 
 `pharo-nexus start`:
 
-- loads `pharo-nexus.home.json`
+- loads `dev-nexus.home.json`
 - starts the Vibe shared backend when configured
 - starts the Vibe Kanban local app
 - injects `VK_SHARED_API_BASE`
@@ -171,7 +171,7 @@ mode.
 ## Agent Model Policy
 
 Agent executor, model, and reasoning defaults are PharoNexus policy. They
-belong in `pharo-nexus.home.json`, `pharo-nexus.project.json`, and future
+belong in `dev-nexus.home.json`, `dev-nexus.project.json`, and future
 issue/workspace-start inputs, not in PLexus or the PLexus gateway.
 
 Resolution order:
@@ -276,7 +276,7 @@ PharoNexus tracks two Vibe ids:
 
 - `vibeKanbanRepoId`: Vibe's local repo registration id, used by workspaces.
 - `vibeKanbanProjectId`: the Kanban board id, written into
-  `pharo-nexus.project.json` and `plexus.project.json`.
+  `dev-nexus.project.json` and `plexus.project.json`.
 
 `pharo-nexus start` ensures both ids exist for the reserved control project.
 `pharo-nexus project sync-kanban` does the same for real projects.

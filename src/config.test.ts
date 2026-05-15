@@ -17,10 +17,10 @@ import {
   pharoNexusControlProjectId,
   pharoNexusControlProjectName,
   pharoNexusGeneratedDirectoryName,
-  pharoNexusHomeConfigPath,
-  pharoNexusHomeConfigFileName,
+  devNexusHomeConfigPath,
+  devNexusHomeConfigFileName,
   pharoNexusLogsDirectoryName,
-  pharoNexusProjectConfigFileName,
+  devNexusProjectConfigFileName,
   pharoNexusProjectWorktreesDirectoryName,
   PharoNexusConfigError,
   plexusProjectConfigFileName,
@@ -55,8 +55,8 @@ describe("PharoNexus home config", () => {
     const relativeHomePath = path.relative(process.cwd(), homePath);
 
     expect(resolvePharoNexusHome(relativeHomePath)).toBe(path.resolve(homePath));
-    expect(pharoNexusHomeConfigPath(relativeHomePath)).toBe(
-      path.join(path.resolve(homePath), pharoNexusHomeConfigFileName),
+    expect(devNexusHomeConfigPath(relativeHomePath)).toBe(
+      path.join(path.resolve(homePath), devNexusHomeConfigFileName),
     );
     expect(() => resolvePharoNexusHome("   ")).toThrow(PharoNexusConfigError);
   });
@@ -134,7 +134,7 @@ describe("PharoNexus home config", () => {
 
     expect(controlProjectRootPath(homePath)).toBe(path.join(homePath, "PharoNexus"));
     expect(controlProjectConfigPath(homePath)).toBe(
-      path.join(homePath, "PharoNexus", pharoNexusProjectConfigFileName),
+      path.join(homePath, "PharoNexus", devNexusProjectConfigFileName),
     );
     expect(controlProjectWorktreesRootPath(homePath)).toBe(
       path.join(homePath, "PharoNexus", pharoNexusProjectWorktreesDirectoryName),
@@ -216,7 +216,7 @@ describe("PharoNexus home config", () => {
 
     expect(validateProjectConfig(config)).toEqual(config);
     expect(saveProjectConfig(projectPath, config)).toBe(
-      path.join(projectPath, pharoNexusProjectConfigFileName),
+      path.join(projectPath, devNexusProjectConfigFileName),
     );
     expect(loadProjectConfig(projectPath)).toEqual(config);
   });
@@ -772,7 +772,7 @@ describe("PharoNexus home config", () => {
     });
 
     expect(result.configPath).toBe(
-      path.join(homePath, pharoNexusHomeConfigFileName),
+      path.join(homePath, devNexusHomeConfigFileName),
     );
     expect(loadHomeConfig(homePath)).toEqual(result.config);
     expect(fs.existsSync(result.config.paths.projectsRoot)).toBe(true);
@@ -830,7 +830,7 @@ describe("PharoNexus home config", () => {
     const configPath = saveHomeConfig(homePath, config);
     const rawConfig = fs.readFileSync(configPath, "utf8");
 
-    expect(configPath).toBe(path.join(homePath, pharoNexusHomeConfigFileName));
+    expect(configPath).toBe(path.join(homePath, devNexusHomeConfigFileName));
     expect(rawConfig.startsWith("\uFEFF")).toBe(false);
     expect(rawConfig.endsWith("\n")).toBe(true);
     expect(JSON.parse(rawConfig)).toEqual(config);
@@ -861,7 +861,7 @@ describe("PharoNexus home config", () => {
     const config = createDefaultHomeConfig(homePath);
     fs.mkdirSync(homePath, { recursive: true });
     fs.writeFileSync(
-      path.join(homePath, pharoNexusHomeConfigFileName),
+      path.join(homePath, devNexusHomeConfigFileName),
       `\uFEFF${JSON.stringify(config, null, 2)}\n`,
       "utf8",
     );

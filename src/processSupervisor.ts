@@ -263,7 +263,7 @@ function resolveCommandForSpawn(
     [
       `Cannot start ${processName}: executable not found: ${command}.`,
       "Make sure it is installed and available on PATH,",
-      "or update the configured command in pharo-nexus.home.json.",
+      "or update the configured command in dev-nexus.home.json.",
     ].join(" "),
   );
 }

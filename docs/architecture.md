@@ -156,7 +156,7 @@ Every PharoNexus home contains one reserved project:
 
 ```text
 <home>\PharoNexus\
-  pharo-nexus.project.json
+  dev-nexus.project.json
   worktrees\
 ```
 
@@ -189,8 +189,8 @@ Kanban project/board named `PharoNexus` exists when no `vibeKanbanProjectId` is
 stored yet. The board id is written to both:
 
 ```text
-<home>\pharo-nexus.home.json
-<home>\PharoNexus\pharo-nexus.project.json
+<home>\dev-nexus.home.json
+<home>\PharoNexus\dev-nexus.project.json
 ```
 
 Registration is best-effort. If Vibe Kanban is healthy but repo registration is
@@ -199,7 +199,7 @@ structured result.
 
 ## Project Config
 
-Each PharoNexus project has a `pharo-nexus.project.json` file:
+Each PharoNexus project has a `dev-nexus.project.json` file:
 
 ```json
 {
@@ -222,7 +222,7 @@ Each PharoNexus project has a `pharo-nexus.project.json` file:
 ```
 
 Relative project paths, such as `plexusProjectConfig` and `worktreesRoot`,
-resolve from the directory containing `pharo-nexus.project.json`.
+resolve from the directory containing `dev-nexus.project.json`.
 
 ## Project Creation
 
@@ -239,7 +239,7 @@ It supports two source modes:
 ```
 
 If `--root` is omitted, the project root is created under
-`pharo-nexus.home.json`'s `paths.projectsRoot`.
+`dev-nexus.home.json`'s `paths.projectsRoot`.
 
 For `project import`, `<path>` is the source Git checkout, not the metadata
 root. Use `--project-root <path>` only when the managed PharoNexus project root
@@ -249,7 +249,7 @@ Creation writes:
 
 ```text
 <project-root>\
-  pharo-nexus.project.json
+  dev-nexus.project.json
   plexus.project.json
   .codex\config.toml
   AGENTS.md
@@ -291,8 +291,8 @@ pharo-nexus project sync-kanban <id-or-path>
 The link and sync operations update three places so all layers agree:
 
 ```text
-<home>\pharo-nexus.home.json
-<project-root>\pharo-nexus.project.json
+<home>\dev-nexus.home.json
+<project-root>\dev-nexus.project.json
 <project-root>\plexus.project.json
 ```
 
@@ -328,7 +328,7 @@ pharo-nexus project status <id-or-path>
 
 `project list` reports registered real Pharo projects. `project status` accepts
 either a registered project id or a path to a project root or
-`pharo-nexus.project.json` file. Both commands resolve the PLexus config path
+`dev-nexus.project.json` file. Both commands resolve the PLexus config path
 and worktrees root from the project config.
 
 ## MCP Surface
@@ -378,7 +378,7 @@ the agent should call `pharo_nexus_project_create` with:
 
 The agent should not manually create directories, hand-edit project config
 files, or call Vibe Kanban directly for this workflow. PharoNexus owns the
-transaction: Git clone or init, `pharo-nexus.project.json`,
+transaction: Git clone or init, `dev-nexus.project.json`,
 `plexus.project.json`, `.codex\config.toml`, `AGENTS.md`, `worktrees\`, Vibe
 repo registration, Vibe board creation or linking, and the home project
 registry update.
@@ -438,7 +438,7 @@ plexus       -> http://127.0.0.1:<plexusMcp>/mcp
 ```
 
 Existing Vibe Kanban MCP servers are preserved. The server names, HTTP host,
-and ports come from `pharo-nexus.home.json`.
+and ports come from `dev-nexus.home.json`.
 
 ## Codex Workspace Config
 
@@ -469,7 +469,7 @@ use the current Node executable and an absolute PharoNexus entrypoint, such as
 ## Agent Model Policy
 
 Agent executor, model, and reasoning defaults are PharoNexus policy. They belong
-in `pharo-nexus.home.json`, `pharo-nexus.project.json`, and future
+in `dev-nexus.home.json`, `dev-nexus.project.json`, and future
 issue/workspace-start inputs, not in PLexus or PLexus gateway.
 
 Resolution order is:

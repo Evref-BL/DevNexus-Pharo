@@ -366,7 +366,7 @@ function resolveComposeCommand(
       "Cannot find a usable Docker Compose command.",
       "Tried `docker compose version` and `docker-compose --version`.",
       "Install Docker Compose, start your Docker engine, or set",
-      "integrations.vibeKanban.backend.composeCommand in pharo-nexus.home.json.",
+      "integrations.vibeKanban.backend.composeCommand in dev-nexus.home.json.",
       `docker compose: ${dockerProbe.error ?? dockerProbe.stderr.trim() ?? dockerProbe.exitCode}`,
       `docker-compose: ${dockerComposeProbe.error ?? dockerComposeProbe.stderr.trim() ?? dockerComposeProbe.exitCode}`,
     ].join(" "),
@@ -632,7 +632,7 @@ function bootstrapManagedSourceBackend(
         [
           "Cannot bootstrap Vibe Kanban backend because the source directory exists",
           `but does not contain the expected remote stack: ${config.workingDirectory}.`,
-          "Fix the directory or update integrations.vibeKanban.backend in pharo-nexus.home.json.",
+          "Fix the directory or update integrations.vibeKanban.backend in dev-nexus.home.json.",
         ].join(" "),
       );
     }
@@ -711,7 +711,7 @@ function assertManagedSourceBackendPaths(
         "Vibe Kanban Docker backend is not configured yet.",
         `Missing: ${missing.join(", ")}.`,
         "Automatic bootstrap did not create the expected files.",
-        "Check the previous clone error, or update integrations.vibeKanban.backend in pharo-nexus.home.json.",
+        "Check the previous clone error, or update integrations.vibeKanban.backend in dev-nexus.home.json.",
       ].join(" "),
     );
   }

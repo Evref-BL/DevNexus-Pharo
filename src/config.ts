@@ -15,8 +15,8 @@ import type {
   WorkTrackingRepositoryConfig,
 } from "./workTrackingTypes.js";
 
-export const pharoNexusHomeConfigFileName = "pharo-nexus.home.json";
-export const pharoNexusProjectConfigFileName = "pharo-nexus.project.json";
+export const devNexusHomeConfigFileName = "dev-nexus.home.json";
+export const devNexusProjectConfigFileName = "dev-nexus.project.json";
 export const plexusProjectConfigFileName = "plexus.project.json";
 export const pharoNexusLogsDirectoryName = "logs";
 export const pharoNexusGeneratedDirectoryName = "generated";
@@ -245,8 +245,8 @@ export function resolvePharoNexusHome(homePath: string): string {
   return path.resolve(homePath);
 }
 
-export function pharoNexusHomeConfigPath(homePath: string): string {
-  return path.join(resolvePharoNexusHome(homePath), pharoNexusHomeConfigFileName);
+export function devNexusHomeConfigPath(homePath: string): string {
+  return path.join(resolvePharoNexusHome(homePath), devNexusHomeConfigFileName);
 }
 
 export function controlProjectRootPath(homePath: string): string {
@@ -264,7 +264,7 @@ export function legacyControlProjectRootPath(homePath: string): string {
 }
 
 export function projectConfigPath(projectRootPath: string): string {
-  return path.join(path.resolve(projectRootPath), pharoNexusProjectConfigFileName);
+  return path.join(path.resolve(projectRootPath), devNexusProjectConfigFileName);
 }
 
 function resolveFromProject(projectRootPath: string, value: string): string {
@@ -1453,7 +1453,7 @@ export function validateHomeConfig(
 }
 
 export function loadHomeConfig(homePath: string): PharoNexusHomeConfig {
-  const configPath = pharoNexusHomeConfigPath(homePath);
+  const configPath = devNexusHomeConfigPath(homePath);
   if (!fs.existsSync(configPath)) {
     throw new PharoNexusConfigError(
       `PharoNexus home is not initialized: ${configPath}. Run "pharo-nexus init" first, or set PHARO_NEXUS_HOME to an initialized home.`,
@@ -1470,7 +1470,7 @@ export function saveHomeConfig(
   homePath: string,
   config: PharoNexusHomeConfig,
 ): string {
-  const configPath = pharoNexusHomeConfigPath(homePath);
+  const configPath = devNexusHomeConfigPath(homePath);
   fs.mkdirSync(path.dirname(configPath), { recursive: true });
   fs.writeFileSync(
     configPath,
@@ -1484,7 +1484,7 @@ export function initPharoNexusHome(
   options: InitPharoNexusHomeOptions,
 ): InitPharoNexusHomeResult {
   const homePath = resolvePharoNexusHome(options.homePath);
-  const configPath = pharoNexusHomeConfigPath(homePath);
+  const configPath = devNexusHomeConfigPath(homePath);
   if (fs.existsSync(configPath) && !options.force) {
     throw new PharoNexusConfigError(
       `PharoNexus home is already initialized: ${configPath}`,

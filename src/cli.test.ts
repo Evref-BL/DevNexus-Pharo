@@ -9,7 +9,7 @@ import {
   initPharoNexusHome,
   loadProjectConfig,
   loadHomeConfig,
-  pharoNexusProjectConfigFileName,
+  devNexusProjectConfigFileName,
   plexusProjectConfigFileName,
   saveHomeConfig,
   saveProjectConfig,
@@ -100,7 +100,7 @@ describe("pharo-nexus cli", () => {
       expect.arrayContaining([
         "PharoNexus home initialized.",
         `  Home: ${homePath}`,
-        `  Config: ${path.join(homePath, "pharo-nexus.home.json")}`,
+        `  Config: ${path.join(homePath, "dev-nexus.home.json")}`,
         "  pharo-nexus start",
       ]),
     );
@@ -528,7 +528,7 @@ describe("pharo-nexus cli", () => {
         },
       });
       expect(
-        fs.existsSync(path.join(projectRoot, pharoNexusProjectConfigFileName)),
+        fs.existsSync(path.join(projectRoot, devNexusProjectConfigFileName)),
       ).toBe(true);
       expect(
         fs.existsSync(path.join(projectRoot, plexusProjectConfigFileName)),
@@ -593,7 +593,7 @@ describe("pharo-nexus cli", () => {
           projectRoot: projectRoot,
         },
       ]);
-      expect(fs.existsSync(path.join(sourceRoot, pharoNexusProjectConfigFileName))).toBe(false);
+      expect(fs.existsSync(path.join(sourceRoot, devNexusProjectConfigFileName))).toBe(false);
     },
   );
 

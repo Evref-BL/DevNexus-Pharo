@@ -68,7 +68,7 @@ pharo-nexus init --interactive
 ```
 
 If `plexus-gateway` is not on `PATH`, edit the generated
-`pharo-nexus.home.json` and set `tools.plexus.command` to an absolute path.
+`dev-nexus.home.json` and set `tools.plexus.command` to an absolute path.
 
 ## Start And Stop
 
@@ -142,7 +142,7 @@ pharo-nexus project import C:\dev\code\git\ExistingProject --name ExistingProjec
 ```
 
 By default, PharoNexus creates the managed project root under
-`paths.projectsRoot` from `pharo-nexus.home.json`. Use `--root` on
+`paths.projectsRoot` from `dev-nexus.home.json`. Use `--root` on
 `project create` or `--project-root` on `project import` to choose a different
 managed root.
 
@@ -153,7 +153,7 @@ Project creation writes the managed project files:
   .codex\config.toml
   AGENTS.md
   suggestedFirstPrompt.md
-  pharo-nexus.project.json
+  dev-nexus.project.json
   plexus.project.json
   worktrees\
 ```
@@ -341,7 +341,7 @@ codex_worktree_archive
 
 ## Configuration Notes
 
-Vibe backend modes are configured in `pharo-nexus.home.json`:
+Vibe backend modes are configured in `dev-nexus.home.json`:
 
 - `docker`: local self-hosted Vibe backend through Docker Compose
 - `dind`: local self-hosted Vibe backend inside a Docker-in-Docker container
@@ -361,7 +361,7 @@ $env:PHARO_NEXUS_GITHUB_OAUTH_CLIENT_SECRET = "<github-oauth-client-secret>"
   <workspace>`, then open a fresh Codex chat after the checks pass.
 - Service health failures: run `pharo-nexus status --check-health`, inspect
   logs under `<home>\logs\`, then rerun `pharo-nexus start`.
-- Port conflicts: update the ports in `pharo-nexus.home.json` or stop the
+- Port conflicts: update the ports in `dev-nexus.home.json` or stop the
   conflicting process, then rerun `pharo-nexus codex init <workspace>`.
 - MCP handshake failures: make sure `.codex\config.toml` points at the
   configured host and ports, and that `pharo-nexus start` is running.

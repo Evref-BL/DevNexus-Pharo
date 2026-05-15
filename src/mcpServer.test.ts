@@ -662,7 +662,7 @@ describe("PharoNexus MCP server tools", () => {
         },
       },
     });
-    expect(fs.existsSync(path.join(sourceRoot, "pharo-nexus.project.json"))).toBe(false);
+    expect(fs.existsSync(path.join(sourceRoot, "dev-nexus.project.json"))).toBe(false);
   });
 
   it("supports the first usable control-project scenario through remoteUrl", async () => {
@@ -832,11 +832,11 @@ describe("PharoNexus MCP server tools", () => {
       "https://github.com/me/MyLibrary.git",
       path.join(projectRoot, "git"),
     ]);
-    expect(fs.existsSync(path.join(projectRoot, "pharo-nexus.project.json"))).toBe(true);
+    expect(fs.existsSync(path.join(projectRoot, "dev-nexus.project.json"))).toBe(true);
     expect(fs.existsSync(path.join(projectRoot, plexusProjectConfigFileName))).toBe(true);
     expect(fs.existsSync(path.join(projectRoot, "worktrees"))).toBe(true);
     expect(fs.existsSync(path.join(projectRoot, ".git"))).toBe(true);
-    expect(fs.existsSync(path.join(projectRoot, "git", "pharo-nexus.project.json"))).toBe(false);
+    expect(fs.existsSync(path.join(projectRoot, "git", "dev-nexus.project.json"))).toBe(false);
     expect(loadProjectConfig(projectRoot)).toMatchObject({
       id: "my-library",
       name: "MyLibrary",

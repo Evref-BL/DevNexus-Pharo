@@ -8,7 +8,7 @@ import {
   initPharoNexusHome,
   loadHomeConfig,
   loadProjectConfig,
-  pharoNexusProjectConfigFileName,
+  devNexusProjectConfigFileName,
   plexusProjectConfigFileName,
   saveProjectConfig,
 } from "./config.js";
@@ -114,7 +114,7 @@ describe("PharoNexus project service", () => {
       projectConfigPath: path.join(
         projectsRoot,
         "MyProject",
-        pharoNexusProjectConfigFileName,
+        devNexusProjectConfigFileName,
       ),
       plexusProjectConfigPath: path.join(
         projectsRoot,
@@ -221,8 +221,8 @@ describe("PharoNexus project service", () => {
       "https://github.com/example/remote-project.git",
       path.join(projectRoot, "git"),
     ]);
-    expect(fs.existsSync(path.join(projectRoot, pharoNexusProjectConfigFileName))).toBe(true);
-    expect(fs.existsSync(path.join(projectRoot, "git", pharoNexusProjectConfigFileName))).toBe(
+    expect(fs.existsSync(path.join(projectRoot, devNexusProjectConfigFileName))).toBe(true);
+    expect(fs.existsSync(path.join(projectRoot, "git", devNexusProjectConfigFileName))).toBe(
       false,
     );
     expect(result.projectConfig.repo).toEqual({
@@ -304,7 +304,7 @@ describe("PharoNexus project service", () => {
           workTracking: null,
           vibeKanbanProjectId: null,
           vibeKanbanRepoId: null,
-          projectConfigPath: path.join(projectRoot, pharoNexusProjectConfigFileName),
+          projectConfigPath: path.join(projectRoot, devNexusProjectConfigFileName),
           projectConfigExists: true,
           plexusProjectConfigPath: path.join(projectRoot, plexusProjectConfigFileName),
           plexusProjectConfigExists: true,
@@ -336,7 +336,7 @@ describe("PharoNexus project service", () => {
     });
     const byConfigPath = getPharoNexusProjectStatus({
       homePath,
-      project: path.join(projectRoot, pharoNexusProjectConfigFileName),
+      project: path.join(projectRoot, devNexusProjectConfigFileName),
     });
 
     expect(byId.project).toEqual(byPath.project);
@@ -393,7 +393,7 @@ describe("PharoNexus project service", () => {
         `Path fallback checked "${path.resolve("pharo-launcher-mcp")}" and failed: ` +
         `PharoNexus project is not initialized: ${path.join(
           path.resolve("pharo-launcher-mcp"),
-          pharoNexusProjectConfigFileName,
+          devNexusProjectConfigFileName,
         )}`,
     );
   });
@@ -441,7 +441,7 @@ describe("PharoNexus project service", () => {
     initPharoNexusHome({ homePath });
     fs.mkdirSync(projectRoot, { recursive: true });
     fs.writeFileSync(
-      path.join(projectRoot, pharoNexusProjectConfigFileName),
+      path.join(projectRoot, devNexusProjectConfigFileName),
       JSON.stringify(
         {
           version: 1,
@@ -970,10 +970,10 @@ describe("PharoNexus project service", () => {
         defaultBranch: "main",
       },
     });
-    expect(fs.existsSync(path.join(projectRoot, pharoNexusProjectConfigFileName))).toBe(true);
+    expect(fs.existsSync(path.join(projectRoot, devNexusProjectConfigFileName))).toBe(true);
     expect(fs.existsSync(path.join(projectRoot, plexusProjectConfigFileName))).toBe(true);
     expect(fs.existsSync(path.join(projectRoot, "worktrees"))).toBe(true);
-    expect(fs.existsSync(path.join(sourceRoot, pharoNexusProjectConfigFileName))).toBe(false);
+    expect(fs.existsSync(path.join(sourceRoot, devNexusProjectConfigFileName))).toBe(false);
     expect(fs.existsSync(path.join(sourceRoot, plexusProjectConfigFileName))).toBe(false);
     expect(fs.readFileSync(path.join(projectRoot, "AGENTS.md"), "utf8")).toBe(
       defaultAgentsContent(),
@@ -1059,7 +1059,7 @@ describe("PharoNexus project service", () => {
       },
     };
     fs.writeFileSync(
-      path.join(projectRoot, pharoNexusProjectConfigFileName),
+      path.join(projectRoot, devNexusProjectConfigFileName),
       `${JSON.stringify(existingConfig, null, 2)}\n`,
       "utf8",
     );
@@ -1103,7 +1103,7 @@ describe("PharoNexus project service", () => {
     });
     fs.mkdirSync(projectRoot, { recursive: true });
     fs.writeFileSync(
-      path.join(homePath, "pharo-nexus.home.json"),
+      path.join(homePath, "dev-nexus.home.json"),
       `${JSON.stringify(config, null, 2)}\n`,
       "utf8",
     );
@@ -1116,7 +1116,7 @@ describe("PharoNexus project service", () => {
       workTracking: null,
       vibeKanbanProjectId: "kanban-missing",
       vibeKanbanRepoId: null,
-      projectConfigPath: path.join(projectRoot, pharoNexusProjectConfigFileName),
+      projectConfigPath: path.join(projectRoot, devNexusProjectConfigFileName),
       projectConfigExists: false,
       plexusProjectConfigPath: path.join(projectRoot, plexusProjectConfigFileName),
       plexusProjectConfigExists: false,

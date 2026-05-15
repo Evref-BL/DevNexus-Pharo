@@ -10,7 +10,7 @@ import {
   initPharoNexusHome,
   loadHomeConfig,
   loadProjectConfig,
-  pharoNexusProjectConfigFileName,
+  devNexusProjectConfigFileName,
   plexusProjectConfigFileName,
   projectPlexusConfigPath,
   projectWorktreesRootPath,
@@ -203,8 +203,8 @@ describe("PharoNexus focused project lifecycle contracts", () => {
         sourceRoot,
       },
     });
-    expect(fs.existsSync(path.join(projectRoot, pharoNexusProjectConfigFileName))).toBe(true);
-    expect(fs.existsSync(path.join(sourceRoot, pharoNexusProjectConfigFileName))).toBe(false);
+    expect(fs.existsSync(path.join(projectRoot, devNexusProjectConfigFileName))).toBe(true);
+    expect(fs.existsSync(path.join(sourceRoot, devNexusProjectConfigFileName))).toBe(false);
   });
 
   it("rejects duplicate project ids before running git", () => {

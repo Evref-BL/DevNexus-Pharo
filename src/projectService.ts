@@ -15,7 +15,7 @@ import { scaffoldNexusProject } from "./nexusProjectScaffold.js";
 import {
   loadHomeConfig,
   loadProjectConfig,
-  pharoNexusProjectConfigFileName,
+  devNexusProjectConfigFileName,
   pharoNexusProjectWorktreesDirectoryName,
   plexusProjectConfigFileName,
   projectConfigPath,
@@ -588,7 +588,7 @@ function loadProjectConfigIfExists(
 
 function projectRootFromInput(input: string): string {
   const resolved = path.resolve(input);
-  return path.basename(resolved) === pharoNexusProjectConfigFileName
+  return path.basename(resolved) === devNexusProjectConfigFileName
     ? path.dirname(resolved)
     : resolved;
 }
@@ -887,11 +887,11 @@ export function createPharoNexusProject(
     vibeKanbanProjectId,
     sourceRoot ? pathForProjectConfig(projectRoot, sourceRoot) : null,
   );
-  const pharoNexusProjectConfigPath = projectConfigPath(projectRoot);
+  const devNexusProjectConfigPath = projectConfigPath(projectRoot);
   const plexusConfigPath = projectPlexusConfigPath(projectRoot, projectConfig);
   const worktreesRoot = projectWorktreesRootPath(projectRoot, projectConfig);
 
-  assertFileDoesNotExist(pharoNexusProjectConfigPath);
+  assertFileDoesNotExist(devNexusProjectConfigPath);
   assertFileDoesNotExist(plexusConfigPath);
   saveProjectConfig(projectRoot, projectConfig);
   const scaffold = scaffoldNexusProject({
@@ -921,7 +921,7 @@ export function createPharoNexusProject(
   return {
     homePath,
     projectRoot,
-    projectConfigPath: pharoNexusProjectConfigPath,
+    projectConfigPath: devNexusProjectConfigPath,
     plexusProjectConfigPath: pharoFiles.plexusProjectConfigPath,
     worktreesRoot,
     agentsPath: pharoFiles.agentsPath,
@@ -997,7 +997,7 @@ export function importPharoNexusProject(
     };
   }
 
-  const pharoNexusProjectConfigPath = projectConfigPath(projectRoot);
+  const devNexusProjectConfigPath = projectConfigPath(projectRoot);
   if (!existingProjectConfig || vibeKanbanProjectId) {
     saveProjectConfig(projectRoot, projectConfig);
   }
@@ -1032,7 +1032,7 @@ export function importPharoNexusProject(
   return {
     homePath,
     projectRoot,
-    projectConfigPath: pharoNexusProjectConfigPath,
+    projectConfigPath: devNexusProjectConfigPath,
     plexusProjectConfigPath: pharoFiles.plexusProjectConfigPath,
     worktreesRoot,
     agentsPath: pharoFiles.agentsPath,
