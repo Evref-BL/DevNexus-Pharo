@@ -34,6 +34,7 @@ import {
   NexusProjectError,
   optionalNonEmptyString,
   pathForProjectConfig,
+  registerNexusProjectExtension,
   resolveProjectSourceRoot,
   runGitCommand,
   safeDirectoryName,
@@ -62,6 +63,8 @@ import {
 } from "./vibeKanbanProjectAdapter.js";
 import { createVibeWorkTrackerProvider } from "./workTrackingVibeProvider.js";
 import type { NexusProjectContext } from "./workTrackingTypes.js";
+
+registerNexusProjectExtension(pharoNexusExtension);
 
 export interface CreatePharoNexusProjectOptions {
   homePath: string;
@@ -443,6 +446,7 @@ export async function syncPharoNexusProjectTracker(
       "project sync-tracker requires a PharoNexus-managed project",
     );
   }
+  const plexusProjectConfig = linked.plexusProjectConfig as PlexusProjectConfig;
   const updatedHomeConfig = loadHomeConfig(homePath);
   const projectConfig = loadProjectConfig(status.projectRoot);
   const reference = upsertProjectReference(
@@ -457,7 +461,7 @@ export async function syncPharoNexusProjectTracker(
   return {
     ...linked,
     plexusProjectConfigPath: linked.plexusProjectConfigPath,
-    plexusProjectConfig: linked.plexusProjectConfig,
+    plexusProjectConfig,
     vibeKanbanProjectId: vibeKanbanBoardRef.id,
     vibeKanbanRepoId: vibeKanbanProject.id,
     project: statusForProjectReference(reference),

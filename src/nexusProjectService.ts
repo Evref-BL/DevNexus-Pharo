@@ -1,13 +1,8 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import {
-  projectPlexusConfigPath,
-  projectUsesPharoNexusExtension,
-  updatePlexusProjectKanban,
-  type PlexusProjectConfig,
-} from "./pharoNexusExtension.js";
 import { scaffoldNexusProject } from "./nexusProjectScaffold.js";
+import type { NexusExtension } from "./nexusExtension.js";
 import {
   loadHomeConfig,
   loadProjectConfig,
@@ -159,7 +154,45 @@ export interface LinkNexusProjectTrackerResult {
   project: NexusProjectStatus;
   projectConfigPath: string;
   plexusProjectConfigPath: string | null;
-  plexusProjectConfig: PlexusProjectConfig | null;
+  plexusProjectConfig: unknown | null;
+}
+
+export interface NexusProjectStatusExtensionContribution {
+  plexusProjectConfigPath?: string | null;
+  plexusProjectConfigExists?: boolean;
+}
+
+export interface NexusProjectTrackerLinkExtensionContribution {
+  plexusProjectConfigPath?: string | null;
+  plexusProjectConfig?: unknown | null;
+}
+
+export type NexusProjectServiceExtension = NexusExtension<
+  NexusProjectConfig,
+  unknown,
+  NexusProjectStatusExtensionContribution | undefined,
+  NexusProjectTrackerLinkExtensionContribution | undefined
+>;
+
+const nexusProjectServiceExtensions: NexusProjectServiceExtension[] = [];
+
+export function registerNexusProjectExtension(
+  extension: NexusProjectServiceExtension,
+): void {
+  const existingIndex = nexusProjectServiceExtensions.findIndex(
+    (registered) => registered.id === extension.id,
+  );
+
+  if (existingIndex >= 0) {
+    nexusProjectServiceExtensions[existingIndex] = extension;
+    return;
+  }
+
+  nexusProjectServiceExtensions.push(extension);
+}
+
+export function registeredNexusProjectExtensions(): readonly NexusProjectServiceExtension[] {
+  return nexusProjectServiceExtensions;
 }
 
 export class NexusProjectError extends Error {
@@ -545,16 +578,79 @@ function projectRootFromInput(input: string): string {
     : resolved;
 }
 
+function projectStatusExtensionContribution(
+  projectRoot: string,
+  projectConfig: NexusProjectConfig | undefined,
+): Required<NexusProjectStatusExtensionContribution> {
+  const contribution: Required<NexusProjectStatusExtensionContribution> = {
+    plexusProjectConfigPath: null,
+    plexusProjectConfigExists: false,
+  };
+  if (!projectConfig) {
+    return contribution;
+  }
+
+  for (const extension of nexusProjectServiceExtensions) {
+    const result = extension.projectStatus?.({
+      projectRoot,
+      projectConfig,
+    });
+    if (!result) {
+      continue;
+    }
+
+    if (result.plexusProjectConfigPath !== undefined) {
+      contribution.plexusProjectConfigPath = result.plexusProjectConfigPath;
+    }
+    if (result.plexusProjectConfigExists !== undefined) {
+      contribution.plexusProjectConfigExists = result.plexusProjectConfigExists;
+    }
+  }
+
+  return contribution;
+}
+
+function projectTrackerLinkExtensionContribution(
+  projectRoot: string,
+  projectConfig: NexusProjectConfig,
+  trackerProjectId: string,
+): Required<NexusProjectTrackerLinkExtensionContribution> {
+  const contribution: Required<NexusProjectTrackerLinkExtensionContribution> = {
+    plexusProjectConfigPath: null,
+    plexusProjectConfig: null,
+  };
+
+  for (const extension of nexusProjectServiceExtensions) {
+    const result = extension.linkProjectTracker?.({
+      projectRoot,
+      projectConfig,
+      trackerProjectId,
+    });
+    if (!result) {
+      continue;
+    }
+
+    if (result.plexusProjectConfigPath !== undefined) {
+      contribution.plexusProjectConfigPath = result.plexusProjectConfigPath;
+    }
+    if (result.plexusProjectConfig !== undefined) {
+      contribution.plexusProjectConfig = result.plexusProjectConfig;
+    }
+  }
+
+  return contribution;
+}
+
 export function statusForProjectReference(
   reference: NexusProjectReference,
 ): NexusProjectStatus {
   const projectRoot = path.resolve(reference.projectRoot);
   const config = loadProjectConfigIfExists(projectRoot);
   const resolvedProjectConfigPath = projectConfigPath(projectRoot);
-  const resolvedPlexusProjectConfigPath =
-    config && projectUsesPharoNexusExtension(config)
-      ? projectPlexusConfigPath(projectRoot, config)
-      : null;
+  const statusContribution = projectStatusExtensionContribution(
+    projectRoot,
+    config,
+  );
   const resolvedWorktreesRoot = projectWorktreesRootPath(projectRoot, config);
 
   return {
@@ -568,10 +664,8 @@ export function statusForProjectReference(
     vibeKanbanRepoId: reference.vibeKanbanRepoId ?? null,
     projectConfigPath: resolvedProjectConfigPath,
     projectConfigExists: Boolean(config),
-    plexusProjectConfigPath: resolvedPlexusProjectConfigPath,
-    plexusProjectConfigExists: resolvedPlexusProjectConfigPath
-      ? fs.existsSync(resolvedPlexusProjectConfigPath)
-      : false,
+    plexusProjectConfigPath: statusContribution.plexusProjectConfigPath,
+    plexusProjectConfigExists: statusContribution.plexusProjectConfigExists,
     worktreesRoot: resolvedWorktreesRoot,
     worktreesRootExists: fs.existsSync(resolvedWorktreesRoot),
   };
@@ -1049,17 +1143,11 @@ export function linkNexusProjectTracker(
     },
   };
   const projectConfigFilePath = saveProjectConfig(projectRoot, updatedProjectConfig);
-  const plexusConfigPath = projectUsesPharoNexusExtension(updatedProjectConfig)
-    ? projectPlexusConfigPath(projectRoot, updatedProjectConfig)
-    : null;
-  const plexusProjectConfig = plexusConfigPath
-    ? updatePlexusProjectKanban(
-        plexusConfigPath,
-        updatedProjectConfig.name,
-        updatedProjectConfig.id,
-        vibeKanbanProjectId,
-      )
-    : null;
+  const trackerLinkContribution = projectTrackerLinkExtensionContribution(
+    projectRoot,
+    updatedProjectConfig,
+    vibeKanbanProjectId,
+  );
 
   const reference = upsertProjectReference(
     homeConfig,
@@ -1075,8 +1163,8 @@ export function linkNexusProjectTracker(
     vibeKanbanRepoId: reference.vibeKanbanRepoId ?? null,
     project: statusForProjectReference(reference),
     projectConfigPath: projectConfigFilePath,
-    plexusProjectConfigPath: plexusConfigPath,
-    plexusProjectConfig,
+    plexusProjectConfigPath: trackerLinkContribution.plexusProjectConfigPath,
+    plexusProjectConfig: trackerLinkContribution.plexusProjectConfig,
   };
 }
 
@@ -1111,9 +1199,10 @@ export function configureNexusProjectTracker(
     homePath,
     project: statusForProjectReference(reference),
     projectConfigPath: projectConfigFilePath,
-    plexusProjectConfigPath: projectUsesPharoNexusExtension(updatedProjectConfig)
-      ? projectPlexusConfigPath(projectRoot, updatedProjectConfig)
-      : null,
+    plexusProjectConfigPath: projectStatusExtensionContribution(
+      projectRoot,
+      updatedProjectConfig,
+    ).plexusProjectConfigPath,
     projectConfig: updatedProjectConfig,
     workTracking,
   };

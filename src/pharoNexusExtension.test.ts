@@ -124,4 +124,69 @@ describe("PharoNexus extension", () => {
     );
     expect(fs.existsSync(files.plexusProjectConfigPath)).toBe(true);
   });
+
+  it("contributes PLexus status and tracker linking only for PharoNexus projects", () => {
+    const projectRoot = path.join(makeTempDir("pharo-nexus-project-"), "Project");
+    const plexusPath = path.join(projectRoot, plexusProjectConfigFileName);
+    const unmanagedConfig = projectConfig();
+
+    expect(
+      pharoNexusExtension.projectStatus?.({
+        projectRoot,
+        projectConfig: unmanagedConfig,
+      }),
+    ).toBeUndefined();
+    expect(
+      pharoNexusExtension.linkProjectTracker?.({
+        projectRoot,
+        projectConfig: unmanagedConfig,
+        trackerProjectId: "vk-ignored",
+      }),
+    ).toBeUndefined();
+
+    const managedConfig = projectConfig({
+      extensions: {
+        [pharoNexusProjectExtensionConfigKey]: {},
+      },
+    });
+    expect(
+      pharoNexusExtension.projectStatus?.({
+        projectRoot,
+        projectConfig: managedConfig,
+      }),
+    ).toEqual({
+      plexusProjectConfigPath: plexusPath,
+      plexusProjectConfigExists: false,
+    });
+
+    const linked = pharoNexusExtension.linkProjectTracker?.({
+      projectRoot,
+      projectConfig: managedConfig,
+      trackerProjectId: "vk-linked",
+    });
+
+    expect(linked).toEqual({
+      plexusProjectConfigPath: plexusPath,
+      plexusProjectConfig: {
+        name: "Pharo Project",
+        kanban: {
+          provider: "vibe-kanban",
+          projectId: "vk-linked",
+        },
+        images: [],
+      },
+    });
+    expect(JSON.parse(fs.readFileSync(plexusPath, "utf8"))).toEqual(
+      linked?.plexusProjectConfig,
+    );
+    expect(
+      pharoNexusExtension.projectStatus?.({
+        projectRoot,
+        projectConfig: managedConfig,
+      }),
+    ).toEqual({
+      plexusProjectConfigPath: plexusPath,
+      plexusProjectConfigExists: true,
+    });
+  });
 });

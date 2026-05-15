@@ -5,6 +5,10 @@ import type { NexusExtension } from "./nexusExtension.js";
 import {
   type NexusProjectConfig,
 } from "./config.js";
+import type {
+  NexusProjectStatusExtensionContribution,
+  NexusProjectTrackerLinkExtensionContribution,
+} from "./nexusProjectService.js";
 
 export interface PlexusProjectConfig {
   name: string;
@@ -279,7 +283,9 @@ export function installPharoNexusProjectFiles(
 
 export const pharoNexusExtension: NexusExtension<
   NexusProjectConfig,
-  PharoNexusProjectFiles
+  PharoNexusProjectFiles,
+  NexusProjectStatusExtensionContribution | undefined,
+  NexusProjectTrackerLinkExtensionContribution | undefined
 > = {
   id: "pharo-nexus",
   name: "PharoNexus",
@@ -289,6 +295,33 @@ export const pharoNexusExtension: NexusExtension<
       projectConfig,
       vibeKanbanProjectId: projectConfig.kanban.projectId,
     }),
+  projectStatus: ({ projectRoot, projectConfig }) => {
+    if (!projectUsesPharoNexusExtension(projectConfig)) {
+      return undefined;
+    }
+
+    const plexusConfigPath = projectPlexusConfigPath(projectRoot, projectConfig);
+    return {
+      plexusProjectConfigPath: plexusConfigPath,
+      plexusProjectConfigExists: fs.existsSync(plexusConfigPath),
+    };
+  },
+  linkProjectTracker: ({ projectRoot, projectConfig, trackerProjectId }) => {
+    if (!projectUsesPharoNexusExtension(projectConfig)) {
+      return undefined;
+    }
+
+    const plexusConfigPath = projectPlexusConfigPath(projectRoot, projectConfig);
+    return {
+      plexusProjectConfigPath: plexusConfigPath,
+      plexusProjectConfig: updatePlexusProjectKanban(
+        plexusConfigPath,
+        projectConfig.name,
+        projectConfig.id,
+        trackerProjectId,
+      ),
+    };
+  },
 };
 
 export function pharoNexusProjectFilesFromExtensionResult(
