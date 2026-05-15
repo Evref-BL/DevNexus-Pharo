@@ -12,6 +12,10 @@ import {
   type InitCodexWorkspaceResult,
 } from "./codexConfig.js";
 import {
+  buildCodexWorktreeGuide,
+  type CodexWorktreeGuideResult,
+} from "./codexWorktreeGuide.js";
+import {
   archiveCodexWorktree,
   getCodexWorktreeStatus,
   listCodexWorktrees,
@@ -90,6 +94,7 @@ export function usage(): string {
     "  pharo-nexus mcp-stdio",
     "  pharo-nexus codex init <workspace> [options]",
     "  pharo-nexus codex doctor <workspace> [options]",
+    "  pharo-nexus codex worktree guide [options]",
     "  pharo-nexus codex worktree list [options]",
     "  pharo-nexus codex worktree status <id> [options]",
     "  pharo-nexus codex worktree prepare <project> [options]",
@@ -148,6 +153,17 @@ export function usage(): string {
     "Options for codex doctor:",
     "  --home <path>",
     "  --timeout-ms <ms>",
+    "  --json",
+    "",
+    "Options for codex worktree guide:",
+    "  --home <path>",
+    "  --id <worktree-id>",
+    "  --project <id-or-path>",
+    "  --work-item-id <id>",
+    "  --branch <name>",
+    "  --comment-work-item",
+    "  --remove-worktree",
+    "  --publication-decision <not_decided|local_only|direct_integration|review_handoff|blocked>",
     "  --json",
     "",
     "Options for codex worktree list:",
@@ -559,13 +575,27 @@ interface ParsedCodexWorktreeRecordCommand {
   json?: boolean;
 }
 
+interface ParsedCodexWorktreeGuideCommand {
+  command: "worktree_guide";
+  homePath: string;
+  id?: string;
+  project?: string;
+  workItemId?: string;
+  branchName?: string;
+  commentWorkItem?: boolean;
+  removeWorktree?: boolean;
+  publicationDecision?: CodexWorktreePublicationDecisionType;
+  json?: boolean;
+}
+
 type ParsedCodexCommand =
   | ParsedCodexWorkspaceCommand
   | ParsedCodexWorktreePrepareCommand
   | ParsedCodexWorktreeArchiveCommand
   | ParsedCodexWorktreeListCommand
   | ParsedCodexWorktreeStatusCommand
-  | ParsedCodexWorktreeRecordCommand;
+  | ParsedCodexWorktreeRecordCommand
+  | ParsedCodexWorktreeGuideCommand;
 
 function parseCodexCommand(argv: string[]): ParsedCodexCommand {
   const [, command, workspacePath, ...rest] = argv;
@@ -631,18 +661,20 @@ function parseCodexWorktreeCommand(argv: string[]): ParsedCodexCommand {
     action !== "archive" &&
     action !== "list" &&
     action !== "status" &&
-    action !== "record"
+    action !== "record" &&
+    action !== "guide"
   ) {
-    throw new Error("codex worktree requires list, status, prepare, record, or archive");
+    throw new Error("codex worktree requires guide, list, status, prepare, record, or archive");
   }
 
   const remaining = argv.slice(3);
-  const target = action === "list" ? undefined : remaining[0];
-  const rest = action === "list" ? remaining : remaining.slice(1);
-  if (action === "list" && remaining[0] && !remaining[0].startsWith("--")) {
-    throw new Error("codex worktree list does not accept a positional argument");
+  const takesPositional = action !== "list" && action !== "guide";
+  const target = takesPositional ? remaining[0] : undefined;
+  const rest = takesPositional ? remaining.slice(1) : remaining;
+  if (!takesPositional && remaining[0] && !remaining[0].startsWith("--")) {
+    throw new Error(`codex worktree ${action} does not accept a positional argument`);
   }
-  if (action !== "list" && (!target || target.startsWith("--"))) {
+  if (takesPositional && (!target || target.startsWith("--"))) {
     throw new Error(`codex worktree ${action} requires ${action === "prepare" ? "a project" : "an id"}`);
   }
   const targetValue = target ?? "";
@@ -652,7 +684,8 @@ function parseCodexWorktreeCommand(argv: string[]): ParsedCodexCommand {
     | Partial<ParsedCodexWorktreeArchiveCommand>
     | Partial<ParsedCodexWorktreeListCommand>
     | Partial<ParsedCodexWorktreeStatusCommand>
-    | Partial<ParsedCodexWorktreeRecordCommand> =
+    | Partial<ParsedCodexWorktreeRecordCommand>
+    | Partial<ParsedCodexWorktreeGuideCommand> =
     action === "prepare"
       ? {
           command: "worktree_prepare",
@@ -679,7 +712,7 @@ function parseCodexWorktreeCommand(argv: string[]): ParsedCodexCommand {
                 commitIds: [],
               }
             : {
-                command: "worktree_list",
+                command: action === "guide" ? "worktree_guide" : "worktree_list",
                 homePath: defaultHomePath(),
               };
 
@@ -699,10 +732,20 @@ function parseCodexWorktreeCommand(argv: string[]): ParsedCodexCommand {
         parsed.homePath = next();
         break;
       case "--project":
-        if (action !== "list") {
-          throw new Error("--project is only supported for codex worktree list");
+        if (action !== "list" && action !== "guide") {
+          throw new Error("--project is only supported for codex worktree list or guide");
         }
-        (parsed as Partial<ParsedCodexWorktreeListCommand>).project = next();
+        (
+          parsed as
+            | Partial<ParsedCodexWorktreeListCommand>
+            | Partial<ParsedCodexWorktreeGuideCommand>
+        ).project = next();
+        break;
+      case "--id":
+        if (action !== "guide") {
+          throw new Error("--id is only supported for codex worktree guide");
+        }
+        (parsed as Partial<ParsedCodexWorktreeGuideCommand>).id = next();
         break;
       case "--state":
         if (action !== "list") {
@@ -712,10 +755,14 @@ function parseCodexWorktreeCommand(argv: string[]): ParsedCodexCommand {
           parseCodexWorktreeState(next(), arg);
         break;
       case "--branch":
-        if (action !== "prepare") {
-          throw new Error("--branch is only supported for codex worktree prepare");
+        if (action !== "prepare" && action !== "guide") {
+          throw new Error("--branch is only supported for codex worktree prepare or guide");
         }
-        (parsed as Partial<ParsedCodexWorktreePrepareCommand>).branchName = next();
+        (
+          parsed as
+            | Partial<ParsedCodexWorktreePrepareCommand>
+            | Partial<ParsedCodexWorktreeGuideCommand>
+        ).branchName = next();
         break;
       case "--worktree-name":
         if (action !== "prepare") {
@@ -730,19 +777,24 @@ function parseCodexWorktreeCommand(argv: string[]): ParsedCodexCommand {
         (parsed as Partial<ParsedCodexWorktreePrepareCommand>).baseRef = next();
         break;
       case "--work-item-id":
-        if (action !== "prepare") {
-          throw new Error("--work-item-id is only supported for codex worktree prepare");
+        if (action !== "prepare" && action !== "guide") {
+          throw new Error("--work-item-id is only supported for codex worktree prepare or guide");
         }
-        (parsed as Partial<ParsedCodexWorktreePrepareCommand>).workItemId = next();
+        (
+          parsed as
+            | Partial<ParsedCodexWorktreePrepareCommand>
+            | Partial<ParsedCodexWorktreeGuideCommand>
+        ).workItemId = next();
         break;
       case "--comment-work-item":
-        if (action !== "prepare" && action !== "archive") {
-          throw new Error("--comment-work-item is only supported for codex worktree prepare or archive");
+        if (action !== "prepare" && action !== "archive" && action !== "guide") {
+          throw new Error("--comment-work-item is only supported for codex worktree prepare, archive, or guide");
         }
         (
           parsed as
             | Partial<ParsedCodexWorktreePrepareCommand>
             | Partial<ParsedCodexWorktreeArchiveCommand>
+            | Partial<ParsedCodexWorktreeGuideCommand>
         ).commentWorkItem = true;
         break;
       case "--commit-id":
@@ -771,11 +823,16 @@ function parseCodexWorktreeCommand(argv: string[]): ParsedCodexCommand {
         (parsed as Partial<ParsedCodexWorktreeRecordCommand>).verificationSummary = next();
         break;
       case "--publication-decision":
-        if (action !== "record") {
-          throw new Error("--publication-decision is only supported for codex worktree record");
+        if (action !== "record" && action !== "guide") {
+          throw new Error("--publication-decision is only supported for codex worktree record or guide");
         }
-        (parsed as Partial<ParsedCodexWorktreeRecordCommand>).publicationDecisionType =
-          parseCodexWorktreePublicationDecisionType(next(), arg);
+        if (action === "record") {
+          (parsed as Partial<ParsedCodexWorktreeRecordCommand>).publicationDecisionType =
+            parseCodexWorktreePublicationDecisionType(next(), arg);
+        } else {
+          (parsed as Partial<ParsedCodexWorktreeGuideCommand>).publicationDecision =
+            parseCodexWorktreePublicationDecisionType(next(), arg);
+        }
         break;
       case "--target-branch":
         if (action !== "record") {
@@ -802,10 +859,14 @@ function parseCodexWorktreeCommand(argv: string[]): ParsedCodexCommand {
         (parsed as Partial<ParsedCodexWorktreeRecordCommand>).reason = next();
         break;
       case "--remove-worktree":
-        if (action !== "archive") {
-          throw new Error("--remove-worktree is only supported for codex worktree archive");
+        if (action !== "archive" && action !== "guide") {
+          throw new Error("--remove-worktree is only supported for codex worktree archive or guide");
         }
-        (parsed as Partial<ParsedCodexWorktreeArchiveCommand>).removeWorktree = true;
+        (
+          parsed as
+            | Partial<ParsedCodexWorktreeArchiveCommand>
+            | Partial<ParsedCodexWorktreeGuideCommand>
+        ).removeWorktree = true;
         break;
       case "--json":
         parsed.json = true;
@@ -1028,6 +1089,29 @@ function printCodexWorktreeRecordResult(
   console.log(`  Metadata: ${result.metadataPath}`);
 }
 
+function printCodexWorktreeGuideResult(
+  result: CodexWorktreeGuideResult,
+  json: boolean | undefined,
+): void {
+  const payload = { ok: true, ...result };
+  if (json) {
+    console.log(JSON.stringify(payload, null, 2));
+    return;
+  }
+
+  console.log("Direct Codex worktree workflow.");
+  for (const [index, step] of result.steps.entries()) {
+    console.log(`${index + 1}. ${step.title}`);
+    if (step.command) {
+      console.log(`   ${step.command}`);
+    }
+    console.log(`   ${step.detail}`);
+  }
+  for (const note of result.notes) {
+    console.log(`Note: ${note}`);
+  }
+}
+
 export interface CliContext {
   gitRunner?: GitRunner;
 }
@@ -1044,6 +1128,21 @@ async function handleCodexCommand(
       dryRun: parsed.dryRun,
     });
     printCodexInitResult(result, parsed.json);
+    return 0;
+  }
+
+  if (parsed.command === "worktree_guide") {
+    const result = buildCodexWorktreeGuide({
+      homePath: parsed.homePath,
+      id: parsed.id,
+      project: parsed.project,
+      workItemId: parsed.workItemId,
+      branchName: parsed.branchName,
+      commentWorkItem: parsed.commentWorkItem,
+      removeWorktree: parsed.removeWorktree,
+      publicationDecision: parsed.publicationDecision,
+    });
+    printCodexWorktreeGuideResult(result, parsed.json);
     return 0;
   }
 

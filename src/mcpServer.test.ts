@@ -213,6 +213,7 @@ describe("PharoNexus MCP server tools", () => {
       "project_list",
       "project_status",
       "codex_worktree_prepare",
+      "codex_worktree_guide",
       "codex_worktree_list",
       "codex_worktree_status",
       "codex_worktree_record_execution",
@@ -862,6 +863,35 @@ describe("PharoNexus MCP server tools", () => {
         worktreeExists: true,
       },
     });
+
+    const guidePayload = parseToolText(
+      await callPharoNexusMcpTool("codex_worktree_guide", {
+        homePath,
+        id: "codex-mcp:codex/fcd-900",
+        commentWorkItem: true,
+        removeWorktree: true,
+      }),
+    );
+    expect(guidePayload).toMatchObject({
+      ok: true,
+      id: "codex-mcp:codex/fcd-900",
+      project: "codex-mcp",
+    });
+    expect((guidePayload as { steps: unknown[] }).steps).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          title: "Record execution metadata",
+          command: expect.stringContaining("codex worktree record"),
+        }),
+        expect.objectContaining({
+          title: "Archive worktree",
+          command: expect.stringContaining("--remove-worktree"),
+        }),
+      ]),
+    );
+    expect((guidePayload as { notes: unknown[] }).notes).toEqual(
+      expect.arrayContaining([expect.stringContaining("Vibe")]),
+    );
 
     const recordPayload = parseToolText(
       await callPharoNexusMcpTool(

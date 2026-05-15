@@ -41,6 +41,7 @@ describe("pharo-nexus cli", () => {
     expect(usage()).toContain("pharo-nexus mcp");
     expect(usage()).toContain("pharo-nexus codex init <workspace>");
     expect(usage()).toContain("pharo-nexus codex doctor <workspace>");
+    expect(usage()).toContain("pharo-nexus codex worktree guide");
     expect(usage()).toContain("pharo-nexus codex worktree list");
     expect(usage()).toContain("pharo-nexus codex worktree status <id>");
     expect(usage()).toContain("pharo-nexus codex worktree prepare <project>");
@@ -61,6 +62,7 @@ describe("pharo-nexus cli", () => {
     expect(usage()).toContain("--sync-tracker");
     expect(usage()).toContain("--no-open-browser");
     expect(usage()).toContain("--state <active|archived>");
+    expect(usage()).toContain("--id <worktree-id>");
     expect(usage()).toContain("--work-item-id");
     expect(usage()).toContain("--comment-work-item");
     expect(usage()).toContain("--commit-id");
@@ -421,6 +423,54 @@ describe("pharo-nexus cli", () => {
         },
       ]),
     );
+  });
+
+  it("prints direct Codex worktree workflow guidance from the CLI", async () => {
+    const homePath = path.join(makeTempDir("pharo-nexus-parent-"), "home");
+    initHome(homePath);
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+
+    await expect(
+      main([
+        "codex",
+        "worktree",
+        "guide",
+        "--home",
+        homePath,
+        "--project",
+        "prepared",
+        "--work-item-id",
+        "local-1",
+        "--comment-work-item",
+        "--remove-worktree",
+        "--publication-decision",
+        "review_handoff",
+        "--json",
+      ]),
+    ).resolves.toBe(0);
+
+    const payload = JSON.parse(String(log.mock.calls[0]?.[0]));
+    expect(payload).toMatchObject({
+      ok: true,
+      homePath,
+      project: "prepared",
+      workItemId: "local-1",
+      worktree: null,
+    });
+    expect(payload.steps).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        title: "Prepare worktree",
+        command: expect.stringContaining("--comment-work-item"),
+      }),
+      expect.objectContaining({
+        title: "Run Codex directly",
+        detail: expect.stringContaining("Do not create a Vibe workspace"),
+      }),
+    ]));
+    expect(payload.notes).toEqual(expect.arrayContaining([
+      expect.stringContaining("read-only"),
+      expect.stringContaining("Vibe"),
+    ]));
   });
 
   it("uses PHARO_NEXUS_HOME for status when no home is passed", async () => {

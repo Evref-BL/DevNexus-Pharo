@@ -1,5 +1,6 @@
 export * from "./browserOpener.js";
 export * from "./codexConfig.js";
+export * from "./codexWorktreeGuide.js";
 export * from "./codexWorktreeService.js";
 export * from "./codexWorktreeTrackerHandoff.js";
 export * from "./config.js";

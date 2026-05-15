@@ -1,6 +1,7 @@
 import { Buffer } from "node:buffer";
 import http from "node:http";
 import process from "node:process";
+import { buildCodexWorktreeGuide } from "./codexWorktreeGuide.js";
 import {
   archiveCodexWorktree,
   getCodexWorktreeStatus,
@@ -185,6 +186,33 @@ const tools: McpTool[] = [
         commentWorkItem: { type: "boolean" },
       },
       required: ["project"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "codex_worktree_guide",
+    description: "Return read-only guidance for the direct local Codex worktree workflow without starting agents.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        homePath: { type: "string" },
+        id: { type: "string" },
+        project: { type: "string" },
+        workItemId: { type: "string" },
+        branchName: { type: "string" },
+        commentWorkItem: { type: "boolean" },
+        removeWorktree: { type: "boolean" },
+        publicationDecision: {
+          type: "string",
+          enum: [
+            "not_decided",
+            "local_only",
+            "direct_integration",
+            "review_handoff",
+            "blocked",
+          ],
+        },
+      },
       additionalProperties: false,
     },
   },
@@ -610,6 +638,17 @@ function codexPublicationDecisionType(
   );
 }
 
+function optionalCodexPublicationDecisionType(
+  record: Record<string, unknown>,
+  key: string,
+  pathName: string,
+): CodexWorktreePublicationDecisionType | undefined {
+  const value = optionalString(record, key, pathName);
+  return value === undefined
+    ? undefined
+    : codexPublicationDecisionType(value, `${pathName}.${key}`);
+}
+
 function homePathFromArgs(args: Record<string, unknown>): string {
   return optionalString(args, "homePath", "arguments") ?? defaultPharoNexusHomePath();
 }
@@ -916,6 +955,24 @@ export async function callPharoNexusMcpTool(
           ...getPharoNexusProjectStatus({
             homePath: homePathFromArgs(args),
             project: requiredString(args, "project", "arguments"),
+          }),
+        });
+      case "codex_worktree_guide":
+        return toolResult({
+          ok: true,
+          ...buildCodexWorktreeGuide({
+            homePath: homePathFromArgs(args),
+            id: optionalString(args, "id", "arguments"),
+            project: optionalString(args, "project", "arguments"),
+            workItemId: optionalString(args, "workItemId", "arguments"),
+            branchName: optionalString(args, "branchName", "arguments"),
+            commentWorkItem: optionalBoolean(args, "commentWorkItem", "arguments"),
+            removeWorktree: optionalBoolean(args, "removeWorktree", "arguments"),
+            publicationDecision: optionalCodexPublicationDecisionType(
+              args,
+              "publicationDecision",
+              "arguments",
+            ),
           }),
         });
       case "codex_worktree_prepare": {
