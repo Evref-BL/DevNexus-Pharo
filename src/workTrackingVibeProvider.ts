@@ -22,7 +22,7 @@ import type {
   WorkItemRef,
   WorkStatus,
   WorkTrackerProvider,
-} from "./workTrackingTypes.js";
+} from "dev-nexus";
 
 export interface VibeWorkTrackerProviderOptions extends VibeKanbanApiOptions {
   config?: VibeKanbanWorkTrackingConfig;

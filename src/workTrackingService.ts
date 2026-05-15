@@ -6,16 +6,16 @@ import type { VibeKanbanApiOptions } from "./vibeKanbanMcpConfig.js";
 import {
   createGitHubWorkTrackerProvider,
   type GitHubWorkTrackerProviderOptions,
-} from "./workTrackingGitHubProvider.js";
+} from "dev-nexus";
 import {
   createGitLabWorkTrackerProvider,
   type GitLabWorkTrackerProviderOptions,
-} from "./workTrackingGitLabProvider.js";
+} from "dev-nexus";
 import {
   createJiraWorkTrackerProvider,
   type JiraWorkTrackerProviderOptions,
-} from "./workTrackingJiraProvider.js";
-import { createLocalWorkTrackerProvider } from "./workTrackingLocalProvider.js";
+} from "dev-nexus";
+import { createLocalWorkTrackerProvider } from "dev-nexus";
 import { createVibeWorkTrackerProvider } from "./workTrackingVibeProvider.js";
 import type {
   GitHubWorkTrackingConfig,
@@ -24,7 +24,7 @@ import type {
   VibeKanbanWorkTrackingConfig,
   WorkTrackingConfig,
   WorkTrackerProvider,
-} from "./workTrackingTypes.js";
+} from "dev-nexus";
 
 export interface CreateWorkTrackerProviderOptions {
   projectRoot?: string;

@@ -35,7 +35,7 @@ import type {
   WorkItemPatch,
   WorkItemRef,
   WorkStatus,
-} from "./workTrackingTypes.js";
+} from "dev-nexus";
 
 type JsonRpcId = string | number | null;
 

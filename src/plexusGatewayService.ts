@@ -17,7 +17,7 @@ import {
   type HttpPortHealthCheckResult,
   type ProcessLogPaths,
   type StopProcessByPidResult,
-} from "./processSupervisor.js";
+} from "dev-nexus";
 
 export const plexusGatewayServiceName = "plexus-gateway";
 export const pharoNexusStateDirectoryName = "state";

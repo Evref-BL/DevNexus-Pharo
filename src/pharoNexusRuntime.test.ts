@@ -21,7 +21,7 @@ import {
 } from "./pharoNexusRuntime.js";
 import { stopPharoNexusMcp } from "./pharoNexusMcpService.js";
 import { stopPlexusGateway } from "./plexusGatewayService.js";
-import { waitForHttpPort } from "./processSupervisor.js";
+import { waitForHttpPort } from "dev-nexus";
 import { stopVibeKanban } from "./vibeKanbanService.js";
 
 const tempDirs: string[] = [];

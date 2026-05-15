@@ -20,7 +20,7 @@ import {
   type HttpPortHealthCheckResult,
   type ProcessLogPaths,
   type StopProcessByPidResult,
-} from "./processSupervisor.js";
+} from "dev-nexus";
 
 export const pharoNexusMcpServiceName = "pharo-nexus-mcp";
 export const pharoNexusMcpStateFileName = "pharo-nexus-mcp.json";

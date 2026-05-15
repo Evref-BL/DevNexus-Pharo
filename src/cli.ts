@@ -74,7 +74,7 @@ import {
   type ImportPharoNexusProjectResult,
   type SyncPharoNexusProjectTrackerResult,
 } from "./pharoNexusProjectService.js";
-import type { WorkComment } from "./workTrackingTypes.js";
+import type { WorkComment } from "dev-nexus";
 import {
   runPharoNexusMcpServer,
   runPharoNexusMcpStdioServer,

@@ -14,7 +14,7 @@ import {
   saveProjectConfig,
   type NexusProjectConfig,
 } from "./config.js";
-import { scaffoldNexusProject } from "./nexusProjectScaffold.js";
+import { scaffoldNexusProject } from "dev-nexus";
 import {
   assertFileDoesNotExist,
   assertGitRepository,
@@ -62,7 +62,7 @@ import {
   type UpdateVibeKanbanProjectResult,
 } from "./vibeKanbanProjectAdapter.js";
 import { createVibeWorkTrackerProvider } from "./workTrackingVibeProvider.js";
-import type { NexusProjectContext } from "./workTrackingTypes.js";
+import type { NexusProjectContext } from "dev-nexus";
 
 registerNexusProjectExtension(pharoNexusExtension);
 

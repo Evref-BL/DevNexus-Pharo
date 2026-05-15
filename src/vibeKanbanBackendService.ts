@@ -11,7 +11,7 @@ import {
   type VibeKanbanDindBackendConfig,
   type VibeKanbanDockerBackendConfig,
 } from "./config.js";
-import { type HttpPortHealthCheckResult } from "./processSupervisor.js";
+import { type HttpPortHealthCheckResult } from "dev-nexus";
 
 export const vibeKanbanBackendServiceName = "vibe-kanban-backend";
 export const vibeKanbanBackendStateDirectoryName = "state";

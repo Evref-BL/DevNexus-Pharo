@@ -23,7 +23,7 @@ import type {
   WorkStatus,
   WorkTrackerProvider,
   WorkTrackingConfig,
-} from "./workTrackingTypes.js";
+} from "dev-nexus";
 
 export interface WorkItemProjectSelector {
   project?: string;

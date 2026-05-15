@@ -16,7 +16,7 @@ import {
   type HttpPortHealthCheckResult,
   type ProcessLogPaths,
   type StopProcessByPidResult,
-} from "./processSupervisor.js";
+} from "dev-nexus";
 
 export const vibeKanbanServiceName = "vibe-kanban";
 export const vibeKanbanStateDirectoryName = "state";

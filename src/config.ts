@@ -13,7 +13,7 @@ import type {
   WorkTrackingConfig,
   WorkTrackingProviderName,
   WorkTrackingRepositoryConfig,
-} from "./workTrackingTypes.js";
+} from "dev-nexus";
 
 export const devNexusHomeConfigFileName = "dev-nexus.home.json";
 export const devNexusProjectConfigFileName = "dev-nexus.project.json";

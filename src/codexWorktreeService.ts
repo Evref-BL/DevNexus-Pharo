@@ -16,7 +16,7 @@ import {
   removeGitWorktree,
   runGitCommand,
   safeDirectoryName,
-} from "./gitWorktreeService.js";
+} from "dev-nexus";
 import {
   getNexusProjectStatus,
   type GitCommandResult,
@@ -35,8 +35,8 @@ import {
   type WorktreeVerificationInput,
   type WorktreeVerificationRecord,
   type WorktreeVerificationStatus,
-} from "./worktreeExecutionMetadata.js";
-import type { WorkItemRef } from "./workTrackingTypes.js";
+} from "dev-nexus";
+import type { WorkItemRef } from "dev-nexus";
 
 export const codexWorktreeMetadataFileName = "codex-worktrees.json";
 export const codexWorktreeMetadataStoreVersion = 1;

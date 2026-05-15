@@ -6,7 +6,7 @@ import {
   pharoNexusExtension,
   pharoNexusProjectFilesFromExtensionResult,
 } from "./pharoNexusExtension.js";
-import { scaffoldNexusProject } from "./nexusProjectScaffold.js";
+import { scaffoldNexusProject } from "dev-nexus";
 import {
   nexusProjectWorktreesDirectoryName,
   type NexusProjectConfig,

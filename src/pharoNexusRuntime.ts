@@ -39,7 +39,7 @@ import {
 import {
   waitForHttpPort,
   type HttpPortHealthCheckResult,
-} from "./processSupervisor.js";
+} from "dev-nexus";
 import {
   installPharoNexusAndPlexusMcpForExecutor,
   type InstallPharoNexusAndPlexusMcpConfigResult,

@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import type { NexusExtension } from "./nexusExtension.js";
+import type { NexusExtension } from "dev-nexus";
 import {
   type NexusProjectConfig,
 } from "./config.js";

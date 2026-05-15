@@ -12,9 +12,15 @@
     "node": ">=24"
   },
   "scripts": {
+    "build:dev-nexus": "npm --prefix ../DevNexus run build",
+    "prebuild": "npm run build:dev-nexus",
     "build": "tsc -p tsconfig.json",
+    "pretest": "npm run build:dev-nexus",
     "test": "vitest run",
     "check": "npm run build && npm test"
+  },
+  "dependencies": {
+    "dev-nexus": "file:../DevNexus"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",

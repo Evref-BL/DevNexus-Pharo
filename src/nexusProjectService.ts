@@ -1,8 +1,8 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { scaffoldNexusProject } from "./nexusProjectScaffold.js";
-import type { NexusExtension } from "./nexusExtension.js";
+import { scaffoldNexusProject } from "dev-nexus";
+import type { NexusExtension } from "dev-nexus";
 import {
   loadHomeConfig,
   loadProjectConfig,
@@ -20,7 +20,7 @@ import {
 } from "./config.js";
 import type {
   WorkTrackingConfig,
-} from "./workTrackingTypes.js";
+} from "dev-nexus";
 
 export interface GitCommandResult {
   args: string[];

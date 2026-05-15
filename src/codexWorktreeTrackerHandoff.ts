@@ -1,6 +1,6 @@
 import type { CodexWorktreeRecord } from "./codexWorktreeService.js";
 import { createWorkItemService } from "./workItemService.js";
-import type { WorkComment } from "./workTrackingTypes.js";
+import type { WorkComment } from "dev-nexus";
 
 export type CodexWorktreeTrackerEvent = "prepared" | "archived";
 
