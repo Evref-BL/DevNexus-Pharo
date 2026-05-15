@@ -1,5 +1,6 @@
 export * from "./browserOpener.js";
 export * from "./codexConfig.js";
+export * from "./codexWorktreeService.js";
 export * from "./config.js";
 export * from "./mcpServer.js";
 export * from "./pharoNexusMcpService.js";
