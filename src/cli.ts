@@ -51,16 +51,20 @@ import {
 } from "./pharoNexusRuntime.js";
 import {
   configurePharoNexusProjectTracker,
+  createNexusProject,
   createPharoNexusProject,
   getPharoNexusProjectStatus,
+  importNexusProject,
   importPharoNexusProject,
   linkPharoNexusProjectTracker,
   listPharoNexusProjects,
   syncPharoNexusProjectTracker,
   type ConfigurePharoNexusProjectTrackerProvider,
   type ConfigurePharoNexusProjectTrackerResult,
+  type CreateNexusProjectResult,
   type CreatePharoNexusProjectResult,
   type GetPharoNexusProjectStatusResult,
+  type ImportNexusProjectResult,
   type ImportPharoNexusProjectResult,
   type LinkPharoNexusProjectTrackerResult,
   type ListPharoNexusProjectsResult,
@@ -103,8 +107,8 @@ export function usage(): string {
     "  pharo-nexus codex worktree prepare <project> [options]",
     "  pharo-nexus codex worktree record <id> [options]",
     "  pharo-nexus codex worktree archive <id> [options]",
-    "  pharo-nexus project create <name> [--from <git-url> | --git-init] [options]",
-    "  pharo-nexus project import <path> [--name <name>] [options]",
+    "  pharo-nexus project create <name> [--from <git-url> | --git-init] [--generic] [options]",
+    "  pharo-nexus project import <path> [--name <name>] [--generic] [options]",
     "  pharo-nexus project configure-tracker <id-or-path> --provider <local|github|gitlab|jira> [options]",
     "  pharo-nexus project link-tracker <id-or-path> --tracker-project-id <id> [options]",
     "  pharo-nexus project sync-tracker <id-or-path> [options]",
@@ -211,6 +215,7 @@ export function usage(): string {
     "Options for project create:",
     "  --from <git-url>",
     "  --git-init",
+    "  --generic",
     "  --root <path>",
     "  --tracker-project-id <id>",
     "  --sync-tracker",
@@ -222,6 +227,7 @@ export function usage(): string {
     "Options for project import:",
     "  --name <name>",
     "  --project-root <path>",
+    "  --generic",
     "  --tracker-project-id <id>",
     "  --sync-tracker",
     "  --vibe-host <host>",
@@ -1518,6 +1524,7 @@ interface ParsedProjectCreateCommand {
   root?: string;
   trackerProjectId?: string;
   syncTracker?: boolean;
+  generic?: boolean;
   vibeHost?: string;
   vibePort?: number;
   json?: boolean;
@@ -1530,6 +1537,7 @@ interface ParsedProjectImportCommand {
   name?: string;
   trackerProjectId?: string;
   syncTracker?: boolean;
+  generic?: boolean;
   vibeHost?: string;
   vibePort?: number;
   json?: boolean;
@@ -1616,6 +1624,9 @@ function parseProjectCreateCommand(argv: string[]): ParsedProjectCreateCommand {
       case "--sync-tracker":
         parsed.syncTracker = true;
         break;
+      case "--generic":
+        parsed.generic = true;
+        break;
       case "--vibe-host":
         parsed.vibeHost = next();
         break;
@@ -1635,6 +1646,9 @@ function parseProjectCreateCommand(argv: string[]): ParsedProjectCreateCommand {
 
   if (parsed.syncTracker && parsed.trackerProjectId) {
     throw new Error("--sync-tracker and --tracker-project-id are mutually exclusive");
+  }
+  if (parsed.generic && parsed.syncTracker) {
+    throw new Error("--generic and --sync-tracker are mutually exclusive");
   }
 
   return parsed as ParsedProjectCreateCommand;
@@ -1678,6 +1692,9 @@ function parseProjectImportCommand(argv: string[]): ParsedProjectImportCommand {
       case "--sync-tracker":
         parsed.syncTracker = true;
         break;
+      case "--generic":
+        parsed.generic = true;
+        break;
       case "--vibe-host":
         parsed.vibeHost = next();
         break;
@@ -1697,6 +1714,9 @@ function parseProjectImportCommand(argv: string[]): ParsedProjectImportCommand {
 
   if (parsed.syncTracker && parsed.trackerProjectId) {
     throw new Error("--sync-tracker and --tracker-project-id are mutually exclusive");
+  }
+  if (parsed.generic && parsed.syncTracker) {
+    throw new Error("--generic and --sync-tracker are mutually exclusive");
   }
 
   return parsed as ParsedProjectImportCommand;
@@ -2044,6 +2064,73 @@ function printProjectImportResult(
   console.log(JSON.stringify(payload, null, 2));
 }
 
+function printNexusProjectCreateResult(
+  result: CreateNexusProjectResult,
+  json: boolean | undefined,
+): void {
+  const payload = {
+    ok: true,
+    ...result,
+  };
+  if (json) {
+    console.log(JSON.stringify(payload, null, 2));
+    return;
+  }
+
+  console.log("DevNexus project created.");
+  console.log(`  Name: ${result.projectConfig.name}`);
+  console.log(`  Id: ${result.projectConfig.id}`);
+  console.log(`  Root: ${result.projectRoot}`);
+  console.log(`  Config: ${result.projectConfigPath}`);
+  console.log(`  Worktrees: ${result.worktreesRoot}`);
+  console.log(`  Git: ${result.git.operation}`);
+  if (result.git.remoteUrl) {
+    console.log(`  Remote: ${result.git.remoteUrl}`);
+  }
+  if (result.git.defaultBranch) {
+    console.log(`  Default branch: ${result.git.defaultBranch}`);
+  }
+  if (result.projectConfig.kanban.projectId) {
+    console.log(`  Vibe Kanban project: ${result.projectConfig.kanban.projectId}`);
+  }
+  console.log("");
+  console.log("JSON:");
+  console.log(JSON.stringify(payload, null, 2));
+}
+
+function printNexusProjectImportResult(
+  result: ImportNexusProjectResult,
+  json: boolean | undefined,
+): void {
+  const payload = {
+    ok: true,
+    ...result,
+  };
+  if (json) {
+    console.log(JSON.stringify(payload, null, 2));
+    return;
+  }
+
+  console.log("DevNexus project imported.");
+  console.log(`  Name: ${result.projectConfig.name}`);
+  console.log(`  Id: ${result.projectConfig.id}`);
+  console.log(`  Root: ${result.projectRoot}`);
+  console.log(`  Config: ${result.projectConfigPath}`);
+  console.log(`  Worktrees: ${result.worktreesRoot}`);
+  if (result.git.remoteUrl) {
+    console.log(`  Remote: ${result.git.remoteUrl}`);
+  }
+  if (result.git.defaultBranch) {
+    console.log(`  Default branch: ${result.git.defaultBranch}`);
+  }
+  if (result.projectConfig.kanban.projectId) {
+    console.log(`  Vibe Kanban project: ${result.projectConfig.kanban.projectId}`);
+  }
+  console.log("");
+  console.log("JSON:");
+  console.log(JSON.stringify(payload, null, 2));
+}
+
 function printProjectLinkTrackerResult(
   result: LinkPharoNexusProjectTrackerResult,
   json: boolean | undefined,
@@ -2061,7 +2148,7 @@ function printProjectLinkTrackerResult(
     console.log(`  Tracker repo: ${result.vibeKanbanRepoId}`);
   }
   console.log(`  Config: ${result.projectConfigPath}`);
-  console.log(`  PLexus config: ${result.plexusProjectConfigPath}`);
+  console.log(`  PLexus config: ${result.plexusProjectConfigPath ?? "(not managed)"}`);
   console.log("");
   console.log("JSON:");
   console.log(JSON.stringify(payload, null, 2));
@@ -2121,7 +2208,7 @@ function printProjectSyncTrackerResult(
   console.log(`  Tracker board: ${result.vibeKanbanProjectId}`);
   console.log(`  Tracker repo: ${result.vibeKanbanRepoId}`);
   console.log(`  Config: ${result.projectConfigPath}`);
-  console.log(`  PLexus config: ${result.plexusProjectConfigPath}`);
+  console.log(`  PLexus config: ${result.plexusProjectConfigPath ?? "(not managed)"}`);
   console.log("");
   console.log("JSON:");
   console.log(JSON.stringify(payload, null, 2));
@@ -2143,7 +2230,7 @@ function printProjectStatus(project: PharoNexusProjectStatus): void {
   console.log(
     `    Vibe Kanban repo: ${project.vibeKanbanRepoId ?? "(unregistered)"}`,
   );
-  console.log(`    PLexus config: ${project.plexusProjectConfigPath}`);
+  console.log(`    PLexus config: ${project.plexusProjectConfigPath ?? "(not managed)"}`);
   console.log(`    Worktrees: ${project.worktreesRoot}`);
 }
 
@@ -2187,6 +2274,15 @@ async function handleProjectCommand(argv: string[]): Promise<number> {
   const command = argv[1];
   if (command === "create") {
     const parsed = parseProjectCreateCommand(argv);
+    if (parsed.generic) {
+      const result = createNexusProject({
+        ...parsed,
+        vibeKanbanProjectId: parsed.trackerProjectId,
+      });
+      printNexusProjectCreateResult(result, parsed.json);
+      return 0;
+    }
+
     const result = createPharoNexusProject({
       ...parsed,
       vibeKanbanProjectId: parsed.trackerProjectId,
@@ -2216,6 +2312,15 @@ async function handleProjectCommand(argv: string[]): Promise<number> {
 
   if (command === "import") {
     const parsed = parseProjectImportCommand(argv);
+    if (parsed.generic) {
+      const result = importNexusProject({
+        ...parsed,
+        vibeKanbanProjectId: parsed.trackerProjectId,
+      });
+      printNexusProjectImportResult(result, parsed.json);
+      return 0;
+    }
+
     const result = importPharoNexusProject({
       ...parsed,
       vibeKanbanProjectId: parsed.trackerProjectId,

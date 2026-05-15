@@ -338,6 +338,55 @@ describe("PharoNexus MCP server tools", () => {
     });
   });
 
+  it("creates a generic DevNexus project through MCP without PharoNexus files", async () => {
+    const homePath = makeTempDir("pharo-nexus-home-");
+    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "GenericMcp");
+    initPharoNexusHome({ homePath });
+
+    const createResult = await callPharoNexusMcpTool(
+      "project_create",
+      {
+        homePath,
+        name: "GenericMcp",
+        root: projectRoot,
+        generic: true,
+        syncTracker: false,
+      },
+      { gitRunner: fakeGitRunner },
+    );
+    const createPayload = parseToolText(createResult);
+
+    expect(createResult.isError).toBeUndefined();
+    expect(createPayload).toMatchObject({
+      ok: true,
+      projectRoot,
+      projectConfig: {
+        id: "generic-mcp",
+        name: "GenericMcp",
+      },
+    });
+    expect(loadProjectConfig(projectRoot).extensions).toBeUndefined();
+    expect(fs.existsSync(path.join(projectRoot, plexusProjectConfigFileName))).toBe(
+      false,
+    );
+    expect(fs.existsSync(path.join(projectRoot, "AGENTS.md"))).toBe(false);
+
+    const statusPayload = parseToolText(
+      await callPharoNexusMcpTool("project_status", {
+        homePath,
+        project: "generic-mcp",
+      }),
+    );
+    expect(statusPayload).toMatchObject({
+      ok: true,
+      project: {
+        id: "generic-mcp",
+        plexusProjectConfigPath: null,
+        plexusProjectConfigExists: false,
+      },
+    });
+  });
+
   it("manages local work items through neutral MCP tool calls", async () => {
     const homePath = makeTempDir("pharo-nexus-home-");
     const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "Tracked");

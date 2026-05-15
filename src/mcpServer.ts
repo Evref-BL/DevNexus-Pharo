@@ -16,8 +16,10 @@ import { commentCodexWorktreeHandoff } from "./codexWorktreeTrackerHandoff.js";
 import { defaultPharoNexusHomePath, loadProjectConfig } from "./config.js";
 import {
   configurePharoNexusProjectTracker,
+  createNexusProject,
   createPharoNexusProject,
   getPharoNexusProjectStatus,
+  importNexusProject,
   importPharoNexusProject,
   linkPharoNexusProjectTracker,
   listPharoNexusProjects,
@@ -93,6 +95,7 @@ const tools: McpTool[] = [
         gitInit: { type: "boolean" },
         trackerProjectId: { type: "string" },
         syncTracker: { type: "boolean" },
+        generic: { type: "boolean" },
         vibeHost: { type: "string" },
         vibePort: { type: "number" },
       },
@@ -112,6 +115,7 @@ const tools: McpTool[] = [
         name: { type: "string" },
         trackerProjectId: { type: "string" },
         syncTracker: { type: "boolean" },
+        generic: { type: "boolean" },
         vibeHost: { type: "string" },
         vibePort: { type: "number" },
       },
@@ -875,6 +879,28 @@ export async function callPharoNexusMcpTool(
     switch (name) {
       case "project_create": {
         const homePath = homePathFromArgs(args);
+        if (optionalBoolean(args, "generic", "arguments")) {
+          if (optionalBoolean(args, "syncTracker", "arguments")) {
+            throw new Error("generic project_create does not support syncTracker");
+          }
+          return toolResult({
+            ok: true,
+            ...createNexusProject({
+              homePath,
+              name: requiredString(args, "name", "arguments"),
+              root: optionalString(args, "root", "arguments"),
+              from: remoteUrlFromCreateArgs(args),
+              gitInit: optionalBoolean(args, "gitInit", "arguments"),
+              vibeKanbanProjectId: optionalString(
+                args,
+                "trackerProjectId",
+                "arguments",
+              ),
+              gitRunner: context.gitRunner,
+            }),
+          });
+        }
+
         const created = createPharoNexusProject({
           homePath,
           name: requiredString(args, "name", "arguments"),
@@ -917,6 +943,27 @@ export async function callPharoNexusMcpTool(
       }
       case "project_import": {
         const homePath = homePathFromArgs(args);
+        if (optionalBoolean(args, "generic", "arguments")) {
+          if (optionalBoolean(args, "syncTracker", "arguments")) {
+            throw new Error("generic project_import does not support syncTracker");
+          }
+          return toolResult({
+            ok: true,
+            ...importNexusProject({
+              homePath,
+              root: requiredString(args, "root", "arguments"),
+              projectRoot: optionalString(args, "projectRoot", "arguments"),
+              name: optionalString(args, "name", "arguments"),
+              vibeKanbanProjectId: optionalString(
+                args,
+                "trackerProjectId",
+                "arguments",
+              ),
+              gitRunner: context.gitRunner,
+            }),
+          });
+        }
+
         const imported = importPharoNexusProject({
           homePath,
           root: requiredString(args, "root", "arguments"),

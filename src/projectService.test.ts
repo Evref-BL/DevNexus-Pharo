@@ -11,11 +11,16 @@ import {
   devNexusProjectConfigFileName,
   saveProjectConfig,
 } from "./config.js";
-import { plexusProjectConfigFileName } from "./pharoNexusExtension.js";
 import {
+  pharoNexusProjectExtensionConfigKey,
+  plexusProjectConfigFileName,
+} from "./pharoNexusExtension.js";
+import {
+  createNexusProject,
   configurePharoNexusProjectTracker,
   createPharoNexusProject,
   getPharoNexusProjectStatus,
+  importNexusProject,
   importPharoNexusProject,
   linkPharoNexusProjectTracker,
   listPharoNexusProjects,
@@ -160,6 +165,9 @@ describe("PharoNexus project service", () => {
         provider: "vibe-kanban",
         projectId: null,
       },
+      extensions: {
+        [pharoNexusProjectExtensionConfigKey]: {},
+      },
     });
     expect(
       JSON.parse(fs.readFileSync(result.plexusProjectConfigPath, "utf8")),
@@ -198,6 +206,51 @@ describe("PharoNexus project service", () => {
         projectRoot: result.projectRoot,
       },
     ]);
+  });
+
+  it("creates a generic DevNexus project without PharoNexus extension files", () => {
+    const homePath = makeTempDir("pharo-nexus-home-");
+    const projectsRoot = path.join(homePath, "custom-projects");
+    initPharoNexusHome({ homePath, projectsRoot });
+    const gitCalls: string[][] = [];
+
+    const result = createNexusProject({
+      homePath,
+      name: "PlainTool",
+      gitRunner: fakeGitRunner(gitCalls, { branch: "main" }),
+    });
+
+    expect(result).toMatchObject({
+      homePath,
+      projectRoot: path.join(projectsRoot, "PlainTool"),
+      projectConfigPath: path.join(
+        projectsRoot,
+        "PlainTool",
+        devNexusProjectConfigFileName,
+      ),
+      worktreesRoot: path.join(projectsRoot, "PlainTool", "worktrees"),
+      projectConfig: {
+        id: "plain-tool",
+        name: "PlainTool",
+      },
+      git: {
+        operation: "init",
+        remoteUrl: null,
+        defaultBranch: "main",
+      },
+    });
+    expect(fs.existsSync(path.join(result.projectRoot, plexusProjectConfigFileName))).toBe(
+      false,
+    );
+    expect(result.projectConfig.extensions).toBeUndefined();
+    expect(fs.existsSync(path.join(result.projectRoot, "AGENTS.md"))).toBe(false);
+    expect(fs.existsSync(codexConfigPath(result.projectRoot))).toBe(false);
+    expect(getPharoNexusProjectStatus({ homePath, project: "plain-tool" }).project)
+      .toMatchObject({
+        id: "plain-tool",
+        plexusProjectConfigPath: null,
+        plexusProjectConfigExists: false,
+      });
   });
 
   it("creates a managed project root and clones a remote source under it", () => {
@@ -456,6 +509,9 @@ describe("PharoNexus project service", () => {
           kanban: {
             provider: "vibe-kanban",
             projectId: null,
+          },
+          extensions: {
+            [pharoNexusProjectExtensionConfigKey]: {},
           },
         },
         null,
@@ -987,6 +1043,64 @@ describe("PharoNexus project service", () => {
     ]);
   });
 
+  it("imports a generic DevNexus project without touching the source checkout", () => {
+    const homePath = makeTempDir("pharo-nexus-home-");
+    const sourceRoot = path.join(makeTempDir("pharo-nexus-source-"), "ImportedGeneric");
+    fs.mkdirSync(path.join(sourceRoot, ".codex"), { recursive: true });
+    fs.writeFileSync(path.join(sourceRoot, "AGENTS.md"), "# Source owned\n", "utf8");
+    fs.writeFileSync(
+      codexConfigPath(sourceRoot),
+      'model = "gpt-5.3-codex"\n',
+      "utf8",
+    );
+    initPharoNexusHome({ homePath });
+    const projectRoot = path.join(homePath, "projects", "ImportedGeneric");
+    const gitCalls: string[][] = [];
+
+    const result = importNexusProject({
+      homePath,
+      root: sourceRoot,
+      projectRoot,
+      name: "ImportedGeneric",
+      gitRunner: fakeGitRunner(gitCalls, {
+        branch: "main",
+        remoteUrl: "https://github.com/example/imported-generic.git",
+      }),
+    });
+
+    expect(gitCalls).toEqual([
+      ["-C", sourceRoot, "rev-parse", "--is-inside-work-tree"],
+      ["-C", sourceRoot, "config", "--get", "remote.origin.url"],
+      ["-C", sourceRoot, "symbolic-ref", "--short", "HEAD"],
+      ["init", projectRoot],
+    ]);
+    expect(result.projectConfig).toMatchObject({
+      id: "imported-generic",
+      name: "ImportedGeneric",
+      repo: {
+        kind: "git",
+        remoteUrl: "https://github.com/example/imported-generic.git",
+        defaultBranch: "main",
+        sourceRoot,
+      },
+    });
+    expect(result.projectConfig.extensions).toBeUndefined();
+    expect(fs.existsSync(path.join(projectRoot, devNexusProjectConfigFileName))).toBe(true);
+    expect(fs.existsSync(path.join(projectRoot, plexusProjectConfigFileName))).toBe(false);
+    expect(fs.existsSync(path.join(projectRoot, "AGENTS.md"))).toBe(false);
+    expect(fs.existsSync(codexConfigPath(projectRoot))).toBe(false);
+    expect(fs.existsSync(path.join(sourceRoot, devNexusProjectConfigFileName))).toBe(false);
+    expect(fs.readFileSync(path.join(sourceRoot, "AGENTS.md"), "utf8")).toBe(
+      "# Source owned\n",
+    );
+    expect(getPharoNexusProjectStatus({ homePath, project: "imported-generic" }).project)
+      .toMatchObject({
+        id: "imported-generic",
+        plexusProjectConfigPath: null,
+        plexusProjectConfigExists: false,
+      });
+  });
+
   it("imports a repository without touching source-owned agent and Codex files", () => {
     const homePath = makeTempDir("pharo-nexus-home-");
     const sourceRoot = path.join(makeTempDir("pharo-nexus-source-"), "ImportedOwnedFiles");
@@ -1033,7 +1147,7 @@ describe("PharoNexus project service", () => {
     expect(suggestedFirstPrompt).toContain("Record durable local context in NOTES.md");
   });
 
-  it("imports an existing project config without overwriting it", () => {
+  it("imports an existing project config and marks it PharoNexus-managed", () => {
     const homePath = makeTempDir("pharo-nexus-home-");
     const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "Existing");
     fs.mkdirSync(projectRoot, { recursive: true });
@@ -1072,7 +1186,12 @@ describe("PharoNexus project service", () => {
       gitRunner: fakeGitRunner([], { branch: "main" }),
     });
 
-    expect(result.projectConfig).toEqual(existingConfig);
+    expect(result.projectConfig).toEqual({
+      ...existingConfig,
+      extensions: {
+        [pharoNexusProjectExtensionConfigKey]: {},
+      },
+    });
     expect(fs.readFileSync(result.suggestedFirstPromptPath, "utf8")).toBe(
       "# Existing project-owned prompt\n",
     );
@@ -1114,7 +1233,7 @@ describe("PharoNexus project service", () => {
       vibeKanbanRepoId: null,
       projectConfigPath: path.join(projectRoot, devNexusProjectConfigFileName),
       projectConfigExists: false,
-      plexusProjectConfigPath: path.join(projectRoot, plexusProjectConfigFileName),
+      plexusProjectConfigPath: null,
       plexusProjectConfigExists: false,
       worktreesRoot: path.join(projectRoot, "worktrees"),
       worktreesRootExists: false,

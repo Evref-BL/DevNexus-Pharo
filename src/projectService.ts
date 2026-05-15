@@ -7,8 +7,10 @@ import {
 } from "./codexConfig.js";
 import {
   pharoNexusExtension,
+  pharoNexusProjectExtensionEntry,
   pharoNexusProjectFilesFromExtensionResult,
   projectPlexusConfigPath,
+  projectUsesPharoNexusExtension,
   updatePlexusProjectKanban,
   type PlexusProjectConfig,
 } from "./pharoNexusExtension.js";
@@ -23,6 +25,7 @@ import {
   resolvePharoNexusHome,
   saveHomeConfig,
   saveProjectConfig,
+  type NexusProjectExtensionsConfig,
   type PharoNexusHomeConfig,
   type PharoNexusProjectConfig,
   type NexusProjectReference,
@@ -67,6 +70,53 @@ export interface ImportPharoNexusProjectOptions {
   name?: string;
   vibeKanbanProjectId?: string;
   gitRunner?: GitRunner;
+}
+
+export interface CreateNexusProjectOptions {
+  homePath: string;
+  name: string;
+  root?: string;
+  from?: string;
+  gitInit?: boolean;
+  vibeKanbanProjectId?: string;
+  gitRunner?: GitRunner;
+}
+
+export interface ImportNexusProjectOptions {
+  homePath: string;
+  root: string;
+  projectRoot?: string;
+  name?: string;
+  vibeKanbanProjectId?: string;
+  gitRunner?: GitRunner;
+}
+
+export interface CreateNexusProjectResult {
+  homePath: string;
+  projectRoot: string;
+  projectConfigPath: string;
+  worktreesRoot: string;
+  projectConfig: PharoNexusProjectConfig;
+  git: {
+    operation: "clone" | "init";
+    remoteUrl: string | null;
+    defaultBranch: string | null;
+    commands: GitCommandResult[];
+  };
+}
+
+export interface ImportNexusProjectResult {
+  homePath: string;
+  projectRoot: string;
+  projectConfigPath: string;
+  worktreesRoot: string;
+  projectConfig: PharoNexusProjectConfig;
+  git: {
+    operation: "import";
+    remoteUrl: string | null;
+    defaultBranch: string | null;
+    commands: GitCommandResult[];
+  };
 }
 
 export interface CreatePharoNexusProjectResult {
@@ -119,7 +169,7 @@ export interface PharoNexusProjectStatus {
   vibeKanbanRepoId: string | null;
   projectConfigPath: string;
   projectConfigExists: boolean;
-  plexusProjectConfigPath: string;
+  plexusProjectConfigPath: string | null;
   plexusProjectConfigExists: boolean;
   worktreesRoot: string;
   worktreesRootExists: boolean;
@@ -173,7 +223,7 @@ export interface ConfigurePharoNexusProjectTrackerResult {
   homePath: string;
   project: PharoNexusProjectStatus;
   projectConfigPath: string;
-  plexusProjectConfigPath: string;
+  plexusProjectConfigPath: string | null;
   projectConfig: PharoNexusProjectConfig;
   workTracking: WorkTrackingConfig;
 }
@@ -184,8 +234,8 @@ export interface LinkPharoNexusProjectTrackerResult {
   vibeKanbanRepoId: string | null;
   project: PharoNexusProjectStatus;
   projectConfigPath: string;
-  plexusProjectConfigPath: string;
-  plexusProjectConfig: PlexusProjectConfig;
+  plexusProjectConfigPath: string | null;
+  plexusProjectConfig: PlexusProjectConfig | null;
 }
 
 export interface SyncPharoNexusProjectTrackerOptions {
@@ -198,6 +248,8 @@ export interface SyncPharoNexusProjectTrackerOptions {
 
 export interface SyncPharoNexusProjectTrackerResult
   extends LinkPharoNexusProjectTrackerResult {
+  plexusProjectConfigPath: string;
+  plexusProjectConfig: PlexusProjectConfig;
   vibeKanbanRepoId: string;
   vibeKanbanRepo: RegisterVibeKanbanProjectResult;
   vibeKanbanRepoSetup: UpdateVibeKanbanProjectResult;
@@ -598,10 +650,10 @@ function statusForProjectReference(
   const projectRoot = path.resolve(reference.projectRoot);
   const config = loadProjectConfigIfExists(projectRoot);
   const resolvedProjectConfigPath = projectConfigPath(projectRoot);
-  const resolvedPlexusProjectConfigPath = projectPlexusConfigPath(
-    projectRoot,
-    config,
-  );
+  const resolvedPlexusProjectConfigPath =
+    config && projectUsesPharoNexusExtension(config)
+      ? projectPlexusConfigPath(projectRoot, config)
+      : null;
   const resolvedWorktreesRoot = projectWorktreesRootPath(projectRoot, config);
 
   return {
@@ -616,7 +668,9 @@ function statusForProjectReference(
     projectConfigPath: resolvedProjectConfigPath,
     projectConfigExists: Boolean(config),
     plexusProjectConfigPath: resolvedPlexusProjectConfigPath,
-    plexusProjectConfigExists: fs.existsSync(resolvedPlexusProjectConfigPath),
+    plexusProjectConfigExists: resolvedPlexusProjectConfigPath
+      ? fs.existsSync(resolvedPlexusProjectConfigPath)
+      : false,
     worktreesRoot: resolvedWorktreesRoot,
     worktreesRootExists: fs.existsSync(resolvedWorktreesRoot),
   };
@@ -681,6 +735,7 @@ function buildProjectConfig(
   vibeKanbanProjectId: string | null = null,
   sourceRoot?: string | null,
   forceGit = false,
+  extensions?: NexusProjectExtensionsConfig,
 ): PharoNexusProjectConfig {
   return {
     version: 1,
@@ -698,6 +753,7 @@ function buildProjectConfig(
       provider: "vibe-kanban",
       projectId: vibeKanbanProjectId,
     },
+    ...(extensions ? { extensions } : {}),
   };
 }
 
@@ -836,6 +892,7 @@ function upsertProjectReference(
 export function createPharoNexusProject(
   options: CreatePharoNexusProjectOptions,
 ): CreatePharoNexusProjectResult {
+  const pharoNexusExtensions = pharoNexusProjectExtensionEntry();
   assertNonEmptyString(options.name, "name");
   const vibeKanbanProjectId =
     optionalNonEmptyString(options.vibeKanbanProjectId, "vibeKanbanProjectId") ??
@@ -884,6 +941,8 @@ export function createPharoNexusProject(
     defaultBranch,
     vibeKanbanProjectId,
     sourceRoot ? pathForProjectConfig(projectRoot, sourceRoot) : null,
+    false,
+    pharoNexusExtensions,
   );
   const devNexusProjectConfigPath = projectConfigPath(projectRoot);
   const plexusConfigPath = projectPlexusConfigPath(projectRoot, projectConfig);
@@ -937,9 +996,97 @@ export function createPharoNexusProject(
   };
 }
 
+export function createNexusProject(
+  options: CreateNexusProjectOptions,
+): CreateNexusProjectResult {
+  assertNonEmptyString(options.name, "name");
+  const vibeKanbanProjectId =
+    optionalNonEmptyString(options.vibeKanbanProjectId, "vibeKanbanProjectId") ??
+    null;
+  if (options.from && options.gitInit) {
+    throw new PharoNexusProjectError("--from and --git-init are mutually exclusive");
+  }
+
+  const homePath = resolvePharoNexusHome(options.homePath);
+  const homeConfig = loadHomeConfig(homePath);
+  const projectId = slugify(options.name);
+  const projectRoot = path.resolve(
+    options.root ?? path.join(homeConfig.paths.projectsRoot, safeDirectoryName(options.name)),
+  );
+  ensureUniqueProject(homeConfig, projectId, projectRoot);
+
+  const creatingFromRemote = Boolean(options.from);
+  if (directoryExistsAndIsNonEmpty(projectRoot)) {
+    throw new PharoNexusProjectError(
+      `Project root already exists and is not empty: ${projectRoot}`,
+    );
+  }
+
+  const gitRunner = options.gitRunner ?? defaultGitRunner;
+  const gitCommands: GitCommandResult[] = [];
+  let sourceRoot: string | null = null;
+  if (creatingFromRemote) {
+    fs.mkdirSync(projectRoot, { recursive: true });
+    runGitCommand(gitRunner, gitCommands, ["init", projectRoot]);
+    sourceRoot = path.join(projectRoot, defaultSourceCheckoutDirectoryName);
+    runGitCommand(gitRunner, gitCommands, ["clone", options.from as string, sourceRoot]);
+  } else {
+    fs.mkdirSync(projectRoot, { recursive: true });
+    runGitCommand(gitRunner, gitCommands, ["init", projectRoot]);
+  }
+
+  const defaultBranch = detectDefaultBranch(
+    gitRunner,
+    gitCommands,
+    sourceRoot ?? projectRoot,
+  );
+  const projectConfig = buildProjectConfig(
+    options.name,
+    projectId,
+    options.from,
+    defaultBranch,
+    vibeKanbanProjectId,
+    sourceRoot ? pathForProjectConfig(projectRoot, sourceRoot) : null,
+  );
+  const devNexusProjectConfigPath = projectConfigPath(projectRoot);
+  const worktreesRoot = projectWorktreesRootPath(projectRoot, projectConfig);
+
+  assertFileDoesNotExist(devNexusProjectConfigPath);
+  saveProjectConfig(projectRoot, projectConfig);
+  scaffoldNexusProject({
+    homePath,
+    projectRoot,
+    worktreesRoot,
+    projectConfig,
+  });
+
+  homeConfig.projects.push({
+    id: projectId,
+    name: options.name,
+    projectRoot: projectRoot,
+    ...(vibeKanbanProjectId ? { vibeKanbanProjectId } : {}),
+  });
+  saveHomeConfig(homePath, homeConfig);
+
+  return {
+    homePath,
+    projectRoot,
+    projectConfigPath: devNexusProjectConfigPath,
+    worktreesRoot,
+    projectConfig,
+    git: {
+      operation: creatingFromRemote ? "clone" : "init",
+      remoteUrl: options.from ?? null,
+      defaultBranch,
+      commands: gitCommands,
+    },
+  };
+}
+
 export function importPharoNexusProject(
   options: ImportPharoNexusProjectOptions,
 ): ImportPharoNexusProjectResult {
+  const pharoNexusExtensions = pharoNexusProjectExtensionEntry();
   const homePath = resolvePharoNexusHome(options.homePath);
   const homeConfig = loadHomeConfig(homePath);
   const vibeKanbanProjectId =
@@ -978,16 +1125,24 @@ export function importPharoNexusProject(
   }
 
   const projectConfig =
-    existingProjectConfig ??
-    buildProjectConfig(
-      projectName,
-      projectId,
-      remoteUrl ?? undefined,
-      defaultBranch,
-      vibeKanbanProjectId,
-      pathForProjectConfig(projectRoot, sourceRoot),
-      true,
-    );
+    existingProjectConfig
+      ? {
+          ...existingProjectConfig,
+          extensions: {
+            ...existingProjectConfig.extensions,
+            ...pharoNexusExtensions,
+          },
+        }
+      : buildProjectConfig(
+          projectName,
+          projectId,
+          remoteUrl ?? undefined,
+          defaultBranch,
+          vibeKanbanProjectId,
+          pathForProjectConfig(projectRoot, sourceRoot),
+          true,
+          pharoNexusExtensions,
+        );
   if (existingProjectConfig && vibeKanbanProjectId) {
     projectConfig.kanban = {
       ...projectConfig.kanban,
@@ -996,7 +1151,11 @@ export function importPharoNexusProject(
   }
 
   const devNexusProjectConfigPath = projectConfigPath(projectRoot);
-  if (!existingProjectConfig || vibeKanbanProjectId) {
+  if (
+    !existingProjectConfig ||
+    vibeKanbanProjectId ||
+    !projectUsesPharoNexusExtension(existingProjectConfig)
+  ) {
     saveProjectConfig(projectRoot, projectConfig);
   }
 
@@ -1039,6 +1198,103 @@ export function importPharoNexusProject(
     projectConfig,
     plexusProjectConfig: pharoFiles.plexusProjectConfig,
     codex,
+    git: {
+      operation: "import",
+      remoteUrl,
+      defaultBranch,
+      commands: gitCommands,
+    },
+  };
+}
+
+export function importNexusProject(
+  options: ImportNexusProjectOptions,
+): ImportNexusProjectResult {
+  const homePath = resolvePharoNexusHome(options.homePath);
+  const homeConfig = loadHomeConfig(homePath);
+  const vibeKanbanProjectId =
+    optionalNonEmptyString(options.vibeKanbanProjectId, "vibeKanbanProjectId") ??
+    null;
+  const sourceRoot = path.resolve(options.root);
+  if (!fs.existsSync(sourceRoot) || !fs.statSync(sourceRoot).isDirectory()) {
+    throw new PharoNexusProjectError(
+      `Project source root must be an existing directory: ${sourceRoot}`,
+    );
+  }
+
+  const gitRunner = options.gitRunner ?? defaultGitRunner;
+  const gitCommands: GitCommandResult[] = [];
+  assertGitRepository(gitRunner, gitCommands, sourceRoot);
+  const remoteUrl = detectOriginUrl(gitRunner, gitCommands, sourceRoot);
+  const defaultBranch = detectDefaultBranch(gitRunner, gitCommands, sourceRoot);
+  const existingProjectConfig = loadProjectConfigIfExists(sourceRoot);
+  const projectName =
+    existingProjectConfig?.name ?? options.name ?? path.basename(sourceRoot);
+  const projectId = existingProjectConfig?.id ?? slugify(projectName);
+  const projectRoot = existingProjectConfig
+    ? sourceRoot
+    : path.resolve(
+        options.projectRoot ??
+          defaultImportedProjectRoot(homeConfig, projectName, sourceRoot),
+      );
+  ensureUniqueProject(homeConfig, projectId, projectRoot);
+  if (!existingProjectConfig && directoryExistsAndIsNonEmpty(projectRoot)) {
+    throw new PharoNexusProjectError(
+      `Project root already exists and is not empty: ${projectRoot}`,
+    );
+  }
+  if (!existingProjectConfig) {
+    fs.mkdirSync(projectRoot, { recursive: true });
+    runGitCommand(gitRunner, gitCommands, ["init", projectRoot]);
+  }
+
+  const projectConfig =
+    existingProjectConfig ??
+    buildProjectConfig(
+      projectName,
+      projectId,
+      remoteUrl ?? undefined,
+      defaultBranch,
+      vibeKanbanProjectId,
+      pathForProjectConfig(projectRoot, sourceRoot),
+      true,
+    );
+  if (existingProjectConfig && vibeKanbanProjectId) {
+    projectConfig.kanban = {
+      ...projectConfig.kanban,
+      projectId: vibeKanbanProjectId,
+    };
+  }
+
+  const devNexusProjectConfigPath = projectConfigPath(projectRoot);
+  if (!existingProjectConfig || vibeKanbanProjectId) {
+    saveProjectConfig(projectRoot, projectConfig);
+  }
+
+  const worktreesRoot = projectWorktreesRootPath(projectRoot, projectConfig);
+  scaffoldNexusProject({
+    homePath,
+    projectRoot,
+    worktreesRoot,
+    projectConfig,
+  });
+
+  homeConfig.projects.push({
+    id: projectConfig.id,
+    name: projectConfig.name,
+    projectRoot: projectRoot,
+    ...(projectConfig.kanban.projectId
+      ? { vibeKanbanProjectId: projectConfig.kanban.projectId }
+      : {}),
+  });
+  saveHomeConfig(homePath, homeConfig);
+
+  return {
+    homePath,
+    projectRoot,
+    projectConfigPath: devNexusProjectConfigPath,
+    worktreesRoot,
+    projectConfig,
     git: {
       operation: "import",
       remoteUrl,
@@ -1123,13 +1379,17 @@ export function linkPharoNexusProjectTracker(
     },
   };
   const projectConfigFilePath = saveProjectConfig(projectRoot, updatedProjectConfig);
-  const plexusConfigPath = projectPlexusConfigPath(projectRoot, updatedProjectConfig);
-  const plexusProjectConfig = updatePlexusProjectKanban(
-    plexusConfigPath,
-    updatedProjectConfig.name,
-    updatedProjectConfig.id,
-    vibeKanbanProjectId,
-  );
+  const plexusConfigPath = projectUsesPharoNexusExtension(updatedProjectConfig)
+    ? projectPlexusConfigPath(projectRoot, updatedProjectConfig)
+    : null;
+  const plexusProjectConfig = plexusConfigPath
+    ? updatePlexusProjectKanban(
+        plexusConfigPath,
+        updatedProjectConfig.name,
+        updatedProjectConfig.id,
+        vibeKanbanProjectId,
+      )
+    : null;
 
   const reference = upsertProjectReference(
     homeConfig,
@@ -1181,10 +1441,9 @@ export function configurePharoNexusProjectTracker(
     homePath,
     project: statusForProjectReference(reference),
     projectConfigPath: projectConfigFilePath,
-    plexusProjectConfigPath: projectPlexusConfigPath(
-      projectRoot,
-      updatedProjectConfig,
-    ),
+    plexusProjectConfigPath: projectUsesPharoNexusExtension(updatedProjectConfig)
+      ? projectPlexusConfigPath(projectRoot, updatedProjectConfig)
+      : null,
     projectConfig: updatedProjectConfig,
     workTracking,
   };
@@ -1202,6 +1461,11 @@ export async function syncPharoNexusProjectTracker(
     project: options.project,
   }).project;
   const initialProjectConfig = loadProjectConfig(status.projectRoot);
+  if (!projectUsesPharoNexusExtension(initialProjectConfig)) {
+    throw new PharoNexusProjectError(
+      "project sync-tracker requires a PharoNexus-managed project",
+    );
+  }
   const sourceRoot = resolveProjectSourceRoot(
     status.projectRoot,
     initialProjectConfig,
@@ -1247,6 +1511,11 @@ export async function syncPharoNexusProjectTracker(
     project: status.projectRoot,
     trackerProjectId: vibeKanbanBoardRef.id,
   });
+  if (!linked.plexusProjectConfigPath || !linked.plexusProjectConfig) {
+    throw new PharoNexusProjectError(
+      "project sync-tracker requires a PharoNexus-managed project",
+    );
+  }
   const updatedHomeConfig = loadHomeConfig(homePath);
   const projectConfig = loadProjectConfig(status.projectRoot);
   const reference = upsertProjectReference(
@@ -1260,6 +1529,8 @@ export async function syncPharoNexusProjectTracker(
 
   return {
     ...linked,
+    plexusProjectConfigPath: linked.plexusProjectConfigPath,
+    plexusProjectConfig: linked.plexusProjectConfig,
     vibeKanbanProjectId: vibeKanbanBoardRef.id,
     vibeKanbanRepoId: vibeKanbanProject.id,
     project: statusForProjectReference(reference),

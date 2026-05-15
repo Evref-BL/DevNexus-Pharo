@@ -13,7 +13,10 @@ import {
   saveHomeConfig,
   saveProjectConfig,
 } from "./config.js";
-import { plexusProjectConfigFileName } from "./pharoNexusExtension.js";
+import {
+  pharoNexusProjectExtensionConfigKey,
+  plexusProjectConfigFileName,
+} from "./pharoNexusExtension.js";
 import type { GitCommandResult, GitRunner } from "./projectService.js";
 import { createWorkItemService } from "./workItemService.js";
 
@@ -62,6 +65,7 @@ describe("pharo-nexus cli", () => {
     expect(usage()).toContain("--interactive");
     expect(usage()).toContain("--tracker-project-id");
     expect(usage()).toContain("--sync-tracker");
+    expect(usage()).toContain("--generic");
     expect(usage()).toContain("--repository-owner");
     expect(usage()).toContain("--repository-name");
     expect(usage()).toContain("--repository-id");
@@ -138,6 +142,42 @@ describe("pharo-nexus cli", () => {
       ok: true,
       homePath,
     });
+  });
+
+  it("creates a generic DevNexus project from the CLI", async () => {
+    const homePath = path.join(makeTempDir("pharo-nexus-parent-"), "home");
+    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "GenericCli");
+    initHome(homePath);
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+
+    await expect(
+      main([
+        "project",
+        "create",
+        "GenericCli",
+        "--root",
+        projectRoot,
+        "--generic",
+        "--home",
+        homePath,
+        "--json",
+      ]),
+    ).resolves.toBe(0);
+
+    expect(JSON.parse(String(log.mock.calls[0]?.[0]))).toMatchObject({
+      ok: true,
+      projectRoot,
+      projectConfig: {
+        id: "generic-cli",
+        name: "GenericCli",
+      },
+    });
+    expect(loadProjectConfig(projectRoot).extensions).toBeUndefined();
+    expect(fs.existsSync(path.join(projectRoot, plexusProjectConfigFileName))).toBe(
+      false,
+    );
+    expect(fs.existsSync(path.join(projectRoot, "AGENTS.md"))).toBe(false);
+    expect(fs.existsSync(codexConfigPath(projectRoot))).toBe(false);
   });
 
   it("initializes Codex MCP config for a workspace while preserving existing settings", async () => {
@@ -622,6 +662,9 @@ describe("pharo-nexus cli", () => {
         provider: "vibe-kanban",
         projectId: "kanban-listed",
       },
+      extensions: {
+        [pharoNexusProjectExtensionConfigKey]: {},
+      },
     });
     fs.writeFileSync(
       path.join(projectRoot, plexusProjectConfigFileName),
@@ -694,6 +737,9 @@ describe("pharo-nexus cli", () => {
       kanban: {
         provider: "vibe-kanban",
         projectId: null,
+      },
+      extensions: {
+        [pharoNexusProjectExtensionConfigKey]: {},
       },
     });
     fs.writeFileSync(
@@ -902,6 +948,9 @@ describe("pharo-nexus cli", () => {
         provider: "vibe-kanban",
         projectId: null,
       },
+      extensions: {
+        [pharoNexusProjectExtensionConfigKey]: {},
+      },
     });
     const log = vi.spyOn(console, "log").mockImplementation(() => {});
 
@@ -969,6 +1018,9 @@ describe("pharo-nexus cli", () => {
       kanban: {
         provider: "vibe-kanban",
         projectId: null,
+      },
+      extensions: {
+        [pharoNexusProjectExtensionConfigKey]: {},
       },
     });
     const fetchMock = vi.fn(

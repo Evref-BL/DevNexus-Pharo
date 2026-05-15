@@ -29,6 +29,22 @@ export interface PharoNexusProjectExtensionConfig {
   plexusProjectConfig?: string;
 }
 
+export function pharoNexusProjectExtensionEntry(
+  config: PharoNexusProjectExtensionConfig = {},
+): Record<typeof pharoNexusProjectExtensionConfigKey, Record<string, unknown>> {
+  return {
+    [pharoNexusProjectExtensionConfigKey]: { ...config },
+  };
+}
+
+export function projectUsesPharoNexusExtension(
+  projectConfig: Pick<PharoNexusProjectConfig, "extensions"> | undefined,
+): boolean {
+  return Boolean(
+    projectConfig?.extensions?.[pharoNexusProjectExtensionConfigKey],
+  );
+}
+
 export interface InstallPharoNexusProjectFilesOptions {
   projectRoot: string;
   projectConfig: PharoNexusProjectConfig;
