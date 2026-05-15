@@ -8,6 +8,7 @@ import {
   prepareCodexWorktree,
   type CodexWorktreeState,
 } from "./codexWorktreeService.js";
+import { commentCodexWorktreeHandoff } from "./codexWorktreeTrackerHandoff.js";
 import { defaultPharoNexusHomePath, loadProjectConfig } from "./config.js";
 import {
   createPharoNexusProject,
@@ -178,6 +179,7 @@ const tools: McpTool[] = [
         worktreeName: { type: "string" },
         baseRef: { type: "string" },
         workItemId: { type: "string" },
+        commentWorkItem: { type: "boolean" },
       },
       required: ["project"],
       additionalProperties: false,
@@ -218,6 +220,7 @@ const tools: McpTool[] = [
         homePath: { type: "string" },
         id: { type: "string" },
         removeWorktree: { type: "boolean" },
+        commentWorkItem: { type: "boolean" },
       },
       required: ["id"],
       additionalProperties: false,
@@ -838,17 +841,28 @@ export async function callPharoNexusMcpTool(
         });
       case "codex_worktree_prepare": {
         const workItemId = optionalString(args, "workItemId", "arguments");
+        const homePath = homePathFromArgs(args);
+        const prepared = prepareCodexWorktree({
+          homePath,
+          project: requiredString(args, "project", "arguments"),
+          branchName: optionalString(args, "branchName", "arguments"),
+          worktreeName: optionalString(args, "worktreeName", "arguments"),
+          baseRef: optionalString(args, "baseRef", "arguments"),
+          workItem: workItemId ? { id: workItemId } : undefined,
+          gitRunner: context.gitRunner,
+        });
+        const trackerComment = optionalBoolean(args, "commentWorkItem", "arguments")
+          ? await commentCodexWorktreeHandoff({
+              homePath,
+              metadataPath: prepared.metadataPath,
+              metadataRecord: prepared.metadataRecord,
+              event: "prepared",
+            })
+          : undefined;
         return toolResult({
           ok: true,
-          ...prepareCodexWorktree({
-            homePath: homePathFromArgs(args),
-            project: requiredString(args, "project", "arguments"),
-            branchName: optionalString(args, "branchName", "arguments"),
-            worktreeName: optionalString(args, "worktreeName", "arguments"),
-            baseRef: optionalString(args, "baseRef", "arguments"),
-            workItem: workItemId ? { id: workItemId } : undefined,
-            gitRunner: context.gitRunner,
-          }),
+          ...prepared,
+          ...(trackerComment ? { trackerComment } : {}),
         });
       }
       case "codex_worktree_list":
@@ -868,16 +882,29 @@ export async function callPharoNexusMcpTool(
             id: requiredString(args, "id", "arguments"),
           }),
         });
-      case "codex_worktree_archive":
+      case "codex_worktree_archive": {
+        const homePath = homePathFromArgs(args);
+        const archived = archiveCodexWorktree({
+          homePath,
+          id: requiredString(args, "id", "arguments"),
+          removeWorktree: optionalBoolean(args, "removeWorktree", "arguments"),
+          gitRunner: context.gitRunner,
+        });
+        const trackerComment = optionalBoolean(args, "commentWorkItem", "arguments")
+          ? await commentCodexWorktreeHandoff({
+              homePath,
+              metadataPath: archived.metadataPath,
+              metadataRecord: archived.metadataRecord,
+              event: "archived",
+              removedWorktree: archived.removedWorktree,
+            })
+          : undefined;
         return toolResult({
           ok: true,
-          ...archiveCodexWorktree({
-            homePath: homePathFromArgs(args),
-            id: requiredString(args, "id", "arguments"),
-            removeWorktree: optionalBoolean(args, "removeWorktree", "arguments"),
-            gitRunner: context.gitRunner,
-          }),
+          ...archived,
+          ...(trackerComment ? { trackerComment } : {}),
         });
+      }
       case "work_item_create": {
         const service = createWorkItemService({ homePath: homePathFromArgs(args) });
         return toolResult({

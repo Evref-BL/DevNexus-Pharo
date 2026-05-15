@@ -766,6 +766,20 @@ describe("PharoNexus MCP server tools", () => {
       { gitRunner },
     );
     expect(createResult.isError).toBeUndefined();
+    saveProjectConfig(projectRoot, {
+      ...loadProjectConfig(projectRoot),
+      workTracking: {
+        provider: "local",
+        storePath: path.join(".tracker", "items.json"),
+      },
+    });
+    const createWorkItemPayload = parseToolText(
+      await callPharoNexusMcpTool("work_item_create", {
+        homePath,
+        project: "codex-mcp",
+        title: "FCD-900",
+      }),
+    ) as { workItem: { id: string } };
 
     const preparePayload = parseToolText(
       await callPharoNexusMcpTool(
@@ -775,7 +789,8 @@ describe("PharoNexus MCP server tools", () => {
           project: "codex-mcp",
           branchName: "codex/fcd-900",
           baseRef: "main",
-          workItemId: "FCD-900",
+          workItemId: createWorkItemPayload.workItem.id,
+          commentWorkItem: true,
         },
         { gitRunner },
       ),
@@ -791,8 +806,12 @@ describe("PharoNexus MCP server tools", () => {
       metadataRecord: {
         id: "codex-mcp:codex/fcd-900",
         workItem: {
-          id: "FCD-900",
+          id: createWorkItemPayload.workItem.id,
         },
+      },
+      trackerComment: {
+        id: "local-comment-1",
+        body: expect.stringContaining("Codex worktree prepared."),
       },
     });
 
@@ -850,6 +869,7 @@ describe("PharoNexus MCP server tools", () => {
           homePath,
           id: "codex-mcp:codex/fcd-900",
           removeWorktree: true,
+          commentWorkItem: true,
         },
         { gitRunner },
       ),
@@ -860,6 +880,10 @@ describe("PharoNexus MCP server tools", () => {
       metadataRecord: {
         id: "codex-mcp:codex/fcd-900",
         state: "archived",
+      },
+      trackerComment: {
+        id: "local-comment-2",
+        body: expect.stringContaining("Codex worktree archived."),
       },
     });
     expect(calls).toEqual(

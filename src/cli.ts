@@ -22,6 +22,7 @@ import {
   type ListCodexWorktreesResult,
   type PrepareCodexWorktreeResult,
 } from "./codexWorktreeService.js";
+import { commentCodexWorktreeHandoff } from "./codexWorktreeTrackerHandoff.js";
 import {
   createDefaultHomeConfig,
   defaultPharoNexusHomePath,
@@ -56,6 +57,7 @@ import {
   type GitRunner,
   type SyncPharoNexusProjectTrackerResult,
 } from "./projectService.js";
+import type { WorkComment } from "./workTrackingTypes.js";
 import {
   runPharoNexusMcpServer,
   runPharoNexusMcpStdioServer,
@@ -159,11 +161,13 @@ export function usage(): string {
     "  --worktree-name <name>",
     "  --base-ref <ref>",
     "  --work-item-id <id>",
+    "  --comment-work-item",
     "  --json",
     "",
     "Options for codex worktree archive:",
     "  --home <path>",
     "  --remove-worktree",
+    "  --comment-work-item",
     "  --json",
     "",
     "Options for project create:",
@@ -493,6 +497,7 @@ interface ParsedCodexWorktreePrepareCommand {
   worktreeName?: string;
   baseRef?: string;
   workItemId?: string;
+  commentWorkItem?: boolean;
   json?: boolean;
 }
 
@@ -501,6 +506,7 @@ interface ParsedCodexWorktreeArchiveCommand {
   id: string;
   homePath: string;
   removeWorktree?: boolean;
+  commentWorkItem?: boolean;
   json?: boolean;
 }
 
@@ -685,6 +691,16 @@ function parseCodexWorktreeCommand(argv: string[]): ParsedCodexCommand {
         }
         (parsed as Partial<ParsedCodexWorktreePrepareCommand>).workItemId = next();
         break;
+      case "--comment-work-item":
+        if (action !== "prepare" && action !== "archive") {
+          throw new Error("--comment-work-item is only supported for codex worktree prepare or archive");
+        }
+        (
+          parsed as
+            | Partial<ParsedCodexWorktreePrepareCommand>
+            | Partial<ParsedCodexWorktreeArchiveCommand>
+        ).commentWorkItem = true;
+        break;
       case "--remove-worktree":
         if (action !== "archive") {
           throw new Error("--remove-worktree is only supported for codex worktree archive");
@@ -755,8 +771,9 @@ function printCodexDoctorResult(
 function printCodexWorktreePrepareResult(
   result: PrepareCodexWorktreeResult,
   json: boolean | undefined,
+  trackerComment?: WorkComment,
 ): void {
-  const payload = { ok: true, ...result };
+  const payload = { ok: true, ...result, ...(trackerComment ? { trackerComment } : {}) };
   if (json) {
     console.log(JSON.stringify(payload, null, 2));
     return;
@@ -767,13 +784,17 @@ function printCodexWorktreePrepareResult(
   console.log(`  Worktree: ${result.worktreePath}`);
   console.log(`  Branch: ${result.branchName}`);
   console.log(`  Metadata: ${result.metadataPath}`);
+  if (trackerComment) {
+    console.log(`  Tracker comment: ${trackerComment.id}`);
+  }
 }
 
 function printCodexWorktreeArchiveResult(
   result: ArchiveCodexWorktreeResult,
   json: boolean | undefined,
+  trackerComment?: WorkComment,
 ): void {
-  const payload = { ok: true, ...result };
+  const payload = { ok: true, ...result, ...(trackerComment ? { trackerComment } : {}) };
   if (json) {
     console.log(JSON.stringify(payload, null, 2));
     return;
@@ -784,6 +805,9 @@ function printCodexWorktreeArchiveResult(
   console.log(`  Worktree: ${result.metadataRecord.worktreePath}`);
   console.log(`  Removed worktree: ${result.removedWorktree ? "yes" : "no"}`);
   console.log(`  Metadata: ${result.metadataPath}`);
+  if (trackerComment) {
+    console.log(`  Tracker comment: ${trackerComment.id}`);
+  }
 }
 
 function printCodexWorktreeListResult(
@@ -857,7 +881,15 @@ async function handleCodexCommand(
       workItem: parsed.workItemId ? { id: parsed.workItemId } : undefined,
       gitRunner: context.gitRunner,
     });
-    printCodexWorktreePrepareResult(result, parsed.json);
+    const trackerComment = parsed.commentWorkItem
+      ? await commentCodexWorktreeHandoff({
+          homePath: parsed.homePath,
+          metadataPath: result.metadataPath,
+          metadataRecord: result.metadataRecord,
+          event: "prepared",
+        })
+      : undefined;
+    printCodexWorktreePrepareResult(result, parsed.json, trackerComment);
     return 0;
   }
 
@@ -868,7 +900,16 @@ async function handleCodexCommand(
       removeWorktree: parsed.removeWorktree,
       gitRunner: context.gitRunner,
     });
-    printCodexWorktreeArchiveResult(result, parsed.json);
+    const trackerComment = parsed.commentWorkItem
+      ? await commentCodexWorktreeHandoff({
+          homePath: parsed.homePath,
+          metadataPath: result.metadataPath,
+          metadataRecord: result.metadataRecord,
+          event: "archived",
+          removedWorktree: result.removedWorktree,
+        })
+      : undefined;
+    printCodexWorktreeArchiveResult(result, parsed.json, trackerComment);
     return 0;
   }
 

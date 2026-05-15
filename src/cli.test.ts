@@ -14,6 +14,7 @@ import {
   saveProjectConfig,
 } from "./config.js";
 import type { GitCommandResult, GitRunner } from "./projectService.js";
+import { createWorkItemService } from "./workItemService.js";
 
 const tempDirs: string[] = [];
 
@@ -60,6 +61,7 @@ describe("pharo-nexus cli", () => {
     expect(usage()).toContain("--no-open-browser");
     expect(usage()).toContain("--state <active|archived>");
     expect(usage()).toContain("--work-item-id");
+    expect(usage()).toContain("--comment-work-item");
     expect(usage()).toContain("--remove-worktree");
     expect(usage()).toContain("--json");
   });
@@ -200,6 +202,17 @@ describe("pharo-nexus cli", () => {
         provider: "vibe-kanban",
         projectId: null,
       },
+      workTracking: {
+        provider: "local",
+        storePath: path.join(".tracker", "items.json"),
+      },
+    });
+    const workItem = await createWorkItemService({
+      homePath,
+      now: () => "2026-05-15T11:10:00.000Z",
+    }).createWorkItem({
+      project: "prepared",
+      title: "FCD-900",
     });
     fs.writeFileSync(path.join(projectRoot, "AGENTS.md"), "# Agent guide\n", "utf8");
     fs.mkdirSync(path.dirname(codexConfigPath(projectRoot)), { recursive: true });
@@ -220,7 +233,8 @@ describe("pharo-nexus cli", () => {
           "--branch",
           "codex/fcd-900",
           "--work-item-id",
-          "FCD-900",
+          workItem.id,
+          "--comment-work-item",
           "--json",
         ],
         context,
@@ -236,8 +250,12 @@ describe("pharo-nexus cli", () => {
       metadataRecord: {
         id: "prepared:codex/fcd-900",
         workItem: {
-          id: "FCD-900",
+          id: workItem.id,
         },
+      },
+      trackerComment: {
+        id: "local-comment-1",
+        body: expect.stringContaining("Codex worktree prepared."),
       },
     });
 
@@ -308,6 +326,7 @@ describe("pharo-nexus cli", () => {
           "--home",
           homePath,
           "--remove-worktree",
+          "--comment-work-item",
           "--json",
         ],
         context,
@@ -321,7 +340,14 @@ describe("pharo-nexus cli", () => {
         id: "prepared:codex/fcd-900",
         state: "archived",
       },
+      trackerComment: {
+        id: "local-comment-2",
+        body: expect.stringContaining("Codex worktree archived."),
+      },
     });
+    expect(JSON.parse(String(log.mock.calls[3]?.[0])).trackerComment.body).toContain(
+      "Removed worktree: yes",
+    );
     expect(fs.existsSync(worktreePath)).toBe(false);
     expect(calls).toEqual(
       expect.arrayContaining([
