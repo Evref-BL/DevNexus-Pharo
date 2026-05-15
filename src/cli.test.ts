@@ -13,6 +13,7 @@ import {
   saveHomeConfig,
   saveProjectConfig,
 } from "./config.js";
+import type { GitCommandResult, GitRunner } from "./projectService.js";
 
 const tempDirs: string[] = [];
 
@@ -39,6 +40,8 @@ describe("pharo-nexus cli", () => {
     expect(usage()).toContain("pharo-nexus mcp");
     expect(usage()).toContain("pharo-nexus codex init <workspace>");
     expect(usage()).toContain("pharo-nexus codex doctor <workspace>");
+    expect(usage()).toContain("pharo-nexus codex worktree prepare <project>");
+    expect(usage()).toContain("pharo-nexus codex worktree archive <id>");
     expect(usage()).toContain("pharo-nexus project create <name>");
     expect(usage()).toContain("pharo-nexus project link-tracker <id-or-path>");
     expect(usage()).toContain("pharo-nexus project sync-tracker <id-or-path>");
@@ -53,6 +56,8 @@ describe("pharo-nexus cli", () => {
     expect(usage()).toContain("--tracker-project-id");
     expect(usage()).toContain("--sync-tracker");
     expect(usage()).toContain("--no-open-browser");
+    expect(usage()).toContain("--work-item-id");
+    expect(usage()).toContain("--remove-worktree");
     expect(usage()).toContain("--json");
   });
 
@@ -162,6 +167,118 @@ describe("pharo-nexus cli", () => {
         },
       ],
     });
+  });
+
+  it("prepares and archives Codex worktrees from the CLI", async () => {
+    const homePath = path.join(makeTempDir("pharo-nexus-parent-"), "home");
+    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "Prepared");
+    initHome(homePath);
+    fs.mkdirSync(projectRoot, { recursive: true });
+    const homeConfig = loadHomeConfig(homePath);
+    homeConfig.projects.push({
+      id: "prepared",
+      name: "Prepared",
+      plexusProjectRoot: projectRoot,
+    });
+    saveHomeConfig(homePath, homeConfig);
+    saveProjectConfig(projectRoot, {
+      version: 1,
+      id: "prepared",
+      name: "Prepared",
+      home: null,
+      repo: {
+        kind: "local",
+        remoteUrl: null,
+        defaultBranch: "main",
+      },
+      plexusProjectConfig: plexusProjectConfigFileName,
+      worktreesRoot: "worktrees",
+      kanban: {
+        provider: "vibe-kanban",
+        projectId: null,
+      },
+    });
+    fs.writeFileSync(path.join(projectRoot, "AGENTS.md"), "# Agent guide\n", "utf8");
+    fs.mkdirSync(path.dirname(codexConfigPath(projectRoot)), { recursive: true });
+    fs.writeFileSync(codexConfigPath(projectRoot), 'model = "gpt-5.3-codex"\n', "utf8");
+    const calls: Array<{ args: string[]; cwd?: string }> = [];
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    const context = { gitRunner: fakeWorktreeGitRunner(calls) };
+
+    await expect(
+      main(
+        [
+          "codex",
+          "worktree",
+          "prepare",
+          "prepared",
+          "--home",
+          homePath,
+          "--branch",
+          "codex/fcd-900",
+          "--work-item-id",
+          "FCD-900",
+          "--json",
+        ],
+        context,
+      ),
+    ).resolves.toBe(0);
+    const worktreePath = path.join(projectRoot, "worktrees", "codex-fcd-900");
+    expect(JSON.parse(String(log.mock.calls[0]?.[0]))).toMatchObject({
+      ok: true,
+      projectRoot,
+      sourceRoot: projectRoot,
+      worktreePath,
+      branchName: "codex/fcd-900",
+      metadataRecord: {
+        id: "prepared:codex/fcd-900",
+        workItem: {
+          id: "FCD-900",
+        },
+      },
+    });
+
+    await expect(
+      main(
+        [
+          "codex",
+          "worktree",
+          "archive",
+          "prepared:codex/fcd-900",
+          "--home",
+          homePath,
+          "--remove-worktree",
+          "--json",
+        ],
+        context,
+      ),
+    ).resolves.toBe(0);
+
+    expect(JSON.parse(String(log.mock.calls[1]?.[0]))).toMatchObject({
+      ok: true,
+      removedWorktree: true,
+      metadataRecord: {
+        id: "prepared:codex/fcd-900",
+        state: "archived",
+      },
+    });
+    expect(fs.existsSync(worktreePath)).toBe(false);
+    expect(calls).toEqual(
+      expect.arrayContaining([
+        {
+          cwd: projectRoot,
+          args: ["worktree", "add", "-b", "codex/fcd-900", worktreePath],
+        },
+        {
+          cwd: worktreePath,
+          args: ["rev-parse", "--git-path", "info/exclude"],
+        },
+        {
+          cwd: projectRoot,
+          args: ["worktree", "remove", worktreePath],
+        },
+      ]),
+    );
   });
 
   it("uses PHARO_NEXUS_HOME for status when no home is passed", async () => {
@@ -681,4 +798,38 @@ function gitIsAvailable(): boolean {
   });
 
   return result.status === 0;
+}
+
+function fakeWorktreeGitRunner(
+  calls: Array<{ args: string[]; cwd?: string }>,
+): GitRunner {
+  return (args: readonly string[], cwd?: string): GitCommandResult => {
+    const argsArray = [...args];
+    calls.push({ args: argsArray, cwd });
+    if (argsArray[0] === "worktree" && argsArray[1] === "add") {
+      fs.mkdirSync(argsArray[4], { recursive: true });
+    }
+    if (argsArray[0] === "worktree" && argsArray[1] === "remove") {
+      fs.rmSync(argsArray[2], { recursive: true, force: true });
+    }
+    if (
+      argsArray[0] === "rev-parse" &&
+      argsArray[1] === "--git-path" &&
+      argsArray[2] === "info/exclude"
+    ) {
+      return {
+        args: argsArray,
+        stdout: `${path.join(cwd ?? "", ".git", "info", "exclude")}\n`,
+        stderr: "",
+        exitCode: 0,
+      };
+    }
+
+    return {
+      args: argsArray,
+      stdout: "",
+      stderr: "",
+      exitCode: 0,
+    };
+  };
 }

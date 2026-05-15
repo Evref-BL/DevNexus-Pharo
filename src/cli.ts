@@ -12,6 +12,12 @@ import {
   type InitCodexWorkspaceResult,
 } from "./codexConfig.js";
 import {
+  archiveCodexWorktree,
+  prepareCodexWorktree,
+  type ArchiveCodexWorktreeResult,
+  type PrepareCodexWorktreeResult,
+} from "./codexWorktreeService.js";
+import {
   createDefaultHomeConfig,
   defaultPharoNexusHomePath,
   initPharoNexusHome,
@@ -42,6 +48,7 @@ import {
   type LinkPharoNexusProjectTrackerResult,
   type ListPharoNexusProjectsResult,
   type PharoNexusProjectStatus,
+  type GitRunner,
   type SyncPharoNexusProjectTrackerResult,
 } from "./projectService.js";
 import {
@@ -72,6 +79,8 @@ export function usage(): string {
     "  pharo-nexus mcp-stdio",
     "  pharo-nexus codex init <workspace> [options]",
     "  pharo-nexus codex doctor <workspace> [options]",
+    "  pharo-nexus codex worktree prepare <project> [options]",
+    "  pharo-nexus codex worktree archive <id> [options]",
     "  pharo-nexus project create <name> [--from <git-url> | --git-init] [options]",
     "  pharo-nexus project import <path> [--name <name>] [options]",
     "  pharo-nexus project link-tracker <id-or-path> --tracker-project-id <id> [options]",
@@ -125,6 +134,19 @@ export function usage(): string {
     "Options for codex doctor:",
     "  --home <path>",
     "  --timeout-ms <ms>",
+    "  --json",
+    "",
+    "Options for codex worktree prepare:",
+    "  --home <path>",
+    "  --branch <name>",
+    "  --worktree-name <name>",
+    "  --base-ref <ref>",
+    "  --work-item-id <id>",
+    "  --json",
+    "",
+    "Options for codex worktree archive:",
+    "  --home <path>",
+    "  --remove-worktree",
     "  --json",
     "",
     "Options for project create:",
@@ -437,7 +459,7 @@ async function handleMcpCommand(argv: string[]): Promise<number> {
   return 0;
 }
 
-interface ParsedCodexCommand {
+interface ParsedCodexWorkspaceCommand {
   command: "init" | "doctor";
   workspacePath: string;
   homePath: string;
@@ -446,17 +468,45 @@ interface ParsedCodexCommand {
   timeoutMs?: number;
 }
 
+interface ParsedCodexWorktreePrepareCommand {
+  command: "worktree_prepare";
+  project: string;
+  homePath: string;
+  branchName?: string;
+  worktreeName?: string;
+  baseRef?: string;
+  workItemId?: string;
+  json?: boolean;
+}
+
+interface ParsedCodexWorktreeArchiveCommand {
+  command: "worktree_archive";
+  id: string;
+  homePath: string;
+  removeWorktree?: boolean;
+  json?: boolean;
+}
+
+type ParsedCodexCommand =
+  | ParsedCodexWorkspaceCommand
+  | ParsedCodexWorktreePrepareCommand
+  | ParsedCodexWorktreeArchiveCommand;
+
 function parseCodexCommand(argv: string[]): ParsedCodexCommand {
   const [, command, workspacePath, ...rest] = argv;
+  if (command === "worktree") {
+    return parseCodexWorktreeCommand(argv);
+  }
+
   if (command !== "init" && command !== "doctor") {
-    throw new Error("codex requires init or doctor");
+    throw new Error("codex requires init, doctor, or worktree");
   }
 
   if (!workspacePath || workspacePath.startsWith("--")) {
     throw new Error(`codex ${command} requires a workspace path`);
   }
 
-  const parsed: Partial<ParsedCodexCommand> = {
+  const parsed: Partial<ParsedCodexWorkspaceCommand> = {
     command,
     workspacePath,
     homePath: defaultHomePath(),
@@ -493,6 +543,86 @@ function parseCodexCommand(argv: string[]): ParsedCodexCommand {
         break;
       default:
         throw new Error(`Unknown codex ${command} option: ${arg}`);
+    }
+  }
+
+  return parsed as ParsedCodexCommand;
+}
+
+function parseCodexWorktreeCommand(argv: string[]): ParsedCodexCommand {
+  const [, , action, target, ...rest] = argv;
+  if (action !== "prepare" && action !== "archive") {
+    throw new Error("codex worktree requires prepare or archive");
+  }
+  if (!target || target.startsWith("--")) {
+    throw new Error(`codex worktree ${action} requires ${action === "prepare" ? "a project" : "an id"}`);
+  }
+
+  const parsed:
+    | Partial<ParsedCodexWorktreePrepareCommand>
+    | Partial<ParsedCodexWorktreeArchiveCommand> =
+    action === "prepare"
+      ? {
+          command: "worktree_prepare",
+          project: target,
+          homePath: defaultHomePath(),
+        }
+      : {
+          command: "worktree_archive",
+          id: target,
+          homePath: defaultHomePath(),
+        };
+
+  for (let index = 0; index < rest.length; index += 1) {
+    const arg = rest[index];
+    const next = (): string => {
+      index += 1;
+      if (index >= rest.length) {
+        throw new Error(`${arg} requires a value`);
+      }
+
+      return rest[index];
+    };
+
+    switch (arg) {
+      case "--home":
+        parsed.homePath = next();
+        break;
+      case "--branch":
+        if (action !== "prepare") {
+          throw new Error("--branch is only supported for codex worktree prepare");
+        }
+        (parsed as Partial<ParsedCodexWorktreePrepareCommand>).branchName = next();
+        break;
+      case "--worktree-name":
+        if (action !== "prepare") {
+          throw new Error("--worktree-name is only supported for codex worktree prepare");
+        }
+        (parsed as Partial<ParsedCodexWorktreePrepareCommand>).worktreeName = next();
+        break;
+      case "--base-ref":
+        if (action !== "prepare") {
+          throw new Error("--base-ref is only supported for codex worktree prepare");
+        }
+        (parsed as Partial<ParsedCodexWorktreePrepareCommand>).baseRef = next();
+        break;
+      case "--work-item-id":
+        if (action !== "prepare") {
+          throw new Error("--work-item-id is only supported for codex worktree prepare");
+        }
+        (parsed as Partial<ParsedCodexWorktreePrepareCommand>).workItemId = next();
+        break;
+      case "--remove-worktree":
+        if (action !== "archive") {
+          throw new Error("--remove-worktree is only supported for codex worktree archive");
+        }
+        (parsed as Partial<ParsedCodexWorktreeArchiveCommand>).removeWorktree = true;
+        break;
+      case "--json":
+        parsed.json = true;
+        break;
+      default:
+        throw new Error(`Unknown codex worktree ${action} option: ${arg}`);
     }
   }
 
@@ -538,7 +668,48 @@ function printCodexDoctorResult(
   }
 }
 
-async function handleCodexCommand(argv: string[]): Promise<number> {
+function printCodexWorktreePrepareResult(
+  result: PrepareCodexWorktreeResult,
+  json: boolean | undefined,
+): void {
+  const payload = { ok: true, ...result };
+  if (json) {
+    console.log(JSON.stringify(payload, null, 2));
+    return;
+  }
+
+  console.log("Codex worktree prepared.");
+  console.log(`  Project: ${result.metadataRecord.projectId}`);
+  console.log(`  Worktree: ${result.worktreePath}`);
+  console.log(`  Branch: ${result.branchName}`);
+  console.log(`  Metadata: ${result.metadataPath}`);
+}
+
+function printCodexWorktreeArchiveResult(
+  result: ArchiveCodexWorktreeResult,
+  json: boolean | undefined,
+): void {
+  const payload = { ok: true, ...result };
+  if (json) {
+    console.log(JSON.stringify(payload, null, 2));
+    return;
+  }
+
+  console.log("Codex worktree archived.");
+  console.log(`  Record: ${result.metadataRecord.id}`);
+  console.log(`  Worktree: ${result.metadataRecord.worktreePath}`);
+  console.log(`  Removed worktree: ${result.removedWorktree ? "yes" : "no"}`);
+  console.log(`  Metadata: ${result.metadataPath}`);
+}
+
+export interface CliContext {
+  gitRunner?: GitRunner;
+}
+
+async function handleCodexCommand(
+  argv: string[],
+  context: CliContext = {},
+): Promise<number> {
   const parsed = parseCodexCommand(argv);
   if (parsed.command === "init") {
     const result = initCodexWorkspace({
@@ -547,6 +718,31 @@ async function handleCodexCommand(argv: string[]): Promise<number> {
       dryRun: parsed.dryRun,
     });
     printCodexInitResult(result, parsed.json);
+    return 0;
+  }
+
+  if (parsed.command === "worktree_prepare") {
+    const result = prepareCodexWorktree({
+      homePath: parsed.homePath,
+      project: parsed.project,
+      branchName: parsed.branchName,
+      worktreeName: parsed.worktreeName,
+      baseRef: parsed.baseRef,
+      workItem: parsed.workItemId ? { id: parsed.workItemId } : undefined,
+      gitRunner: context.gitRunner,
+    });
+    printCodexWorktreePrepareResult(result, parsed.json);
+    return 0;
+  }
+
+  if (parsed.command === "worktree_archive") {
+    const result = archiveCodexWorktree({
+      homePath: parsed.homePath,
+      id: parsed.id,
+      removeWorktree: parsed.removeWorktree,
+      gitRunner: context.gitRunner,
+    });
+    printCodexWorktreeArchiveResult(result, parsed.json);
     return 0;
   }
 
@@ -559,7 +755,7 @@ async function handleCodexCommand(argv: string[]): Promise<number> {
   return result.ok ? 0 : 1;
 }
 
-export async function main(argv: string[]): Promise<number> {
+export async function main(argv: string[], context: CliContext = {}): Promise<number> {
   if (argv.length === 0 || argv.includes("--help") || argv.includes("-h")) {
     console.log(usage());
     return 0;
@@ -594,7 +790,7 @@ export async function main(argv: string[]): Promise<number> {
   }
 
   if (argv[0] === "codex") {
-    return handleCodexCommand(argv);
+    return handleCodexCommand(argv, context);
   }
 
   if (argv[0] === "project") {

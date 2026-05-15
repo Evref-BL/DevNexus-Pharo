@@ -1,6 +1,10 @@
 import { Buffer } from "node:buffer";
 import http from "node:http";
 import process from "node:process";
+import {
+  archiveCodexWorktree,
+  prepareCodexWorktree,
+} from "./codexWorktreeService.js";
 import { defaultPharoNexusHomePath, loadProjectConfig } from "./config.js";
 import {
   createPharoNexusProject,
@@ -156,6 +160,37 @@ const tools: McpTool[] = [
         project: { type: "string" },
       },
       required: ["project"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "codex_worktree_prepare",
+    description: "Prepare a local Codex Git worktree for a managed project.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        homePath: { type: "string" },
+        project: { type: "string" },
+        branchName: { type: "string" },
+        worktreeName: { type: "string" },
+        baseRef: { type: "string" },
+        workItemId: { type: "string" },
+      },
+      required: ["project"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "codex_worktree_archive",
+    description: "Archive a local Codex worktree metadata record, optionally removing the Git worktree.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        homePath: { type: "string" },
+        id: { type: "string" },
+        removeWorktree: { type: "boolean" },
+      },
+      required: ["id"],
       additionalProperties: false,
     },
   },
@@ -754,6 +789,31 @@ export async function callPharoNexusMcpTool(
           ...getPharoNexusProjectStatus({
             homePath: homePathFromArgs(args),
             project: requiredString(args, "project", "arguments"),
+          }),
+        });
+      case "codex_worktree_prepare": {
+        const workItemId = optionalString(args, "workItemId", "arguments");
+        return toolResult({
+          ok: true,
+          ...prepareCodexWorktree({
+            homePath: homePathFromArgs(args),
+            project: requiredString(args, "project", "arguments"),
+            branchName: optionalString(args, "branchName", "arguments"),
+            worktreeName: optionalString(args, "worktreeName", "arguments"),
+            baseRef: optionalString(args, "baseRef", "arguments"),
+            workItem: workItemId ? { id: workItemId } : undefined,
+            gitRunner: context.gitRunner,
+          }),
+        });
+      }
+      case "codex_worktree_archive":
+        return toolResult({
+          ok: true,
+          ...archiveCodexWorktree({
+            homePath: homePathFromArgs(args),
+            id: requiredString(args, "id", "arguments"),
+            removeWorktree: optionalBoolean(args, "removeWorktree", "arguments"),
+            gitRunner: context.gitRunner,
           }),
         });
       case "work_item_create": {

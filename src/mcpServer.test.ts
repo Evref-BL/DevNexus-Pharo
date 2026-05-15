@@ -59,10 +59,31 @@ function parseToolText(result: {
   return JSON.parse(result.content[0].text);
 }
 
-function fakeGitRunner(args: readonly string[]): GitCommandResult {
+function fakeGitRunner(args: readonly string[], cwd?: string): GitCommandResult {
   const argsArray = [...args];
   if (argsArray[0] === "clone") {
     fs.mkdirSync(argsArray[2], { recursive: true });
+  }
+
+  if (argsArray[0] === "worktree" && argsArray[1] === "add") {
+    fs.mkdirSync(argsArray[4], { recursive: true });
+  }
+
+  if (argsArray[0] === "worktree" && argsArray[1] === "remove") {
+    fs.rmSync(argsArray[2], { recursive: true, force: true });
+  }
+
+  if (
+    argsArray[0] === "rev-parse" &&
+    argsArray[1] === "--git-path" &&
+    argsArray[2] === "info/exclude"
+  ) {
+    return {
+      args: argsArray,
+      stdout: `${path.join(cwd ?? "", ".git", "info", "exclude")}\n`,
+      stderr: "",
+      exitCode: 0,
+    };
   }
 
   if (argsArray.includes("rev-parse")) {
@@ -191,6 +212,8 @@ describe("PharoNexus MCP server tools", () => {
       "project_sync_tracker",
       "project_list",
       "project_status",
+      "codex_worktree_prepare",
+      "codex_worktree_archive",
       "work_item_create",
       "work_item_list",
       "work_item_get",
@@ -200,6 +223,9 @@ describe("PharoNexus MCP server tools", () => {
     ]);
     expect(listPharoNexusMcpTools().map((tool) => tool.name)).not.toContain(
       "pharo_nexus_work_item_create",
+    );
+    expect(listPharoNexusMcpTools().map((tool) => tool.name)).not.toContain(
+      "pharo_nexus_codex_worktree_prepare",
     );
   });
 
@@ -714,5 +740,101 @@ describe("PharoNexus MCP server tools", () => {
       ok: false,
       error: "arguments.project is required",
     });
+  });
+
+  it("prepares and archives Codex worktrees through neutral MCP tool calls", async () => {
+    const homePath = makeTempDir("pharo-nexus-home-");
+    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "CodexMcp");
+    initPharoNexusHome({ homePath });
+    const calls: Array<{ args: string[]; cwd?: string }> = [];
+    const gitRunner: GitRunner = (args: readonly string[], cwd?: string) => {
+      calls.push({ args: [...args], cwd });
+      return fakeGitRunner(args, cwd);
+    };
+
+    const createResult = await callPharoNexusMcpTool(
+      "project_create",
+      {
+        homePath,
+        name: "CodexMcp",
+        root: projectRoot,
+        gitInit: true,
+        syncTracker: false,
+      },
+      { gitRunner },
+    );
+    expect(createResult.isError).toBeUndefined();
+
+    const preparePayload = parseToolText(
+      await callPharoNexusMcpTool(
+        "codex_worktree_prepare",
+        {
+          homePath,
+          project: "codex-mcp",
+          branchName: "codex/fcd-900",
+          baseRef: "main",
+          workItemId: "FCD-900",
+        },
+        { gitRunner },
+      ),
+    );
+    const worktreePath = path.join(projectRoot, "worktrees", "codex-fcd-900");
+    expect(preparePayload).toMatchObject({
+      ok: true,
+      projectRoot,
+      sourceRoot: projectRoot,
+      worktreePath,
+      branchName: "codex/fcd-900",
+      baseRef: "main",
+      metadataRecord: {
+        id: "codex-mcp:codex/fcd-900",
+        workItem: {
+          id: "FCD-900",
+        },
+      },
+    });
+
+    const archivePayload = parseToolText(
+      await callPharoNexusMcpTool(
+        "codex_worktree_archive",
+        {
+          homePath,
+          id: "codex-mcp:codex/fcd-900",
+          removeWorktree: true,
+        },
+        { gitRunner },
+      ),
+    );
+    expect(archivePayload).toMatchObject({
+      ok: true,
+      removedWorktree: true,
+      metadataRecord: {
+        id: "codex-mcp:codex/fcd-900",
+        state: "archived",
+      },
+    });
+    expect(calls).toEqual(
+      expect.arrayContaining([
+        {
+          cwd: projectRoot,
+          args: [
+            "worktree",
+            "add",
+            "-b",
+            "codex/fcd-900",
+            worktreePath,
+            "main",
+          ],
+        },
+        {
+          cwd: worktreePath,
+          args: ["rev-parse", "--git-path", "info/exclude"],
+        },
+        {
+          cwd: projectRoot,
+          args: ["worktree", "remove", worktreePath],
+        },
+      ]),
+    );
   });
 });
