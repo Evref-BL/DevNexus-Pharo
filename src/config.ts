@@ -28,15 +28,15 @@ export const pharoNexusControlProjectName = "PharoNexus";
 export const vibeKanbanPinnedVersion = "0.1.43";
 export const vibeKanbanPinnedPackage = `vibe-kanban@${vibeKanbanPinnedVersion}`;
 
-export interface PharoNexusProjectReference {
+export interface NexusProjectReference {
   id: string;
   name: string;
-  plexusProjectRoot: string;
+  projectRoot: string;
   vibeKanbanProjectId?: string;
   vibeKanbanRepoId?: string;
 }
 
-export interface PharoNexusControlProjectReference {
+export interface NexusControlProjectReference {
   id: string;
   name: string;
   root: string;
@@ -167,8 +167,8 @@ export interface PharoNexusHomeConfig {
     };
   };
   agent?: PharoNexusAgentConfig;
-  controlProject: PharoNexusControlProjectReference;
-  projects: PharoNexusProjectReference[];
+  controlProject: NexusControlProjectReference;
+  projects: NexusProjectReference[];
 }
 
 export interface ResolvePharoNexusAgentConfigOptions {
@@ -297,7 +297,7 @@ export function controlProjectConfigPath(homePath: string): string {
 
 export function controlProjectWorktreesRootPath(
   homePath: string,
-  controlProject?: PharoNexusControlProjectReference,
+  controlProject?: NexusControlProjectReference,
 ): string {
   return path.join(
     controlProject?.root ?? controlProjectRootPath(homePath),
@@ -637,7 +637,7 @@ function validateToolCommand(
 function validateProjectReference(
   value: unknown,
   index: number,
-): PharoNexusProjectReference {
+): NexusProjectReference {
   const pathName = `projects[${index}]`;
   const record = assertRecord(value, pathName);
   const vibeKanbanProjectId = optionalString(
@@ -653,7 +653,7 @@ function validateProjectReference(
   return {
     id: requiredString(record, "id", pathName),
     name: requiredString(record, "name", pathName),
-    plexusProjectRoot: requiredString(record, "plexusProjectRoot", pathName),
+    projectRoot: requiredString(record, "projectRoot", pathName),
     ...(vibeKanbanProjectId ? { vibeKanbanProjectId } : {}),
     ...(vibeKanbanRepoId ? { vibeKanbanRepoId } : {}),
   };
@@ -661,7 +661,7 @@ function validateProjectReference(
 
 function defaultControlProjectReference(
   homePathForDefaults: string | undefined,
-): PharoNexusControlProjectReference {
+): NexusControlProjectReference {
   return {
     id: pharoNexusControlProjectId,
     name: pharoNexusControlProjectName,
@@ -674,7 +674,7 @@ function defaultControlProjectReference(
 function validateControlProjectReference(
   value: unknown,
   homePathForDefaults: string | undefined,
-): PharoNexusControlProjectReference {
+): NexusControlProjectReference {
   if (value === undefined) {
     return defaultControlProjectReference(homePathForDefaults);
   }
@@ -1184,7 +1184,7 @@ export function validateProjectConfig(value: unknown): PharoNexusProjectConfig {
 }
 
 export function createControlProjectConfig(
-  controlProject?: PharoNexusControlProjectReference,
+  controlProject?: NexusControlProjectReference,
 ): PharoNexusProjectConfig {
   const vibeKanbanProjectId = controlProject?.vibeKanbanProjectId;
 
@@ -1236,7 +1236,7 @@ export function saveProjectConfig(
 
 export function initControlProject(
   homePath: string,
-  controlProject?: PharoNexusControlProjectReference,
+  controlProject?: NexusControlProjectReference,
 ): {
   projectPath: string;
   configPath: string;
@@ -1260,7 +1260,7 @@ export function initControlProject(
 
 export function ensureControlProject(
   homePath: string,
-  controlProject?: PharoNexusControlProjectReference,
+  controlProject?: NexusControlProjectReference,
 ): {
   projectPath: string;
   configPath: string;

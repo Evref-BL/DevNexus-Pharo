@@ -26,7 +26,7 @@ import {
   saveProjectConfig,
   type PharoNexusHomeConfig,
   type PharoNexusProjectConfig,
-  type PharoNexusProjectReference,
+  type NexusProjectReference,
 } from "./config.js";
 import {
   type EnsureVibeKanbanBoardResult,
@@ -532,7 +532,7 @@ function ensureUniqueProject(
   const duplicate = config.projects.find(
     (project) =>
       project.id === projectId ||
-      path.resolve(project.plexusProjectRoot).toLowerCase() === normalizedRoot,
+      path.resolve(project.projectRoot).toLowerCase() === normalizedRoot,
   );
 
   if (duplicate) {
@@ -594,9 +594,9 @@ function projectRootFromInput(input: string): string {
 }
 
 function statusForProjectReference(
-  reference: PharoNexusProjectReference,
+  reference: NexusProjectReference,
 ): PharoNexusProjectStatus {
-  const projectRoot = path.resolve(reference.plexusProjectRoot);
+  const projectRoot = path.resolve(reference.projectRoot);
   const config = loadProjectConfigIfExists(projectRoot);
   const resolvedProjectConfigPath = projectConfigPath(projectRoot);
   const resolvedPlexusProjectConfigPath = projectPlexusConfigPath(
@@ -634,7 +634,7 @@ function statusForProjectPath(projectRoot: string): PharoNexusProjectStatus {
   return statusForProjectReference({
     id: config.id,
     name: config.name,
-    plexusProjectRoot: projectRoot,
+    projectRoot: projectRoot,
     ...(config.kanban.projectId
       ? { vibeKanbanProjectId: config.kanban.projectId }
       : {}),
@@ -644,12 +644,12 @@ function statusForProjectPath(projectRoot: string): PharoNexusProjectStatus {
 function findProjectReferenceById(
   config: PharoNexusHomeConfig,
   id: string,
-): PharoNexusProjectReference | undefined {
+): NexusProjectReference | undefined {
   return (
     config.projects.find((project) => project.id === id) ??
     config.projects.find(
       (project) =>
-        loadProjectConfigIfExists(path.resolve(project.plexusProjectRoot))?.id === id,
+        loadProjectConfigIfExists(path.resolve(project.projectRoot))?.id === id,
     )
   );
 }
@@ -657,17 +657,17 @@ function findProjectReferenceById(
 function findProjectReferenceByPath(
   config: PharoNexusHomeConfig,
   projectPath: string,
-): PharoNexusProjectReference | undefined {
+): NexusProjectReference | undefined {
   const projectRoot = projectRootFromInput(projectPath);
   return config.projects.find((project) =>
-    samePath(project.plexusProjectRoot, projectRoot),
+    samePath(project.projectRoot, projectRoot),
   );
 }
 
 function findProjectReference(
   config: PharoNexusHomeConfig,
   idOrPath: string,
-): PharoNexusProjectReference | undefined {
+): NexusProjectReference | undefined {
   return (
     findProjectReferenceById(config, idOrPath) ??
     findProjectReferenceByPath(config, idOrPath)
@@ -794,9 +794,9 @@ function upsertProjectReference(
   projectConfig: PharoNexusProjectConfig,
   vibeKanbanProjectId: string | null,
   vibeKanbanRepoId?: string | null,
-): PharoNexusProjectReference {
+): NexusProjectReference {
   const existingIndex = config.projects.findIndex((project) =>
-    samePath(project.plexusProjectRoot, projectRoot),
+    samePath(project.projectRoot, projectRoot),
   );
   const existing =
     existingIndex >= 0 ? config.projects[existingIndex] : undefined;
@@ -804,10 +804,10 @@ function upsertProjectReference(
     vibeKanbanProjectId ?? projectConfig.kanban.projectId ?? existing?.vibeKanbanProjectId ?? null;
   const resolvedVibeKanbanRepoId =
     vibeKanbanRepoId ?? existing?.vibeKanbanRepoId ?? null;
-  const reference: PharoNexusProjectReference = {
+  const reference: NexusProjectReference = {
     id: projectConfig.id,
     name: projectConfig.name,
-    plexusProjectRoot: projectRoot,
+    projectRoot: projectRoot,
     ...(resolvedVibeKanbanProjectId
       ? { vibeKanbanProjectId: resolvedVibeKanbanProjectId }
       : {}),
@@ -913,7 +913,7 @@ export function createPharoNexusProject(
   homeConfig.projects.push({
     id: projectId,
     name: options.name,
-    plexusProjectRoot: projectRoot,
+    projectRoot: projectRoot,
     ...(vibeKanbanProjectId ? { vibeKanbanProjectId } : {}),
   });
   saveHomeConfig(homePath, homeConfig);
@@ -1022,7 +1022,7 @@ export function importPharoNexusProject(
   homeConfig.projects.push({
     id: projectConfig.id,
     name: projectConfig.name,
-    plexusProjectRoot: projectRoot,
+    projectRoot: projectRoot,
     ...(projectConfig.kanban.projectId
       ? { vibeKanbanProjectId: projectConfig.kanban.projectId }
       : {}),
@@ -1114,7 +1114,7 @@ export function linkPharoNexusProjectTracker(
   const homeConfig = loadHomeConfig(homePath);
   const existingReference = findProjectReference(homeConfig, options.project);
   const projectRoot = existingReference
-    ? path.resolve(existingReference.plexusProjectRoot)
+    ? path.resolve(existingReference.projectRoot)
     : projectRootFromInput(options.project);
   const projectConfig = loadProjectConfig(projectRoot);
   const updatedProjectConfig: PharoNexusProjectConfig = {
@@ -1162,7 +1162,7 @@ export function configurePharoNexusProjectTracker(
   const homeConfig = loadHomeConfig(homePath);
   const existingReference = findProjectReference(homeConfig, options.project);
   const projectRoot = existingReference
-    ? path.resolve(existingReference.plexusProjectRoot)
+    ? path.resolve(existingReference.projectRoot)
     : projectRootFromInput(options.project);
   const projectConfig = loadProjectConfig(projectRoot);
   const workTracking = buildConfiguredWorkTracking(options);

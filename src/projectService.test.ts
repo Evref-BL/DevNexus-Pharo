@@ -196,7 +196,7 @@ describe("PharoNexus project service", () => {
       {
         id: "my-project",
         name: "MyProject",
-        plexusProjectRoot: result.projectRoot,
+        projectRoot: result.projectRoot,
       },
     ]);
   });
@@ -235,7 +235,7 @@ describe("PharoNexus project service", () => {
       {
         id: "remote-project",
         name: "RemoteProject",
-        plexusProjectRoot: projectRoot,
+        projectRoot: projectRoot,
       },
     ]);
   });
@@ -270,7 +270,7 @@ describe("PharoNexus project service", () => {
       {
         id: "linked-at-create",
         name: "LinkedAtCreate",
-        plexusProjectRoot: projectRoot,
+        projectRoot: projectRoot,
         vibeKanbanProjectId: "vk-project-1",
       },
     ]);
@@ -429,7 +429,7 @@ describe("PharoNexus project service", () => {
       {
         id: "linkable",
         name: "Linkable",
-        plexusProjectRoot: projectRoot,
+        projectRoot: projectRoot,
         vibeKanbanProjectId: "vk-linkable",
       },
     ]);
@@ -476,7 +476,7 @@ describe("PharoNexus project service", () => {
       {
         id: "unregistered",
         name: "Unregistered",
-        plexusProjectRoot: projectRoot,
+        projectRoot: projectRoot,
         vibeKanbanProjectId: "vk-unregistered",
       },
     ]);
@@ -651,7 +651,7 @@ describe("PharoNexus project service", () => {
       {
         id: "local-tracked",
         name: "LocalTracked",
-        plexusProjectRoot: projectRoot,
+        projectRoot: projectRoot,
       },
     ]);
   });
@@ -798,7 +798,7 @@ describe("PharoNexus project service", () => {
       {
         id: "synced",
         name: "Synced",
-        plexusProjectRoot: projectRoot,
+        projectRoot: projectRoot,
         vibeKanbanProjectId: "board-synced",
         vibeKanbanRepoId: "repo-synced",
       },
@@ -985,7 +985,7 @@ describe("PharoNexus project service", () => {
       {
         id: "imported",
         name: "Imported",
-        plexusProjectRoot: projectRoot,
+        projectRoot: projectRoot,
       },
     ]);
   });
@@ -1084,7 +1084,7 @@ describe("PharoNexus project service", () => {
       {
         id: "existing-id",
         name: "Existing Name",
-        plexusProjectRoot: projectRoot,
+        projectRoot: projectRoot,
         vibeKanbanProjectId: "kanban-existing",
       },
     ]);
@@ -1098,7 +1098,7 @@ describe("PharoNexus project service", () => {
     config.projects.push({
       id: "missing",
       name: "Missing",
-      plexusProjectRoot: projectRoot,
+      projectRoot: projectRoot,
       vibeKanbanProjectId: "kanban-missing",
     });
     fs.mkdirSync(projectRoot, { recursive: true });

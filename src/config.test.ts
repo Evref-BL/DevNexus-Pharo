@@ -750,12 +750,12 @@ describe("PharoNexus home config", () => {
       {
         id: "project-1",
         name: "Project One",
-        plexusProjectRoot: "C:\\dev\\code\\git\\ProjectOne",
+        projectRoot: "C:\\dev\\code\\git\\ProjectOne",
       },
       {
         id: "project-1",
         name: "Project One Duplicate",
-        plexusProjectRoot: "C:\\dev\\code\\git\\ProjectOneDuplicate",
+        projectRoot: "C:\\dev\\code\\git\\ProjectOneDuplicate",
       },
     ];
 

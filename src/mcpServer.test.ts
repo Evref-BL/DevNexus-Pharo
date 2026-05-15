@@ -848,7 +848,7 @@ describe("PharoNexus MCP server tools", () => {
       {
         id: "my-library",
         name: "MyLibrary",
-        plexusProjectRoot: projectRoot,
+        projectRoot: projectRoot,
         vibeKanbanProjectId: "board-my-library",
         vibeKanbanRepoId: "repo-my-library",
       },

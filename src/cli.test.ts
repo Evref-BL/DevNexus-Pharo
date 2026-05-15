@@ -193,7 +193,7 @@ describe("pharo-nexus cli", () => {
     homeConfig.projects.push({
       id: "prepared",
       name: "Prepared",
-      plexusProjectRoot: projectRoot,
+      projectRoot: projectRoot,
     });
     saveHomeConfig(homePath, homeConfig);
     saveProjectConfig(projectRoot, {
@@ -537,7 +537,7 @@ describe("pharo-nexus cli", () => {
         {
           id: "cli-project",
           name: "CliProject",
-          plexusProjectRoot: projectRoot,
+          projectRoot: projectRoot,
         },
       ]);
     },
@@ -590,7 +590,7 @@ describe("pharo-nexus cli", () => {
         {
           id: "imported-cli-project",
           name: "ImportedCliProject",
-          plexusProjectRoot: projectRoot,
+          projectRoot: projectRoot,
         },
       ]);
       expect(fs.existsSync(path.join(sourceRoot, pharoNexusProjectConfigFileName))).toBe(false);
@@ -605,7 +605,7 @@ describe("pharo-nexus cli", () => {
     homeConfig.projects.push({
       id: "listed",
       name: "Listed",
-      plexusProjectRoot: projectRoot,
+      projectRoot: projectRoot,
     });
     saveHomeConfig(homePath, homeConfig);
     saveProjectConfig(projectRoot, {
@@ -679,7 +679,7 @@ describe("pharo-nexus cli", () => {
     homeConfig.projects.push({
       id: "linked",
       name: "Linked",
-      plexusProjectRoot: projectRoot,
+      projectRoot: projectRoot,
     });
     saveHomeConfig(homePath, homeConfig);
     saveProjectConfig(projectRoot, {
@@ -752,7 +752,7 @@ describe("pharo-nexus cli", () => {
     homeConfig.projects.push({
       id: "github-tracked",
       name: "GitHubTracked",
-      plexusProjectRoot: projectRoot,
+      projectRoot: projectRoot,
     });
     saveHomeConfig(homePath, homeConfig);
     saveProjectConfig(projectRoot, {
@@ -822,7 +822,7 @@ describe("pharo-nexus cli", () => {
     homeConfig.projects.push({
       id: "gitlab-tracked",
       name: "GitLabTracked",
-      plexusProjectRoot: projectRoot,
+      projectRoot: projectRoot,
     });
     saveHomeConfig(homePath, homeConfig);
     saveProjectConfig(projectRoot, {
@@ -889,7 +889,7 @@ describe("pharo-nexus cli", () => {
     homeConfig.projects.push({
       id: "jira-tracked",
       name: "JiraTracked",
-      plexusProjectRoot: projectRoot,
+      projectRoot: projectRoot,
     });
     saveHomeConfig(homePath, homeConfig);
     saveProjectConfig(projectRoot, {
@@ -958,7 +958,7 @@ describe("pharo-nexus cli", () => {
     homeConfig.projects.push({
       id: "synced",
       name: "Synced",
-      plexusProjectRoot: projectRoot,
+      projectRoot: projectRoot,
     });
     saveHomeConfig(homePath, homeConfig);
     saveProjectConfig(projectRoot, {

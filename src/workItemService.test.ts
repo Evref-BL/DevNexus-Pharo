@@ -42,7 +42,7 @@ function writeHome(homePath: string, projectRoot?: string): PharoNexusHomeConfig
       {
         id: "tracked-project",
         name: "Tracked Project",
-        plexusProjectRoot: projectRoot,
+        projectRoot: projectRoot,
       },
     ];
   }

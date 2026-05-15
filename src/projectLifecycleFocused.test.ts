@@ -309,12 +309,12 @@ describe("PharoNexus focused project lifecycle contracts", () => {
       {
         id: "created-registry",
         name: "CreatedRegistry",
-        plexusProjectRoot: created.projectRoot,
+        projectRoot: created.projectRoot,
       },
       {
         id: "imported-registry",
         name: "ImportedRegistry",
-        plexusProjectRoot: importedProjectRoot,
+        projectRoot: importedProjectRoot,
       },
     ]);
   });
