@@ -460,7 +460,7 @@ describe("pharo-nexus cli", () => {
       },
     });
     const fetchMock = vi.fn(
-      async (input: string | URL | Request) => {
+      async (input: string | URL | Request, init?: RequestInit) => {
         const url = String(input);
         if (url === "http://127.0.0.1:3400/api/repos") {
           return new Response(
@@ -469,6 +469,20 @@ describe("pharo-nexus cli", () => {
               data: {
                 id: "repo-synced",
                 path: projectRoot,
+              },
+            }),
+            { status: 200 },
+          );
+        }
+
+        if (url === "http://127.0.0.1:3400/api/repos/repo-synced") {
+          return new Response(
+            JSON.stringify({
+              success: true,
+              data: {
+                id: "repo-synced",
+                path: projectRoot,
+                setup_script: JSON.parse(String(init?.body)).setup_script,
               },
             }),
             { status: 200 },

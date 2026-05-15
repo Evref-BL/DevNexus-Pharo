@@ -335,7 +335,7 @@ describe("PharoNexus MCP server tools", () => {
       };
     };
 
-    const fetchMock = async (input: string | URL | Request) => {
+    const fetchMock = async (input: string | URL | Request, init?: RequestInit) => {
       const url = String(input);
       if (url === "http://127.0.0.1:3000/api/repos") {
         return new Response(
@@ -343,7 +343,21 @@ describe("PharoNexus MCP server tools", () => {
             success: true,
             data: {
               id: "repo-my-library",
-              path: path.join(homePath, "projects", "MyLibrary"),
+              path: path.join(homePath, "projects", "MyLibrary", "git"),
+            },
+          }),
+          { status: 200 },
+        );
+      }
+
+      if (url === "http://127.0.0.1:3000/api/repos/repo-my-library") {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            data: {
+              id: "repo-my-library",
+              path: path.join(homePath, "projects", "MyLibrary", "git"),
+              setup_script: JSON.parse(String(init?.body)).setup_script,
             },
           }),
           { status: 200 },

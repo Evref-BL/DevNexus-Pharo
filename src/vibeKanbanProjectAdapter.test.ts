@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   listVibeKanbanProjects,
   registerVibeKanbanProject,
+  updateVibeKanbanProject,
   VibeKanbanProjectAdapterError,
 } from "./vibeKanbanProjectAdapter.js";
 
@@ -84,6 +85,45 @@ describe("Vibe Kanban project adapter", () => {
     expect(String(fetchMock.mock.calls[0]?.[0])).toBe(
       "http://localhost:3100/api/repos",
     );
+  });
+
+  it("updates the Vibe Kanban repository setup script", async () => {
+    const fetchMock = vi.fn(
+      async (_input: string | URL | Request, _init?: RequestInit) =>
+        new Response(
+          JSON.stringify({
+            success: true,
+            data: {
+              id: "repo-1",
+              path: "C:\\dev\\code\\git\\MyProject",
+              display_name: "MyProject",
+              setup_script: "Write-Host setup",
+            },
+          }),
+          { status: 200 },
+        ),
+    );
+
+    const result = await updateVibeKanbanProject({
+      port: 3000,
+      projectId: "repo-1",
+      setupScript: "Write-Host setup",
+      fetch: fetchMock,
+    });
+
+    expect(String(fetchMock.mock.calls[0]?.[0])).toBe(
+      "http://127.0.0.1:3000/api/repos/repo-1",
+    );
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({
+      method: "PUT",
+      headers: {
+        "content-type": "application/json",
+      },
+    });
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({
+      setup_script: "Write-Host setup",
+    });
+    expect(result.project.setup_script).toBe("Write-Host setup");
   });
 
   it("rejects malformed project responses", async () => {

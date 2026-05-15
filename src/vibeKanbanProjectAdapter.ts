@@ -5,6 +5,9 @@ export interface VibeKanbanProject {
   path?: string;
   name?: string;
   display_name?: string;
+  setup_script?: string | null;
+  cleanup_script?: string | null;
+  dev_server_script?: string | null;
   [key: string]: unknown;
 }
 
@@ -14,6 +17,17 @@ export interface RegisterVibeKanbanProjectOptions extends VibeKanbanApiOptions {
 }
 
 export interface RegisterVibeKanbanProjectResult {
+  projectId: string;
+  project: VibeKanbanProject;
+  raw: unknown;
+}
+
+export interface UpdateVibeKanbanProjectOptions extends VibeKanbanApiOptions {
+  projectId: string;
+  setupScript?: string | null;
+}
+
+export interface UpdateVibeKanbanProjectResult {
   projectId: string;
   project: VibeKanbanProject;
   raw: unknown;
@@ -130,6 +144,41 @@ export async function registerVibeKanbanProject(
       path: options.projectRoot,
       display_name: options.name,
     }),
+  });
+  const project = parseProject(parseApiSuccess(raw));
+
+  return {
+    projectId: project.id,
+    project,
+    raw,
+  };
+}
+
+export async function updateVibeKanbanProject(
+  options: UpdateVibeKanbanProjectOptions,
+): Promise<UpdateVibeKanbanProjectResult> {
+  if (options.projectId.trim().length === 0) {
+    throw new VibeKanbanProjectAdapterError("projectId must be non-empty");
+  }
+
+  const payload: Record<string, unknown> = {};
+  if (options.setupScript !== undefined) {
+    payload.setup_script =
+      options.setupScript && options.setupScript.trim().length > 0
+        ? options.setupScript
+        : null;
+  }
+
+  const url = new URL(
+    `/api/repos/${encodeURIComponent(options.projectId)}`,
+    vibeKanbanApiBaseUrl(options),
+  );
+  const raw = await requestJson(options.fetch ?? fetch, url.toString(), {
+    method: "PUT",
+    headers: {
+      "content-type": "application/json",
+    },
+    body: JSON.stringify(payload),
   });
   const project = parseProject(parseApiSuccess(raw));
 

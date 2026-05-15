@@ -279,8 +279,8 @@ links it:
 pharo-nexus project link-kanban <id-or-path> --vibe-project-id <id>
 ```
 
-If Vibe Kanban is running, PharoNexus can also register the project root as a
-local Vibe repo and ensure a Vibe project/board exists:
+If Vibe Kanban is running, PharoNexus can also register the project's source
+checkout as a local Vibe repo and ensure a Vibe project/board exists:
 
 ```text
 pharo-nexus project create <name> --git-init --sync-vibe-kanban
@@ -297,10 +297,27 @@ The link and sync operations update three places so all layers agree:
 ```
 
 The repo adapter uses Vibe Kanban's local repo API (`POST /api/repos`) and
-stores that id as `vibeKanbanRepoId`. The board adapter uses Vibe Kanban's
-local auth session and shared project API to find or create the Kanban board,
-then stores that id as `vibeKanbanProjectId`. `link-kanban` remains the fallback
-when the Vibe board is created manually or by another agent.
+stores that id as `vibeKanbanRepoId`. For imported or cloned repositories, this
+repo path is the source checkout (`repo.sourceRoot`), not the managed
+PharoNexus project root. PharoNexus then refreshes the Vibe repo setup script
+from managed project metadata so future Vibe worktrees receive local support
+files without committing them:
+
+- copy `AGENTS.md` from the managed project root when the worktree lacks one
+- copy managed `.codex/config.toml` when the worktree lacks Codex config
+- add `AGENTS.md`, `.codex/`, and `node_modules/` to `.git/info/exclude`
+- link to source checkout `node_modules` when it already exists, and report
+  when local dependencies are missing instead of hiding that failure
+
+This setup-script provisioning is environment wiring only. Implementation work
+should be done by the Codex automation process against the owning checkout; Vibe
+Kanban remains the board and workspace history system, not the normal source
+worker dispatcher.
+
+The board adapter uses Vibe Kanban's local auth session and shared project API
+to find or create the Kanban board, then stores that id as
+`vibeKanbanProjectId`. `link-kanban` remains the fallback when the Vibe board is
+created manually or by another agent.
 
 Project discovery commands read that registry:
 

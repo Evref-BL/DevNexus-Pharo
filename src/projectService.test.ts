@@ -515,6 +515,20 @@ describe("PharoNexus project service", () => {
           );
         }
 
+        if (url === "http://127.0.0.1:3200/api/repos/repo-synced") {
+          return new Response(
+            JSON.stringify({
+              success: true,
+              data: {
+                id: "repo-synced",
+                path: projectRoot,
+                setup_script: JSON.parse(String(_init?.body)).setup_script,
+              },
+            }),
+            { status: 200 },
+          );
+        }
+
         if (url === "http://127.0.0.1:3200/api/info") {
           return new Response(
             JSON.stringify({
@@ -586,6 +600,14 @@ describe("PharoNexus project service", () => {
       path: projectRoot,
       display_name: "Synced",
     });
+    expect(String(fetchMock.mock.calls[1]?.[0])).toBe(
+      "http://127.0.0.1:3200/api/repos/repo-synced",
+    );
+    const setupPayload = JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body));
+    expect(setupPayload.setup_script).toContain(projectRoot);
+    expect(setupPayload.setup_script).toContain("AGENTS.md");
+    expect(setupPayload.setup_script).toContain(".codex");
+    expect(setupPayload.setup_script).toContain("node_modules");
     expect(result).toMatchObject({
       vibeKanbanProjectId: "board-synced",
       vibeKanbanRepoId: "repo-synced",
@@ -595,6 +617,9 @@ describe("PharoNexus project service", () => {
         vibeKanbanRepoId: "repo-synced",
       },
       vibeKanbanRepo: {
+        projectId: "repo-synced",
+      },
+      vibeKanbanRepoSetup: {
         projectId: "repo-synced",
       },
       vibeKanbanBoard: {
@@ -611,6 +636,129 @@ describe("PharoNexus project service", () => {
         vibeKanbanRepoId: "repo-synced",
       },
     ]);
+  });
+
+  it("syncs imported projects by registering the source checkout and provisioning workspace setup", async () => {
+    const homePath = makeTempDir("pharo-nexus-home-");
+    const sourceRoot = path.join(makeTempDir("pharo-nexus-source-"), "ImportedSynced");
+    fs.mkdirSync(sourceRoot, { recursive: true });
+    initPharoNexusHome({ homePath, vibeKanbanPort: 3200 });
+    const projectRoot = path.join(homePath, "projects", "ImportedSynced");
+    importPharoNexusProject({
+      homePath,
+      root: sourceRoot,
+      name: "ImportedSynced",
+      gitRunner: fakeGitRunner([], {
+        branch: "main",
+        remoteUrl: "https://github.com/example/imported-synced.git",
+      }),
+    });
+    const fetchMock = vi.fn(
+      async (input: string | URL | Request, init?: RequestInit) => {
+        const url = String(input);
+        if (url === "http://127.0.0.1:3200/api/repos") {
+          return new Response(
+            JSON.stringify({
+              success: true,
+              data: {
+                id: "repo-imported-synced",
+                path: sourceRoot,
+              },
+            }),
+            { status: 200 },
+          );
+        }
+
+        if (url === "http://127.0.0.1:3200/api/repos/repo-imported-synced") {
+          return new Response(
+            JSON.stringify({
+              success: true,
+              data: {
+                id: "repo-imported-synced",
+                path: sourceRoot,
+                setup_script: JSON.parse(String(init?.body)).setup_script,
+              },
+            }),
+            { status: 200 },
+          );
+        }
+
+        if (url === "http://127.0.0.1:3200/api/info") {
+          return new Response(
+            JSON.stringify({
+              success: true,
+              data: {
+                shared_api_base: "http://vibe.test",
+              },
+            }),
+            { status: 200 },
+          );
+        }
+
+        if (url === "http://127.0.0.1:3200/api/auth/token") {
+          return new Response(
+            JSON.stringify({
+              success: true,
+              data: {
+                access_token: "token",
+              },
+            }),
+            { status: 200 },
+          );
+        }
+
+        if (url === "http://vibe.test/v1/organizations") {
+          return new Response(
+            JSON.stringify({
+              organizations: [
+                {
+                  id: "org-1",
+                  name: "Personal",
+                  is_personal: true,
+                },
+              ],
+            }),
+            { status: 200 },
+          );
+        }
+
+        if (url === "http://vibe.test/v1/fallback/projects?organization_id=org-1") {
+          return new Response(
+            JSON.stringify({
+              projects: [
+                {
+                  id: "board-imported-synced",
+                  organization_id: "org-1",
+                  name: "ImportedSynced",
+                },
+              ],
+            }),
+            { status: 200 },
+          );
+        }
+
+        throw new Error(`Unexpected Vibe Kanban request: ${url}`);
+      },
+    );
+
+    const result = await syncPharoNexusProjectKanban({
+      homePath,
+      project: "imported-synced",
+      fetch: fetchMock,
+    });
+
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({
+      path: sourceRoot,
+      display_name: "ImportedSynced",
+    });
+    const setupScript = JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body))
+      .setup_script as string;
+    expect(setupScript).toContain(projectRoot);
+    expect(setupScript).toContain(sourceRoot);
+    expect(setupScript).toContain("Add-GitInfoExclude 'AGENTS.md'");
+    expect(setupScript).toContain("Add-GitInfoExclude '.codex/'");
+    expect(setupScript).toContain("Add-GitInfoExclude 'node_modules/'");
+    expect(result.project.vibeKanbanRepoId).toBe("repo-imported-synced");
   });
 
   it("imports an existing git repository and writes missing project files", () => {
