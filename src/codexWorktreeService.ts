@@ -13,7 +13,7 @@ import {
   getNexusProjectStatus,
   type GitCommandResult,
   type GitRunner,
-} from "./projectService.js";
+} from "./nexusProjectService.js";
 import type { WorkItemRef } from "./workTrackingTypes.js";
 
 export const codexWorktreeMetadataFileName = "codex-worktrees.json";

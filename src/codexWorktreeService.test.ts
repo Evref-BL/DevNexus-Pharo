@@ -5,11 +5,13 @@ import { afterEach, describe, expect, it } from "vitest";
 import { codexConfigPath } from "./codexConfig.js";
 import { initPharoNexusHome } from "./config.js";
 import {
-  createPharoNexusProject,
-  importPharoNexusProject,
   type GitCommandResult,
   type GitRunner,
-} from "./projectService.js";
+} from "./nexusProjectService.js";
+import {
+  createPharoNexusProject,
+  importPharoNexusProject,
+} from "./pharoNexusProjectService.js";
 import {
   archiveCodexWorktree,
   CodexWorktreeServiceError,

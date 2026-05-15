@@ -52,26 +52,28 @@ import {
 import {
   configureNexusProjectTracker,
   createNexusProject,
-  createPharoNexusProject,
   getNexusProjectStatus,
   importNexusProject,
-  importPharoNexusProject,
   linkNexusProjectTracker,
   listNexusProjects,
-  syncPharoNexusProjectTracker,
   type ConfigureNexusProjectTrackerProvider,
   type ConfigureNexusProjectTrackerResult,
   type CreateNexusProjectResult,
-  type CreatePharoNexusProjectResult,
   type GetNexusProjectStatusResult,
   type ImportNexusProjectResult,
-  type ImportPharoNexusProjectResult,
   type LinkNexusProjectTrackerResult,
   type ListNexusProjectsResult,
   type NexusProjectStatus,
   type GitRunner,
+} from "./nexusProjectService.js";
+import {
+  createPharoNexusProject,
+  importPharoNexusProject,
+  syncPharoNexusProjectTracker,
+  type CreatePharoNexusProjectResult,
+  type ImportPharoNexusProjectResult,
   type SyncPharoNexusProjectTrackerResult,
-} from "./projectService.js";
+} from "./pharoNexusProjectService.js";
 import type { WorkComment } from "./workTrackingTypes.js";
 import {
   runPharoNexusMcpServer,

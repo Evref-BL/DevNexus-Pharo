@@ -5,10 +5,10 @@ import { afterEach, describe, expect, it } from "vitest";
 import { buildCodexWorktreeGuide } from "./codexWorktreeGuide.js";
 import { initPharoNexusHome } from "./config.js";
 import {
-  createPharoNexusProject,
   type GitCommandResult,
   type GitRunner,
-} from "./projectService.js";
+} from "./nexusProjectService.js";
+import { createPharoNexusProject } from "./pharoNexusProjectService.js";
 import { prepareCodexWorktree } from "./codexWorktreeService.js";
 
 const tempDirs: string[] = [];

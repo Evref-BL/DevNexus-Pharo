@@ -17,7 +17,7 @@ import {
   pharoNexusProjectExtensionConfigKey,
   plexusProjectConfigFileName,
 } from "./pharoNexusExtension.js";
-import type { GitCommandResult, GitRunner } from "./projectService.js";
+import type { GitCommandResult, GitRunner } from "./nexusProjectService.js";
 import { createWorkItemService } from "./workItemService.js";
 
 const tempDirs: string[] = [];

@@ -20,12 +20,14 @@ import {
   projectPlexusConfigPath,
 } from "./pharoNexusExtension.js";
 import {
-  createPharoNexusProject,
-  importPharoNexusProject,
   NexusProjectError,
   type GitCommandResult,
   type GitRunner,
-} from "./projectService.js";
+} from "./nexusProjectService.js";
+import {
+  createPharoNexusProject,
+  importPharoNexusProject,
+} from "./pharoNexusProjectService.js";
 
 const tempDirs: string[] = [];
 

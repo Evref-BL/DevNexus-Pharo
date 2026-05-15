@@ -6,7 +6,7 @@ import {
 import {
   getNexusProjectStatus,
   type NexusProjectStatus,
-} from "./projectService.js";
+} from "./nexusProjectService.js";
 import {
   createProjectWorkTrackerProvider,
   resolveProjectWorkTrackingConfig,

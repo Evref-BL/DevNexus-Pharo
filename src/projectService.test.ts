@@ -18,17 +18,19 @@ import {
 import {
   createNexusProject,
   configureNexusProjectTracker,
-  createPharoNexusProject,
   getNexusProjectStatus,
   importNexusProject,
-  importPharoNexusProject,
   linkNexusProjectTracker,
   listNexusProjects,
   NexusProjectError,
-  syncPharoNexusProjectTracker,
   type GitCommandResult,
   type GitRunner,
-} from "./projectService.js";
+} from "./nexusProjectService.js";
+import {
+  createPharoNexusProject,
+  importPharoNexusProject,
+  syncPharoNexusProjectTracker,
+} from "./pharoNexusProjectService.js";
 
 const tempDirs: string[] = [];
 

@@ -15,7 +15,7 @@ import {
   listPharoNexusMcpTools,
   startPharoNexusMcpHttpServer,
 } from "./mcpServer.js";
-import type { GitCommandResult, GitRunner } from "./projectService.js";
+import type { GitCommandResult, GitRunner } from "./nexusProjectService.js";
 
 const tempDirs: string[] = [];
 

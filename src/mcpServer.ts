@@ -17,16 +17,18 @@ import { defaultPharoNexusHomePath, loadProjectConfig } from "./config.js";
 import {
   configureNexusProjectTracker,
   createNexusProject,
-  createPharoNexusProject,
   getNexusProjectStatus,
   importNexusProject,
-  importPharoNexusProject,
   linkNexusProjectTracker,
   listNexusProjects,
-  syncPharoNexusProjectTracker,
   type GitRunner,
+} from "./nexusProjectService.js";
+import {
+  createPharoNexusProject,
+  importPharoNexusProject,
+  syncPharoNexusProjectTracker,
   type SyncPharoNexusProjectTrackerResult,
-} from "./projectService.js";
+} from "./pharoNexusProjectService.js";
 import { createWorkItemService } from "./workItemService.js";
 import type {
   ExternalRef,
