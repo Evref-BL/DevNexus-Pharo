@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   createControlProjectConfig,
   controlProjectRootPath,
-  initPharoNexusHome,
+  initNexusHome,
   legacyControlProjectRootPath,
   loadHomeConfig,
   loadProjectConfig,
@@ -208,7 +208,7 @@ function initHomeWithTopLevelTools(
   plexusArgs = ["-e", "setInterval(() => {}, 1000);"],
 ): string {
   const homePath = makeTempDir("pharo-nexus-home-");
-  initPharoNexusHome({
+  initNexusHome({
     homePath,
     vibeKanbanPort: vibePort,
     pharoNexusMcpPort,

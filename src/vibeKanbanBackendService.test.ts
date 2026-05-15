@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
-  initPharoNexusHome,
+  initNexusHome,
   loadHomeConfig,
   saveHomeConfig,
   type NexusHomeConfig,
@@ -34,7 +34,7 @@ afterEach(() => {
 
 function initHomeWithDockerBackend(): string {
   const homePath = makeTempDir("pharo-nexus-home-");
-  initPharoNexusHome({ homePath });
+  initNexusHome({ homePath });
   const config = loadHomeConfig(homePath);
   const remoteRoot = path.join(homePath, "vibe-kanban", "crates", "remote");
   fs.mkdirSync(remoteRoot, { recursive: true });
@@ -47,7 +47,7 @@ function initHomeWithDockerBackend(): string {
 
 function initHomeWithDindBackend(): string {
   const homePath = makeTempDir("pharo-nexus-home-");
-  initPharoNexusHome({ homePath });
+  initNexusHome({ homePath });
   const config = loadHomeConfig(homePath);
   const sourceRoot = path.join(homePath, "vibe-kanban");
   const remoteRoot = path.join(sourceRoot, "crates", "remote");
@@ -102,7 +102,7 @@ describe("Vibe Kanban Docker backend service", () => {
     vi.stubEnv("PHARO_NEXUS_GITHUB_OAUTH_CLIENT_SECRET", "github-client-secret");
     vi.stubEnv("PHARO_NEXUS_VIBE_LOCAL_AUTH_EMAIL", "dev@example.com");
     const homePath = makeTempDir("pharo-nexus-home-");
-    initPharoNexusHome({ homePath });
+    initNexusHome({ homePath });
     const remoteRoot = path.join(homePath, "vibe-kanban", "crates", "remote");
     const calls: Array<{
       command: string;
@@ -490,7 +490,7 @@ describe("Vibe Kanban Docker backend service", () => {
 
   it("reports external backend health without running Docker", async () => {
     const homePath = makeTempDir("pharo-nexus-home-");
-    initPharoNexusHome({ homePath });
+    initNexusHome({ homePath });
     const config = loadHomeConfig(homePath);
     config.integrations.vibeKanban.backend = {
       mode: "external",

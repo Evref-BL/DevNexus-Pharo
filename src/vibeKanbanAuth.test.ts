@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import {
-  initPharoNexusHome,
+  initNexusHome,
   loadHomeConfig,
   saveHomeConfig,
 } from "./config.js";
@@ -18,7 +18,7 @@ function jsonResponse(value: unknown, status = 200): Response {
 
 function makeHomeWithEnvFile(content: string): string {
   const homePath = fs.mkdtempSync(path.join(os.tmpdir(), "pharo-nexus-home-"));
-  initPharoNexusHome({ homePath });
+  initNexusHome({ homePath });
   const remoteRoot = path.join(homePath, "vibe-kanban", "crates", "remote");
   fs.mkdirSync(remoteRoot, { recursive: true });
   const envFile = path.join(remoteRoot, ".env.remote");

@@ -13,7 +13,7 @@ import {
   type CodexWorktreeVerificationStatus,
 } from "./codexWorktreeService.js";
 import { commentCodexWorktreeHandoff } from "./codexWorktreeTrackerHandoff.js";
-import { defaultPharoNexusHomePath, loadProjectConfig } from "./config.js";
+import { defaultNexusHomePath, loadProjectConfig } from "./config.js";
 import {
   configureNexusProjectTracker,
   createNexusProject,
@@ -694,7 +694,7 @@ function optionalCodexPublicationDecisionType(
 }
 
 function homePathFromArgs(args: Record<string, unknown>): string {
-  return optionalString(args, "homePath", "arguments") ?? defaultPharoNexusHomePath();
+  return optionalString(args, "homePath", "arguments") ?? defaultNexusHomePath();
 }
 
 function remoteUrlFromCreateArgs(args: Record<string, unknown>): string | undefined {

@@ -7,7 +7,7 @@ import {
   controlProjectRootPath,
   controlProjectWorktreesRootPath,
   createControlProjectConfig,
-  initPharoNexusHome,
+  initNexusHome,
   loadHomeConfig,
   loadProjectConfig,
   devNexusProjectConfigFileName,
@@ -95,7 +95,7 @@ describe("PharoNexus focused project lifecycle contracts", () => {
   it("creates the default control project during init", () => {
     const homePath = makeTempDir("pharo-nexus-home-");
 
-    const result = initPharoNexusHome({ homePath });
+    const result = initNexusHome({ homePath });
 
     expect(result.controlProjectPath).toBe(controlProjectRootPath(homePath));
     expect(result.controlProjectConfigPath).toBe(controlProjectConfigPath(homePath));
@@ -151,7 +151,7 @@ describe("PharoNexus focused project lifecycle contracts", () => {
     const homePath = makeTempDir("pharo-nexus-home-");
     const projectsRoot = path.join(homePath, "projects-root");
     const gitCalls: string[][] = [];
-    initPharoNexusHome({ homePath, projectsRoot });
+    initNexusHome({ homePath, projectsRoot });
 
     const result = createPharoNexusProject({
       homePath,
@@ -179,7 +179,7 @@ describe("PharoNexus focused project lifecycle contracts", () => {
     const sourceRoot = path.join(makeTempDir("pharo-nexus-source-"), "Imported");
     const gitCalls: string[][] = [];
     fs.mkdirSync(sourceRoot, { recursive: true });
-    initPharoNexusHome({ homePath });
+    initNexusHome({ homePath });
     const projectRoot = path.join(homePath, "projects", "Imported");
 
     const result = importPharoNexusProject({
@@ -214,7 +214,7 @@ describe("PharoNexus focused project lifecycle contracts", () => {
   it("rejects duplicate project ids before running git", () => {
     const homePath = makeTempDir("pharo-nexus-home-");
     const gitCalls: string[][] = [];
-    initPharoNexusHome({ homePath });
+    initNexusHome({ homePath });
     createPharoNexusProject({
       homePath,
       name: "Duplicate",
@@ -268,7 +268,7 @@ describe("PharoNexus focused project lifecycle contracts", () => {
   it("generates the PLexus project config alongside the PharoNexus project config", () => {
     const homePath = makeTempDir("pharo-nexus-home-");
     const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "PlexusGenerated");
-    initPharoNexusHome({ homePath });
+    initNexusHome({ homePath });
 
     const result = createPharoNexusProject({
       homePath,
@@ -296,7 +296,7 @@ describe("PharoNexus focused project lifecycle contracts", () => {
     const homePath = makeTempDir("pharo-nexus-home-");
     const importedRoot = path.join(makeTempDir("pharo-nexus-projects-"), "ImportedRegistry");
     fs.mkdirSync(importedRoot, { recursive: true });
-    initPharoNexusHome({ homePath });
+    initNexusHome({ homePath });
     const importedProjectRoot = path.join(homePath, "projects", "ImportedRegistry");
     const created = createPharoNexusProject({
       homePath,

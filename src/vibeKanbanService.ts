@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import {
   loadHomeConfig,
-  pharoNexusLogsDirectoryName,
+  nexusLogsDirectoryName,
   resolveNexusHome,
   type NexusHomeConfig,
 } from "./config.js";
@@ -94,7 +94,7 @@ export function vibeKanbanStatePath(homePath: string): string {
 export function vibeKanbanLogDirectoryPath(homePath: string): string {
   return path.join(
     resolveNexusHome(homePath),
-    pharoNexusLogsDirectoryName,
+    nexusLogsDirectoryName,
     vibeKanbanServiceName,
   );
 }

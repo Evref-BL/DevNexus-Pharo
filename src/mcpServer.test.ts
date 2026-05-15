@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
-  initPharoNexusHome,
+  initNexusHome,
   loadHomeConfig,
   loadProjectConfig,
   saveProjectConfig,
@@ -240,7 +240,7 @@ describe("PharoNexus MCP server tools", () => {
   it("creates, lists, and reads a project through MCP tool calls", async () => {
     const homePath = makeTempDir("pharo-nexus-home-");
     const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "McpProject");
-    initPharoNexusHome({ homePath });
+    initNexusHome({ homePath });
 
     const createResult = await callPharoNexusMcpTool(
       "project_create",
@@ -344,7 +344,7 @@ describe("PharoNexus MCP server tools", () => {
   it("creates a generic DevNexus project through MCP without PharoNexus files", async () => {
     const homePath = makeTempDir("pharo-nexus-home-");
     const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "GenericMcp");
-    initPharoNexusHome({ homePath });
+    initNexusHome({ homePath });
 
     const createResult = await callPharoNexusMcpTool(
       "project_create",
@@ -393,7 +393,7 @@ describe("PharoNexus MCP server tools", () => {
   it("manages local work items through neutral MCP tool calls", async () => {
     const homePath = makeTempDir("pharo-nexus-home-");
     const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "Tracked");
-    initPharoNexusHome({ homePath });
+    initNexusHome({ homePath });
     const createProject = await callPharoNexusMcpTool(
       "project_create",
       {
@@ -527,7 +527,7 @@ describe("PharoNexus MCP server tools", () => {
   it("configures GitLab work tracking through neutral MCP tool calls", async () => {
     const homePath = makeTempDir("pharo-nexus-home-");
     const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "GitLabMcp");
-    initPharoNexusHome({ homePath });
+    initNexusHome({ homePath });
     await callPharoNexusMcpTool(
       "project_create",
       {
@@ -571,7 +571,7 @@ describe("PharoNexus MCP server tools", () => {
   it("configures Jira work tracking through neutral MCP tool calls", async () => {
     const homePath = makeTempDir("pharo-nexus-home-");
     const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "JiraMcp");
-    initPharoNexusHome({ homePath });
+    initNexusHome({ homePath });
     await callPharoNexusMcpTool(
       "project_create",
       {
@@ -615,7 +615,7 @@ describe("PharoNexus MCP server tools", () => {
   it("reports unsupported work tracking providers through neutral MCP tools", async () => {
     const homePath = makeTempDir("pharo-nexus-home-");
     const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "Legacy");
-    initPharoNexusHome({ homePath });
+    initNexusHome({ homePath });
     const createProject = await callPharoNexusMcpTool(
       "project_create",
       {
@@ -645,7 +645,7 @@ describe("PharoNexus MCP server tools", () => {
   it("resolves project status by managed config id before MCP path fallback", async () => {
     const homePath = makeTempDir("pharo-nexus-home-");
     const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "MCP-PL");
-    initPharoNexusHome({ homePath });
+    initNexusHome({ homePath });
 
     const createResult = await callPharoNexusMcpTool(
       "project_create",
@@ -686,7 +686,7 @@ describe("PharoNexus MCP server tools", () => {
     const homePath = makeTempDir("pharo-nexus-home-");
     const sourceRoot = path.join(makeTempDir("pharo-nexus-source-"), "Imported");
     fs.mkdirSync(sourceRoot, { recursive: true });
-    initPharoNexusHome({ homePath });
+    initNexusHome({ homePath });
     const projectRoot = path.join(homePath, "projects", "Imported");
 
     const result = await callPharoNexusMcpTool(
@@ -720,7 +720,7 @@ describe("PharoNexus MCP server tools", () => {
   it("supports the first usable control-project scenario through remoteUrl", async () => {
     const homePath = makeTempDir("pharo-nexus-home-");
     const gitCalls: string[][] = [];
-    initPharoNexusHome({ homePath });
+    initNexusHome({ homePath });
     const gitRunner: GitRunner = (args: readonly string[]): GitCommandResult => {
       const argsArray = [...args];
       gitCalls.push(argsArray);
@@ -920,7 +920,7 @@ describe("PharoNexus MCP server tools", () => {
   it("prepares and archives Codex worktrees through neutral MCP tool calls", async () => {
     const homePath = makeTempDir("pharo-nexus-home-");
     const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "CodexMcp");
-    initPharoNexusHome({ homePath });
+    initNexusHome({ homePath });
     const calls: Array<{ args: string[]; cwd?: string }> = [];
     const gitRunner: GitRunner = (args: readonly string[], cwd?: string) => {
       calls.push({ args: [...args], cwd });

@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
-  initPharoNexusHome,
+  initNexusHome,
   loadHomeConfig,
   saveHomeConfig,
 } from "./config.js";
@@ -118,7 +118,7 @@ async function startFakeVibeKanbanApi(): Promise<{
 
 function initHome(): string {
   const homePath = makeTempDir("pharo-nexus-home-");
-  initPharoNexusHome({ homePath });
+  initNexusHome({ homePath });
   const config = loadHomeConfig(homePath);
   config.tools.plexus = {
     command: "plexus-gateway",

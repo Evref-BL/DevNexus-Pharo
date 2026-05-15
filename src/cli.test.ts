@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { main, usage } from "./cli.js";
 import { codexConfigPath } from "./codexConfig.js";
 import {
-  initPharoNexusHome,
+  initNexusHome,
   loadProjectConfig,
   loadHomeConfig,
   devNexusProjectConfigFileName,
@@ -1234,7 +1234,7 @@ describe("pharo-nexus cli", () => {
 });
 
 function initHome(homePath: string): void {
-  initPharoNexusHome({ homePath });
+  initNexusHome({ homePath });
 }
 
 function gitIsAvailable(): boolean {

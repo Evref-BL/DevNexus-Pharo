@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
-  initPharoNexusHome,
+  initNexusHome,
   loadHomeConfig,
   saveHomeConfig,
   type NexusHomeConfig,
@@ -59,7 +59,7 @@ function initHomeWithVibeKanban(
   configure?: (config: NexusHomeConfig) => void,
 ): string {
   const homePath = makeTempDir("pharo-nexus-home-");
-  initPharoNexusHome({ homePath });
+  initNexusHome({ homePath });
   const config = loadHomeConfig(homePath);
   config.tools.vibeKanban = {
     command: process.execPath,

@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { buildCodexWorktreeGuide } from "./codexWorktreeGuide.js";
-import { initPharoNexusHome } from "./config.js";
+import { initNexusHome } from "./config.js";
 import {
   type GitCommandResult,
   type GitRunner,
@@ -55,7 +55,7 @@ function fakeGitRunner(args: readonly string[], cwd?: string): GitCommandResult 
 describe("Codex worktree guide", () => {
   it("builds read-only direct Codex workflow guidance for an existing worktree", () => {
     const homePath = makeTempDir("pharo-nexus-home-");
-    initPharoNexusHome({ homePath });
+    initNexusHome({ homePath });
     const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "Guide");
     createPharoNexusProject({
       homePath,

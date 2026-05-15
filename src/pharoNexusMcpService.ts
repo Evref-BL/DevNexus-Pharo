@@ -3,7 +3,7 @@ import path from "node:path";
 import {
   loadHomeConfig,
   pharoNexusCliEntrypointPath,
-  pharoNexusLogsDirectoryName,
+  nexusLogsDirectoryName,
   resolveNexusHome,
   type NexusHomeConfig,
 } from "./config.js";
@@ -102,7 +102,7 @@ export function pharoNexusMcpStatePath(homePath: string): string {
 export function pharoNexusMcpLogDirectoryPath(homePath: string): string {
   return path.join(
     resolveNexusHome(homePath),
-    pharoNexusLogsDirectoryName,
+    nexusLogsDirectoryName,
     pharoNexusMcpServiceName,
   );
 }

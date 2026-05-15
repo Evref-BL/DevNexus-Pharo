@@ -33,11 +33,11 @@ import {
 import { commentCodexWorktreeHandoff } from "./codexWorktreeTrackerHandoff.js";
 import {
   createDefaultHomeConfig,
-  defaultPharoNexusHomePath,
-  initPharoNexusHome,
+  defaultNexusHomePath,
+  initNexusHome,
   loadHomeConfig,
   loadProjectConfig,
-  type InitPharoNexusHomeOptions,
+  type InitNexusHomeOptions,
 } from "./config.js";
 import {
   getPlexusGatewayStatus,
@@ -298,7 +298,7 @@ function printProgress(message: string): void {
   console.error(`[pharo-nexus] ${message}`);
 }
 
-interface ParsedInitCommand extends InitPharoNexusHomeOptions {
+interface ParsedInitCommand extends InitNexusHomeOptions {
   interactive?: boolean;
   json?: boolean;
 }
@@ -443,7 +443,7 @@ async function promptInitCommand(
 }
 
 function printInitResult(
-  initResult: ReturnType<typeof initPharoNexusHome>,
+  initResult: ReturnType<typeof initNexusHome>,
   json: boolean | undefined,
 ): void {
   if (json) {
@@ -1274,7 +1274,7 @@ export async function main(argv: string[], context: CliContext = {}): Promise<nu
 
   if (argv[0] === "init") {
     const parsed = await promptInitCommand(parseInitCommand(argv));
-    const initResult = initPharoNexusHome(parsed);
+    const initResult = initNexusHome(parsed);
     printInitResult(initResult, parsed.json);
     return 0;
   }
@@ -1337,7 +1337,7 @@ interface ParsedStartCommand {
 }
 
 function defaultHomePath(): string {
-  return defaultPharoNexusHomePath();
+  return defaultNexusHomePath();
 }
 
 function parseStartCommand(argv: string[]): ParsedStartCommand {

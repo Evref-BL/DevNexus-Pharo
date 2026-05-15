@@ -17,7 +17,7 @@ import type {
 
 export const devNexusHomeConfigFileName = "dev-nexus.home.json";
 export const devNexusProjectConfigFileName = "dev-nexus.project.json";
-export const pharoNexusLogsDirectoryName = "logs";
+export const nexusLogsDirectoryName = "logs";
 export const nexusGeneratedDirectoryName = "generated";
 export const pharoNexusControlProjectDirectoryName = "PharoNexus";
 export const pharoNexusLegacyControlProjectDirectoryName = "control";
@@ -189,12 +189,12 @@ export interface CreateDefaultHomeConfigOptions {
   mcpHost?: string;
 }
 
-export interface InitPharoNexusHomeOptions extends CreateDefaultHomeConfigOptions {
+export interface InitNexusHomeOptions extends CreateDefaultHomeConfigOptions {
   homePath: string;
   force?: boolean;
 }
 
-export interface InitPharoNexusHomeResult {
+export interface InitNexusHomeResult {
   homePath: string;
   configPath: string;
   config: NexusHomeConfig;
@@ -209,7 +209,7 @@ export class NexusConfigError extends Error {
   }
 }
 
-export function defaultPharoNexusHomePath(): string {
+export function defaultNexusHomePath(): string {
   return process.env.PHARO_NEXUS_HOME ?? path.join(os.homedir(), ".pharo-nexus");
 }
 
@@ -1500,9 +1500,9 @@ export function saveHomeConfig(
   return configPath;
 }
 
-export function initPharoNexusHome(
-  options: InitPharoNexusHomeOptions,
-): InitPharoNexusHomeResult {
+export function initNexusHome(
+  options: InitNexusHomeOptions,
+): InitNexusHomeResult {
   const homePath = resolveNexusHome(options.homePath);
   const configPath = devNexusHomeConfigPath(homePath);
   if (fs.existsSync(configPath) && !options.force) {
@@ -1516,7 +1516,7 @@ export function initPharoNexusHome(
   fs.mkdirSync(config.paths.projectsRoot, { recursive: true });
   fs.mkdirSync(config.paths.workspacesRoot, { recursive: true });
   fs.mkdirSync(config.paths.plexusStateRoot, { recursive: true });
-  fs.mkdirSync(path.join(homePath, pharoNexusLogsDirectoryName), {
+  fs.mkdirSync(path.join(homePath, nexusLogsDirectoryName), {
     recursive: true,
   });
   fs.mkdirSync(path.join(homePath, nexusGeneratedDirectoryName), {

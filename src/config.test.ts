@@ -11,7 +11,7 @@ import {
   defaultNexusToolCommand,
   defaultVibeKanbanToolCommand,
   ensureControlProject,
-  initPharoNexusHome,
+  initNexusHome,
   loadHomeConfig,
   loadProjectConfig,
   pharoNexusControlProjectId,
@@ -19,7 +19,7 @@ import {
   nexusGeneratedDirectoryName,
   devNexusHomeConfigPath,
   devNexusHomeConfigFileName,
-  pharoNexusLogsDirectoryName,
+  nexusLogsDirectoryName,
   devNexusProjectConfigFileName,
   nexusProjectWorktreesDirectoryName,
   NexusConfigError,
@@ -768,7 +768,7 @@ describe("PharoNexus home config", () => {
   it("initializes a home directory, writes config, and creates runtime directories", () => {
     const homePath = makeTempDir("pharo-nexus-home-");
 
-    const result = initPharoNexusHome({
+    const result = initNexusHome({
       homePath,
       vibeKanbanPort: 3100,
       plexusMcpPort: 7332,
@@ -782,7 +782,7 @@ describe("PharoNexus home config", () => {
     expect(fs.existsSync(result.config.paths.workspacesRoot)).toBe(true);
     expect(fs.existsSync(result.config.paths.plexusStateRoot)).toBe(true);
     expect(
-      fs.existsSync(path.join(homePath, pharoNexusLogsDirectoryName)),
+      fs.existsSync(path.join(homePath, nexusLogsDirectoryName)),
     ).toBe(true);
     expect(
       fs.existsSync(path.join(homePath, nexusGeneratedDirectoryName)),
@@ -809,12 +809,12 @@ describe("PharoNexus home config", () => {
     };
     saveProjectConfig(controlProjectRootPath(homePath), existingControlConfig);
 
-    initPharoNexusHome({ homePath });
+    initNexusHome({ homePath });
     expect(loadProjectConfig(controlProjectRootPath(homePath))).toEqual(
       existingControlConfig,
     );
 
-    initPharoNexusHome({ homePath, force: true });
+    initNexusHome({ homePath, force: true });
     expect(loadProjectConfig(controlProjectRootPath(homePath))).toEqual(
       createControlProjectConfig(),
     );
@@ -842,14 +842,14 @@ describe("PharoNexus home config", () => {
 
   it("refuses to overwrite an existing home config unless forced", () => {
     const homePath = makeTempDir("pharo-nexus-home-");
-    initPharoNexusHome({ homePath });
+    initNexusHome({ homePath });
 
-    expect(() => initPharoNexusHome({ homePath })).toThrow(
+    expect(() => initNexusHome({ homePath })).toThrow(
       NexusConfigError,
     );
 
     expect(() =>
-      initPharoNexusHome({
+      initNexusHome({
         homePath,
         force: true,
         vibeKanbanPort: 3100,

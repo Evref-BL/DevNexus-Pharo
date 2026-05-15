@@ -5,7 +5,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   createDefaultHomeConfig,
-  initPharoNexusHome,
+  initNexusHome,
   loadHomeConfig,
   saveHomeConfig,
 } from "./config.js";
@@ -225,7 +225,7 @@ describe("Codex config", () => {
 
   it("writes PharoNexus, PLexus, and Vibe Kanban MCP entries to a workspace", () => {
     const homePath = makeTempDir("pharo-nexus-home-");
-    initPharoNexusHome({ homePath });
+    initNexusHome({ homePath });
     const workspacePath = makeTempDir("pharo-nexus-workspace-");
     const configPath = codexConfigPath(workspacePath);
     fs.mkdirSync(path.dirname(configPath), { recursive: true });
@@ -253,7 +253,7 @@ describe("Codex config", () => {
 
   it("reports missing Codex config as an actionable doctor failure", async () => {
     const homePath = makeTempDir("pharo-nexus-home-");
-    initPharoNexusHome({ homePath });
+    initNexusHome({ homePath });
     const workspacePath = makeTempDir("pharo-nexus-workspace-");
 
     await expect(doctorCodexWorkspace({ homePath, workspacePath })).resolves.toMatchObject({
@@ -282,7 +282,7 @@ describe("Codex config", () => {
       pharoNexusMcpPort: pharo.port,
       plexusMcpPort: plexus.port,
     });
-    initPharoNexusHome({ homePath });
+    initNexusHome({ homePath });
     saveHomeConfig(homePath, config);
     const workspacePath = makeTempDir("pharo-nexus-workspace-");
     initCodexWorkspace({ homePath, workspacePath, config: loadHomeConfig(homePath) });
