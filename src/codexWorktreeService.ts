@@ -4,6 +4,7 @@ import path from "node:path";
 import { codexConfigPath } from "./codexConfig.js";
 import {
   loadProjectConfig,
+  pharoNexusGeneratedDirectoryName,
   projectWorktreesRootPath,
   resolvePharoNexusHome,
   type PharoNexusProjectConfig,
@@ -14,6 +15,9 @@ import {
   type GitRunner,
 } from "./projectService.js";
 import type { WorkItemRef } from "./workTrackingTypes.js";
+
+export const codexWorktreeMetadataFileName = "codex-worktrees.json";
+export const codexWorktreeMetadataStoreVersion = 1;
 
 export interface PrepareCodexWorktreeOptions {
   homePath: string;
@@ -28,6 +32,8 @@ export interface PrepareCodexWorktreeOptions {
 
 export interface PrepareCodexWorktreeResult {
   homePath: string;
+  metadataPath: string;
+  metadataRecord: CodexWorktreeRecord;
   projectRoot: string;
   sourceRoot: string;
   worktreesRoot: string;
@@ -36,9 +42,31 @@ export interface PrepareCodexWorktreeResult {
   baseRef: string | null;
   copiedFiles: string[];
   skippedFiles: string[];
+  excludedEntries: string[];
   git: {
     commands: GitCommandResult[];
   };
+}
+
+export interface CodexWorktreeRecord {
+  id: string;
+  projectId: string;
+  projectRoot: string;
+  sourceRoot: string;
+  worktreePath: string;
+  branchName: string;
+  baseRef: string | null;
+  workItem: WorkItemRef | null;
+  createdAt: string;
+  copiedFiles: string[];
+  skippedFiles: string[];
+  excludedEntries: string[];
+}
+
+export interface CodexWorktreeMetadataStore {
+  version: typeof codexWorktreeMetadataStoreVersion;
+  updatedAt: string;
+  worktrees: CodexWorktreeRecord[];
 }
 
 export class CodexWorktreeServiceError extends Error {
@@ -89,9 +117,33 @@ export function prepareCodexWorktree(
   );
 
   const copiedFiles = copyCodexWorktreeSupportFiles(projectRoot, worktreePath);
+  const excludedEntries = ensureSupportFileExcludes(
+    gitRunner,
+    commands,
+    worktreePath,
+  );
+  const createdAt = nowString(options.now);
+  const metadataPath = codexWorktreeMetadataStorePath(homePath);
+  const metadataRecord: CodexWorktreeRecord = {
+    id: `${status.id}:${branchName}`,
+    projectId: status.id,
+    projectRoot,
+    sourceRoot,
+    worktreePath,
+    branchName,
+    baseRef: options.baseRef ?? null,
+    workItem: options.workItem ?? null,
+    createdAt,
+    copiedFiles: copiedFiles.copied,
+    skippedFiles: copiedFiles.skipped,
+    excludedEntries,
+  };
+  saveCodexWorktreeMetadataRecord(metadataPath, metadataRecord, createdAt);
 
   return {
     homePath,
+    metadataPath,
+    metadataRecord,
     projectRoot,
     sourceRoot,
     worktreesRoot,
@@ -100,10 +152,19 @@ export function prepareCodexWorktree(
     baseRef: options.baseRef ?? null,
     copiedFiles: copiedFiles.copied,
     skippedFiles: copiedFiles.skipped,
+    excludedEntries,
     git: {
       commands,
     },
   };
+}
+
+export function codexWorktreeMetadataStorePath(homePath: string): string {
+  return path.join(
+    resolvePharoNexusHome(homePath),
+    pharoNexusGeneratedDirectoryName,
+    codexWorktreeMetadataFileName,
+  );
 }
 
 function resolveProjectSourceRoot(
@@ -138,9 +199,12 @@ function resolveBranchName(
 }
 
 function timestampSuffix(optionsNow: PrepareCodexWorktreeOptions["now"]): string {
+  return nowString(optionsNow).replace(/[^0-9A-Za-z]+/g, "").slice(0, 14) || "worktree";
+}
+
+function nowString(optionsNow: PrepareCodexWorktreeOptions["now"]): string {
   const value = optionsNow?.() ?? new Date();
-  const timestamp = typeof value === "string" ? value : value.toISOString();
-  return timestamp.replace(/[^0-9A-Za-z]+/g, "").slice(0, 14) || "worktree";
+  return typeof value === "string" ? value : value.toISOString();
 }
 
 function normalizeBranchName(value: string): string {
@@ -252,6 +316,117 @@ function copyDirectoryIfMissing(
 
   fs.cpSync(source, target, { recursive: true });
   copied.push(target);
+}
+
+function ensureSupportFileExcludes(
+  gitRunner: GitRunner,
+  commands: GitCommandResult[],
+  worktreePath: string,
+): string[] {
+  const entries = [
+    fs.existsSync(path.join(worktreePath, "AGENTS.md")) ? "AGENTS.md" : undefined,
+    fs.existsSync(path.dirname(codexConfigPath(worktreePath))) ? ".codex/" : undefined,
+  ].filter((entry): entry is string => Boolean(entry));
+  if (entries.length === 0) {
+    return [];
+  }
+
+  const excludePathResult = runGitCommand(
+    gitRunner,
+    commands,
+    ["rev-parse", "--git-path", "info/exclude"],
+    worktreePath,
+  );
+  const excludePath = excludePathResult.stdout.trim();
+  if (!excludePath) {
+    throw new CodexWorktreeServiceError(
+      "git rev-parse --git-path info/exclude returned an empty path",
+    );
+  }
+
+  const resolvedExcludePath = path.isAbsolute(excludePath)
+    ? path.resolve(excludePath)
+    : path.resolve(worktreePath, excludePath);
+  fs.mkdirSync(path.dirname(resolvedExcludePath), { recursive: true });
+  const existingText = fs.existsSync(resolvedExcludePath)
+    ? fs.readFileSync(resolvedExcludePath, "utf8")
+    : "";
+  const existing = existingText.split(/\r?\n/u);
+  const appended = entries.filter((entry) => !existing.includes(entry));
+  if (appended.length > 0) {
+    const prefix =
+      existingText.length > 0 && !existingText.endsWith("\n") ? "\n" : "";
+    fs.appendFileSync(resolvedExcludePath, `${prefix}${appended.join("\n")}\n`, "utf8");
+  }
+
+  return entries;
+}
+
+function saveCodexWorktreeMetadataRecord(
+  metadataPath: string,
+  record: CodexWorktreeRecord,
+  updatedAt: string,
+): void {
+  const store = loadCodexWorktreeMetadataStore(metadataPath, updatedAt);
+  const existingIndex = store.worktrees.findIndex(
+    (candidate) => candidate.id === record.id,
+  );
+  const updatedStore: CodexWorktreeMetadataStore = {
+    ...store,
+    updatedAt,
+    worktrees:
+      existingIndex >= 0
+        ? store.worktrees.map((candidate, index) =>
+            index === existingIndex ? record : candidate,
+          )
+        : [...store.worktrees, record],
+  };
+  fs.mkdirSync(path.dirname(metadataPath), { recursive: true });
+  fs.writeFileSync(
+    metadataPath,
+    `${JSON.stringify(updatedStore, null, 2)}\n`,
+    "utf8",
+  );
+}
+
+function loadCodexWorktreeMetadataStore(
+  metadataPath: string,
+  updatedAt: string,
+): CodexWorktreeMetadataStore {
+  if (!fs.existsSync(metadataPath)) {
+    return {
+      version: codexWorktreeMetadataStoreVersion,
+      updatedAt,
+      worktrees: [],
+    };
+  }
+
+  const raw = JSON.parse(fs.readFileSync(metadataPath, "utf8").replace(/^\uFEFF/u, ""));
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    throw new CodexWorktreeServiceError(
+      `Codex worktree metadata store must be an object: ${metadataPath}`,
+    );
+  }
+  const record = raw as Record<string, unknown>;
+  if (record.version !== codexWorktreeMetadataStoreVersion) {
+    throw new CodexWorktreeServiceError(
+      `Codex worktree metadata store version must be ${codexWorktreeMetadataStoreVersion}`,
+    );
+  }
+  if (!Array.isArray(record.worktrees)) {
+    throw new CodexWorktreeServiceError(
+      `Codex worktree metadata store worktrees must be an array: ${metadataPath}`,
+    );
+  }
+
+  return {
+    version: codexWorktreeMetadataStoreVersion,
+    updatedAt:
+      typeof record.updatedAt === "string" && record.updatedAt.trim()
+        ? record.updatedAt
+        : updatedAt,
+    worktrees: record.worktrees as CodexWorktreeRecord[],
+  };
 }
 
 function defaultGitRunner(

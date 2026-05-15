@@ -12,6 +12,7 @@ import {
 } from "./projectService.js";
 import {
   CodexWorktreeServiceError,
+  codexWorktreeMetadataStorePath,
   prepareCodexWorktree,
 } from "./codexWorktreeService.js";
 
@@ -69,7 +70,18 @@ function fakeWorktreeGitRunner(
     calls.push({ args: argsArray, cwd });
     if (argsArray[0] === "worktree" && argsArray[1] === "add") {
       fs.mkdirSync(argsArray[4], { recursive: true });
-      fs.writeFileSync(path.join(argsArray[4], ".git"), "gitdir: fake\n", "utf8");
+    }
+    if (
+      argsArray[0] === "rev-parse" &&
+      argsArray[1] === "--git-path" &&
+      argsArray[2] === "info/exclude"
+    ) {
+      return {
+        args: argsArray,
+        stdout: `${path.join(cwd ?? "", ".git", "info", "exclude")}\n`,
+        stderr: "",
+        exitCode: 0,
+      };
     }
 
     return { args: argsArray, stdout: "", stderr: "", exitCode: 0 };
@@ -115,11 +127,32 @@ describe("Codex worktree service", () => {
         cwd: projectRoot,
         args: ["worktree", "add", "-b", "codex/fcd-123", expectedWorktreePath],
       },
+      {
+        cwd: expectedWorktreePath,
+        args: ["rev-parse", "--git-path", "info/exclude"],
+      },
     ]);
     expect(fs.existsSync(path.join(expectedWorktreePath, "AGENTS.md"))).toBe(true);
     expect(fs.existsSync(codexConfigPath(expectedWorktreePath))).toBe(true);
     expect(result.copiedFiles).toContain(path.join(expectedWorktreePath, "AGENTS.md"));
     expect(result.copiedFiles).toContain(path.join(expectedWorktreePath, ".codex"));
+    expect(result.excludedEntries).toEqual(["AGENTS.md", ".codex/"]);
+    expect(
+      fs.readFileSync(path.join(expectedWorktreePath, ".git", "info", "exclude"), "utf8"),
+    ).toContain("AGENTS.md\n.codex/");
+    expect(result.metadataPath).toBe(codexWorktreeMetadataStorePath(homePath));
+    expect(JSON.parse(fs.readFileSync(result.metadataPath, "utf8"))).toMatchObject({
+      version: 1,
+      worktrees: [
+        {
+          id: "ready:codex/fcd-123",
+          projectId: "ready",
+          branchName: "codex/fcd-123",
+          worktreePath: expectedWorktreePath,
+          excludedEntries: ["AGENTS.md", ".codex/"],
+        },
+      ],
+    });
   });
 
   it("uses an imported source checkout as the Git worktree source", () => {
@@ -166,7 +199,19 @@ describe("Codex worktree service", () => {
           "main",
         ],
       },
+      {
+        cwd: path.join(projectRoot, "worktrees", "codex-imported-fcd-42"),
+        args: ["rev-parse", "--git-path", "info/exclude"],
+      },
     ]);
+    expect(result.metadataRecord).toMatchObject({
+      id: "imported:codex/imported/fcd-42",
+      projectId: "imported",
+      sourceRoot,
+      workItem: {
+        id: "FCD-42",
+      },
+    });
   });
 
   it("rejects unsafe branch names before running Git", () => {
