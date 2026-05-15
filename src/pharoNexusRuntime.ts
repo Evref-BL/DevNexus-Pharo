@@ -5,7 +5,7 @@ import {
   openBrowser as defaultBrowserOpener,
   type BrowserOpenResult,
   type BrowserOpener,
-} from "./browserOpener.js";
+} from "dev-nexus";
 import {
   ensureControlProject,
   legacyControlProjectRootPath,
