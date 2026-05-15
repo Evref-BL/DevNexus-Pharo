@@ -1,11 +1,13 @@
-import fs from "node:fs";
 import path from "node:path";
 import {
   assertFileDoesNotExist,
   assertGitRepository,
   assertNonEmptyString,
+  buildProjectConfig,
   buildNexusProjectStatus,
   buildNexusProjectStatusForPath,
+  configureNexusProjectTrackerInRegistry,
+  createNexusProjectInRegistry,
   defaultImportedProjectRoot,
   defaultProjectGitRunner,
   defaultSourceCheckoutDirectoryName,
@@ -16,6 +18,7 @@ import {
   findNexusProjectReference,
   findNexusProjectReferenceById,
   findNexusProjectReferenceByPath,
+  importNexusProjectInRegistry,
   loadProjectConfigIfExists,
   NexusProjectError,
   optionalNonEmptyString,
@@ -28,6 +31,7 @@ import {
   scaffoldNexusProject,
   slugify,
   upsertNexusProjectReference,
+  type ConfigureNexusProjectTrackerProvider,
   type NexusExtension,
   type ProjectGitCommandResult,
   type ProjectGitRunner,
@@ -36,13 +40,9 @@ import {
 import {
   loadHomeConfig,
   loadProjectConfig,
-  nexusProjectWorktreesDirectoryName,
-  projectConfigPath,
-  projectWorktreesRootPath,
   resolveNexusHome,
   saveHomeConfig,
   saveProjectConfig,
-  type NexusProjectExtensionsConfig,
   type NexusHomeConfig,
   type NexusProjectConfig,
   type NexusProjectReference,
@@ -54,11 +54,13 @@ const safeDirectoryName = safeProjectDirectoryName;
 
 export type GitCommandResult = ProjectGitCommandResult;
 export type GitRunner = ProjectGitRunner;
+export type { ConfigureNexusProjectTrackerProvider };
 
 export {
   assertFileDoesNotExist,
   assertGitRepository,
   assertNonEmptyString,
+  buildProjectConfig,
   buildNexusProjectStatus,
   buildNexusProjectStatusForPath,
   defaultImportedProjectRoot,
@@ -171,12 +173,6 @@ export interface LinkNexusProjectTrackerOptions {
   project: string;
   trackerProjectId: string;
 }
-
-export type ConfigureNexusProjectTrackerProvider =
-  | "local"
-  | "github"
-  | "gitlab"
-  | "jira";
 
 export interface ConfigureNexusProjectTrackerOptions {
   homePath: string;
@@ -346,121 +342,6 @@ function statusForProjectPath(projectRoot: string): NexusProjectStatus {
   });
 }
 
-export function buildProjectConfig(
-  name: string,
-  projectId: string,
-  from: string | undefined,
-  defaultBranch: string | null,
-  vibeKanbanProjectId: string | null = null,
-  sourceRoot?: string | null,
-  forceGit = false,
-  extensions?: NexusProjectExtensionsConfig,
-): NexusProjectConfig {
-  return {
-    version: 1,
-    id: projectId,
-    name,
-    home: null,
-    repo: {
-      kind: from || sourceRoot || forceGit ? "git" : "local",
-      remoteUrl: from ?? null,
-      defaultBranch,
-      ...(sourceRoot ? { sourceRoot } : {}),
-    },
-    worktreesRoot: nexusProjectWorktreesDirectoryName,
-    kanban: {
-      provider: "vibe-kanban",
-      projectId: vibeKanbanProjectId,
-    },
-    ...(extensions ? { extensions } : {}),
-  };
-}
-
-function buildConfiguredWorkTracking(
-  options: ConfigureNexusProjectTrackerOptions,
-): WorkTrackingConfig {
-  if (options.provider === "local") {
-    const storePath = optionalNonEmptyString(options.storePath, "storePath");
-    return {
-      provider: "local",
-      ...(storePath !== undefined ? { storePath } : {}),
-    };
-  }
-
-  if (options.provider === "github") {
-    const owner = optionalNonEmptyString(
-      options.repositoryOwner,
-      "repositoryOwner",
-    );
-    const name = optionalNonEmptyString(options.repositoryName, "repositoryName");
-    if (!owner) {
-      throw new NexusProjectError(
-        "repositoryOwner is required for github tracker configuration",
-      );
-    }
-    if (!name) {
-      throw new NexusProjectError(
-        "repositoryName is required for github tracker configuration",
-      );
-    }
-
-    const host = optionalNonEmptyString(options.host, "host");
-    return {
-      provider: "github",
-      ...(host !== undefined ? { host } : {}),
-      repository: {
-        owner,
-        name,
-      },
-    };
-  }
-
-  if (options.provider === "gitlab") {
-    const id = optionalNonEmptyString(options.repositoryId, "repositoryId");
-    if (!id) {
-      throw new NexusProjectError(
-        "repositoryId is required for gitlab tracker configuration",
-      );
-    }
-
-    const host = optionalNonEmptyString(options.host, "host");
-    return {
-      provider: "gitlab",
-      ...(host !== undefined ? { host } : {}),
-      repository: {
-        id,
-      },
-    };
-  }
-
-  if (options.provider === "jira") {
-    const host = optionalNonEmptyString(options.host, "host");
-    const projectKey = optionalNonEmptyString(options.projectKey, "projectKey");
-    const issueType = optionalNonEmptyString(options.issueType, "issueType");
-    if (!host) {
-      throw new NexusProjectError(
-        "host is required for jira tracker configuration",
-      );
-    }
-    if (!projectKey) {
-      throw new NexusProjectError(
-        "projectKey is required for jira tracker configuration",
-      );
-    }
-
-    return {
-      provider: "jira",
-      host,
-      projectKey,
-      ...(issueType !== undefined ? { issueType } : {}),
-    };
-  }
-
-  throw new NexusProjectError(
-    `Unsupported tracker provider: ${options.provider}`,
-  );
-}
-
 export function upsertProjectReference(
   config: NexusHomeConfig,
   projectRoot: string,
@@ -477,87 +358,29 @@ export function upsertProjectReference(
 export function createNexusProject(
   options: CreateNexusProjectOptions,
 ): CreateNexusProjectResult {
-  assertNonEmptyString(options.name, "name");
-  const vibeKanbanProjectId =
-    optionalNonEmptyString(options.vibeKanbanProjectId, "vibeKanbanProjectId") ??
-    null;
-  if (options.from && options.gitInit) {
-    throw new NexusProjectError("--from and --git-init are mutually exclusive");
-  }
-
   const homePath = resolveNexusHome(options.homePath);
   const homeConfig = loadHomeConfig(homePath);
-  const projectId = slugify(options.name);
-  const projectRoot = path.resolve(
-    options.root ?? path.join(homeConfig.paths.projectsRoot, safeDirectoryName(options.name)),
-  );
-  ensureUniqueProject(homeConfig, projectId, projectRoot);
-
-  const creatingFromRemote = Boolean(options.from);
-  if (directoryExistsAndIsNonEmpty(projectRoot)) {
-    throw new NexusProjectError(
-      `Project root already exists and is not empty: ${projectRoot}`,
-    );
-  }
-
-  const gitRunner = options.gitRunner ?? defaultGitRunner;
-  const gitCommands: GitCommandResult[] = [];
-  let sourceRoot: string | null = null;
-  if (creatingFromRemote) {
-    fs.mkdirSync(projectRoot, { recursive: true });
-    runGitCommand(gitRunner, gitCommands, ["init", projectRoot]);
-    sourceRoot = path.join(projectRoot, defaultSourceCheckoutDirectoryName);
-    runGitCommand(gitRunner, gitCommands, ["clone", options.from as string, sourceRoot]);
-  } else {
-    fs.mkdirSync(projectRoot, { recursive: true });
-    runGitCommand(gitRunner, gitCommands, ["init", projectRoot]);
-  }
-
-  const defaultBranch = detectDefaultBranch(
-    gitRunner,
-    gitCommands,
-    sourceRoot ?? projectRoot,
-  );
-  const projectConfig = buildProjectConfig(
-    options.name,
-    projectId,
-    options.from,
-    defaultBranch,
-    vibeKanbanProjectId,
-    sourceRoot ? pathForProjectConfig(projectRoot, sourceRoot) : null,
-  );
-  const devNexusProjectConfigPath = projectConfigPath(projectRoot);
-  const worktreesRoot = projectWorktreesRootPath(projectRoot, projectConfig);
-
-  assertFileDoesNotExist(devNexusProjectConfigPath);
-  saveProjectConfig(projectRoot, projectConfig);
-  scaffoldNexusProject({
+  const result = createNexusProjectInRegistry({
     homePath,
-    projectRoot,
-    worktreesRoot,
-    projectConfig,
-  });
-
-  homeConfig.projects.push({
-    id: projectId,
+    registry: homeConfig,
     name: options.name,
-    projectRoot: projectRoot,
-    ...(vibeKanbanProjectId ? { vibeKanbanProjectId } : {}),
+    ...(options.root !== undefined ? { root: options.root } : {}),
+    ...(options.from !== undefined ? { from: options.from } : {}),
+    ...(options.gitInit !== undefined ? { gitInit: options.gitInit } : {}),
+    ...(options.vibeKanbanProjectId !== undefined
+      ? { vibeKanbanProjectId: options.vibeKanbanProjectId }
+      : {}),
+    ...(options.gitRunner ? { gitRunner: options.gitRunner } : {}),
   });
   saveHomeConfig(homePath, homeConfig);
 
   return {
     homePath,
-    projectRoot,
-    projectConfigPath: devNexusProjectConfigPath,
-    worktreesRoot,
-    projectConfig,
-    git: {
-      operation: creatingFromRemote ? "clone" : "init",
-      remoteUrl: options.from ?? null,
-      defaultBranch,
-      commands: gitCommands,
-    },
+    projectRoot: result.projectRoot,
+    projectConfigPath: result.projectConfigPath,
+    worktreesRoot: result.worktreesRoot,
+    projectConfig: result.projectConfig,
+    git: result.git,
   };
 }
 
@@ -566,95 +389,26 @@ export function importNexusProject(
 ): ImportNexusProjectResult {
   const homePath = resolveNexusHome(options.homePath);
   const homeConfig = loadHomeConfig(homePath);
-  const vibeKanbanProjectId =
-    optionalNonEmptyString(options.vibeKanbanProjectId, "vibeKanbanProjectId") ??
-    null;
-  const sourceRoot = path.resolve(options.root);
-  if (!fs.existsSync(sourceRoot) || !fs.statSync(sourceRoot).isDirectory()) {
-    throw new NexusProjectError(
-      `Project source root must be an existing directory: ${sourceRoot}`,
-    );
-  }
-
-  const gitRunner = options.gitRunner ?? defaultGitRunner;
-  const gitCommands: GitCommandResult[] = [];
-  assertGitRepository(gitRunner, gitCommands, sourceRoot);
-  const remoteUrl = detectOriginUrl(gitRunner, gitCommands, sourceRoot);
-  const defaultBranch = detectDefaultBranch(gitRunner, gitCommands, sourceRoot);
-  const existingProjectConfig = loadProjectConfigIfExists(sourceRoot);
-  const projectName =
-    existingProjectConfig?.name ?? options.name ?? path.basename(sourceRoot);
-  const projectId = existingProjectConfig?.id ?? slugify(projectName);
-  const projectRoot = existingProjectConfig
-    ? sourceRoot
-    : path.resolve(
-        options.projectRoot ??
-          defaultImportedProjectRoot(homeConfig, projectName, sourceRoot),
-      );
-  ensureUniqueProject(homeConfig, projectId, projectRoot);
-  if (!existingProjectConfig && directoryExistsAndIsNonEmpty(projectRoot)) {
-    throw new NexusProjectError(
-      `Project root already exists and is not empty: ${projectRoot}`,
-    );
-  }
-  if (!existingProjectConfig) {
-    fs.mkdirSync(projectRoot, { recursive: true });
-    runGitCommand(gitRunner, gitCommands, ["init", projectRoot]);
-  }
-
-  const projectConfig =
-    existingProjectConfig ??
-    buildProjectConfig(
-      projectName,
-      projectId,
-      remoteUrl ?? undefined,
-      defaultBranch,
-      vibeKanbanProjectId,
-      pathForProjectConfig(projectRoot, sourceRoot),
-      true,
-    );
-  if (existingProjectConfig && vibeKanbanProjectId) {
-    projectConfig.kanban = {
-      ...projectConfig.kanban,
-      projectId: vibeKanbanProjectId,
-    };
-  }
-
-  const devNexusProjectConfigPath = projectConfigPath(projectRoot);
-  if (!existingProjectConfig || vibeKanbanProjectId) {
-    saveProjectConfig(projectRoot, projectConfig);
-  }
-
-  const worktreesRoot = projectWorktreesRootPath(projectRoot, projectConfig);
-  scaffoldNexusProject({
+  const result = importNexusProjectInRegistry({
     homePath,
-    projectRoot,
-    worktreesRoot,
-    projectConfig,
-  });
-
-  homeConfig.projects.push({
-    id: projectConfig.id,
-    name: projectConfig.name,
-    projectRoot: projectRoot,
-    ...(projectConfig.kanban.projectId
-      ? { vibeKanbanProjectId: projectConfig.kanban.projectId }
+    registry: homeConfig,
+    root: options.root,
+    ...(options.projectRoot !== undefined ? { projectRoot: options.projectRoot } : {}),
+    ...(options.name !== undefined ? { name: options.name } : {}),
+    ...(options.vibeKanbanProjectId !== undefined
+      ? { vibeKanbanProjectId: options.vibeKanbanProjectId }
       : {}),
+    ...(options.gitRunner ? { gitRunner: options.gitRunner } : {}),
   });
   saveHomeConfig(homePath, homeConfig);
 
   return {
     homePath,
-    projectRoot,
-    projectConfigPath: devNexusProjectConfigPath,
-    worktreesRoot,
-    projectConfig,
-    git: {
-      operation: "import",
-      remoteUrl,
-      defaultBranch,
-      commands: gitCommands,
-    },
+    projectRoot: result.projectRoot,
+    projectConfigPath: result.projectConfigPath,
+    worktreesRoot: result.worktreesRoot,
+    projectConfig: result.projectConfig,
+    git: result.git,
   };
 }
 
@@ -766,35 +520,36 @@ export function configureNexusProjectTracker(
 
   const homePath = resolveNexusHome(options.homePath);
   const homeConfig = loadHomeConfig(homePath);
-  const existingReference = findNexusProjectReference(homeConfig, options.project);
-  const projectRoot = existingReference
-    ? path.resolve(existingReference.projectRoot)
-    : projectRootFromInput(options.project);
-  const projectConfig = loadProjectConfig(projectRoot);
-  const workTracking = buildConfiguredWorkTracking(options);
-  const updatedProjectConfig: NexusProjectConfig = {
-    ...projectConfig,
-    workTracking,
-  };
-  const projectConfigFilePath = saveProjectConfig(projectRoot, updatedProjectConfig);
-  const reference = upsertProjectReference(
-    homeConfig,
-    projectRoot,
-    updatedProjectConfig,
-    null,
-  );
+  const result = configureNexusProjectTrackerInRegistry({
+    registry: homeConfig,
+    project: options.project,
+    provider: options.provider,
+    ...(options.host !== undefined ? { host: options.host } : {}),
+    ...(options.repositoryOwner !== undefined
+      ? { repositoryOwner: options.repositoryOwner }
+      : {}),
+    ...(options.repositoryName !== undefined
+      ? { repositoryName: options.repositoryName }
+      : {}),
+    ...(options.repositoryId !== undefined
+      ? { repositoryId: options.repositoryId }
+      : {}),
+    ...(options.projectKey !== undefined ? { projectKey: options.projectKey } : {}),
+    ...(options.issueType !== undefined ? { issueType: options.issueType } : {}),
+    ...(options.storePath !== undefined ? { storePath: options.storePath } : {}),
+  });
   saveHomeConfig(homePath, homeConfig);
 
   return {
     homePath,
-    project: statusForProjectReference(reference),
-    projectConfigPath: projectConfigFilePath,
+    project: statusForProjectReference(result.reference),
+    projectConfigPath: result.projectConfigPath,
     plexusProjectConfigPath: projectStatusExtensionContribution(
-      projectRoot,
-      updatedProjectConfig,
+      result.projectRoot,
+      result.projectConfig,
     ).plexusProjectConfigPath,
-    projectConfig: updatedProjectConfig,
-    workTracking,
+    projectConfig: result.projectConfig,
+    workTracking: result.workTracking,
   };
 }
 
