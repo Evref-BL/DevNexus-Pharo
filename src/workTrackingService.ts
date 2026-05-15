@@ -3,9 +3,14 @@ import type {
   PharoNexusProjectKanbanConfig,
 } from "./config.js";
 import type { VibeKanbanApiOptions } from "./vibeKanbanMcpConfig.js";
+import {
+  createGitHubWorkTrackerProvider,
+  type GitHubWorkTrackerProviderOptions,
+} from "./workTrackingGitHubProvider.js";
 import { createLocalWorkTrackerProvider } from "./workTrackingLocalProvider.js";
 import { createVibeWorkTrackerProvider } from "./workTrackingVibeProvider.js";
 import type {
+  GitHubWorkTrackingConfig,
   VibeKanbanWorkTrackingConfig,
   WorkTrackingConfig,
   WorkTrackerProvider,
@@ -15,6 +20,7 @@ export interface CreateWorkTrackerProviderOptions {
   projectRoot?: string;
   now?: () => Date | string;
   vibeKanban?: VibeKanbanApiOptions;
+  github?: Omit<GitHubWorkTrackerProviderOptions, "config">;
 }
 
 export class WorkTrackingServiceError extends Error {
@@ -74,6 +80,13 @@ export function createWorkTrackerProvider(
     return createVibeWorkTrackerProvider({
       ...options.vibeKanban,
       config,
+    });
+  }
+
+  if (config.provider === "github") {
+    return createGitHubWorkTrackerProvider({
+      ...options.github,
+      config: config as GitHubWorkTrackingConfig,
     });
   }
 

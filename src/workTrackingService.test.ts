@@ -8,7 +8,6 @@ import {
   createWorkTrackerProvider,
   legacyKanbanFromWorkTracking,
   resolveProjectWorkTrackingConfig,
-  WorkTrackingServiceError,
   workTrackingFromLegacyKanban,
 } from "./workTrackingService.js";
 
@@ -161,25 +160,37 @@ describe("work tracking service", () => {
     expect(provider.capabilities.createItem).toBe(false);
   });
 
+  it("creates a GitHub work tracker provider from direct config", () => {
+    const provider = createWorkTrackerProvider(
+      {
+        provider: "github",
+        repository: {
+          owner: "example",
+          name: "project",
+        },
+      },
+      {
+        github: {
+          fetch: async () => new Response(),
+          env: {},
+        },
+      },
+    );
+
+    expect(provider.provider).toBe("github");
+    expect(provider.capabilities.createItem).toBe(true);
+    expect(provider.capabilities.board).toBe(false);
+  });
+
   it("reports unsupported work tracking providers before MCP tools use them", () => {
     expect(() =>
       createWorkTrackerProvider({
-        provider: "github",
+        provider: "gitlab",
         repository: {
-          owner: "example",
-          name: "project",
+          id: "example/project",
         },
       }),
-    ).toThrow(WorkTrackingServiceError);
-    expect(() =>
-      createWorkTrackerProvider({
-        provider: "github",
-        repository: {
-          owner: "example",
-          name: "project",
-        },
-      }),
-    ).toThrow(/not implemented yet: github/);
+    ).toThrow(/not implemented yet: gitlab/);
 
     const legacyVibeConfig = validateProjectConfig({
       version: 1,
