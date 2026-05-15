@@ -12,6 +12,13 @@ import {
   type GitRunner,
   type SyncPharoNexusProjectKanbanResult,
 } from "./projectService.js";
+import { createWorkItemService } from "./workItemService.js";
+import type {
+  ExternalRef,
+  WorkItemPatch,
+  WorkItemRef,
+  WorkStatus,
+} from "./workTrackingTypes.js";
 
 type JsonRpcId = string | number | null;
 
@@ -152,6 +159,126 @@ const tools: McpTool[] = [
       additionalProperties: false,
     },
   },
+  {
+    name: "work_item_create",
+    description: "Create a work item through the configured PharoNexus work tracker.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        homePath: { type: "string" },
+        project: { type: "string" },
+        projectRoot: { type: "string" },
+        title: { type: "string" },
+        description: { type: ["string", "null"] },
+        status: { type: "string" },
+        labels: { type: "array", items: { type: "string" } },
+        assignees: { type: "array", items: { type: "string" } },
+        milestone: { type: ["string", "null"] },
+      },
+      required: ["title"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "work_item_list",
+    description: "List work items through the configured PharoNexus work tracker.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        homePath: { type: "string" },
+        project: { type: "string" },
+        projectRoot: { type: "string" },
+        status: {
+          oneOf: [
+            { type: "string" },
+            { type: "array", items: { type: "string" } },
+          ],
+        },
+        labels: { type: "array", items: { type: "string" } },
+        assignees: { type: "array", items: { type: "string" } },
+        search: { type: "string" },
+        limit: { type: "number" },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "work_item_get",
+    description: "Get a work item through the configured PharoNexus work tracker.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        homePath: { type: "string" },
+        project: { type: "string" },
+        projectRoot: { type: "string" },
+        id: { type: "string" },
+        provider: { type: "string" },
+        externalRef: { type: "object" },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "work_item_update",
+    description: "Update a work item through the configured PharoNexus work tracker.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        homePath: { type: "string" },
+        project: { type: "string" },
+        projectRoot: { type: "string" },
+        id: { type: "string" },
+        provider: { type: "string" },
+        externalRef: { type: "object" },
+        ref: { type: "object" },
+        title: { type: "string" },
+        description: { type: ["string", "null"] },
+        status: { type: "string" },
+        labels: { type: "array", items: { type: "string" } },
+        assignees: { type: "array", items: { type: "string" } },
+        milestone: { type: ["string", "null"] },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "work_item_comment",
+    description: "Add a comment to a work item through the configured PharoNexus work tracker.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        homePath: { type: "string" },
+        project: { type: "string" },
+        projectRoot: { type: "string" },
+        id: { type: "string" },
+        provider: { type: "string" },
+        externalRef: { type: "object" },
+        ref: { type: "object" },
+        body: { type: "string" },
+      },
+      required: ["body"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "work_item_set_status",
+    description: "Set a work item's status through the configured PharoNexus work tracker.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        homePath: { type: "string" },
+        project: { type: "string" },
+        projectRoot: { type: "string" },
+        id: { type: "string" },
+        provider: { type: "string" },
+        externalRef: { type: "object" },
+        ref: { type: "object" },
+        status: { type: "string" },
+      },
+      required: ["status"],
+      additionalProperties: false,
+    },
+  },
 ];
 
 function asRecord(value: unknown, pathName: string): Record<string, unknown> {
@@ -213,6 +340,48 @@ function optionalNumber(
   return value;
 }
 
+function optionalNullableString(
+  record: Record<string, unknown>,
+  key: string,
+  pathName: string,
+): string | null | undefined {
+  const value = record[key];
+  if (value === undefined) {
+    return undefined;
+  }
+  if (value === null) {
+    return null;
+  }
+
+  if (typeof value !== "string" || value.trim().length === 0) {
+    throw new Error(`${pathName}.${key} must be a non-empty string or null`);
+  }
+
+  return value;
+}
+
+function optionalStringArray(
+  record: Record<string, unknown>,
+  key: string,
+  pathName: string,
+): string[] | undefined {
+  const value = record[key];
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+  if (!Array.isArray(value)) {
+    throw new Error(`${pathName}.${key} must be an array of strings`);
+  }
+
+  return value.map((item, index) => {
+    if (typeof item !== "string" || item.trim().length === 0) {
+      throw new Error(`${pathName}.${key}[${index}] must be a non-empty string`);
+    }
+
+    return item;
+  });
+}
+
 function requiredString(
   record: Record<string, unknown>,
   key: string,
@@ -224,6 +393,59 @@ function requiredString(
   }
 
   return value;
+}
+
+const workStatuses = new Set<WorkStatus>([
+  "todo",
+  "ready",
+  "in_progress",
+  "blocked",
+  "done",
+  "wont_do",
+]);
+
+function parseWorkStatus(value: string, pathName: string): WorkStatus {
+  if (!workStatuses.has(value as WorkStatus)) {
+    throw new Error(
+      `${pathName} must be todo, ready, in_progress, blocked, done, or wont_do`,
+    );
+  }
+
+  return value as WorkStatus;
+}
+
+function optionalWorkStatus(
+  record: Record<string, unknown>,
+  key: string,
+  pathName: string,
+): WorkStatus | undefined {
+  const value = optionalString(record, key, pathName);
+  return value === undefined ? undefined : parseWorkStatus(value, `${pathName}.${key}`);
+}
+
+function optionalWorkStatusQuery(
+  record: Record<string, unknown>,
+  key: string,
+  pathName: string,
+): WorkStatus | WorkStatus[] | undefined {
+  const value = record[key];
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+  if (typeof value === "string") {
+    return parseWorkStatus(value, `${pathName}.${key}`);
+  }
+  if (!Array.isArray(value)) {
+    throw new Error(`${pathName}.${key} must be a status or array of statuses`);
+  }
+
+  return value.map((item, index) => {
+    if (typeof item !== "string") {
+      throw new Error(`${pathName}.${key}[${index}] must be a status`);
+    }
+
+    return parseWorkStatus(item, `${pathName}.${key}[${index}]`);
+  });
 }
 
 function homePathFromArgs(args: Record<string, unknown>): string {
@@ -238,6 +460,120 @@ function remoteUrlFromCreateArgs(args: Record<string, unknown>): string | undefi
   }
 
   return remoteUrl ?? from;
+}
+
+function projectSelectorFromArgs(args: Record<string, unknown>): {
+  project?: string;
+  projectRoot?: string;
+} {
+  const project = optionalString(args, "project", "arguments");
+  const projectRoot = optionalString(args, "projectRoot", "arguments");
+  return {
+    ...(project ? { project } : {}),
+    ...(projectRoot ? { projectRoot } : {}),
+  };
+}
+
+function optionalExternalRef(
+  record: Record<string, unknown>,
+  key: string,
+  pathName: string,
+): ExternalRef | undefined {
+  const value = record[key];
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+
+  const externalRef = asRecord(value, `${pathName}.${key}`);
+  const externalRefPath = `${pathName}.${key}`;
+  const itemNumber = optionalNumber(externalRef, "itemNumber", externalRefPath);
+  return {
+    provider: requiredString(externalRef, "provider", externalRefPath),
+    host: optionalNullableString(externalRef, "host", externalRefPath),
+    repositoryId: optionalNullableString(
+      externalRef,
+      "repositoryId",
+      externalRefPath,
+    ),
+    repositoryOwner: optionalNullableString(
+      externalRef,
+      "repositoryOwner",
+      externalRefPath,
+    ),
+    repositoryName: optionalNullableString(
+      externalRef,
+      "repositoryName",
+      externalRefPath,
+    ),
+    projectId: optionalNullableString(externalRef, "projectId", externalRefPath),
+    boardId: optionalNullableString(externalRef, "boardId", externalRefPath),
+    itemId: requiredString(externalRef, "itemId", externalRefPath),
+    itemNumber:
+      itemNumber === undefined
+        ? undefined
+        : Number.isInteger(itemNumber)
+          ? itemNumber
+          : (() => {
+              throw new Error(`${externalRefPath}.itemNumber must be an integer`);
+            })(),
+    itemKey: optionalNullableString(externalRef, "itemKey", externalRefPath),
+    nodeId: optionalNullableString(externalRef, "nodeId", externalRefPath),
+    webUrl: optionalNullableString(externalRef, "webUrl", externalRefPath),
+  };
+}
+
+function workItemRefFromRecord(
+  record: Record<string, unknown>,
+  pathName: string,
+): WorkItemRef {
+  const provider = optionalString(record, "provider", pathName);
+  const id = optionalString(record, "id", pathName);
+  const externalRef = optionalExternalRef(record, "externalRef", pathName);
+  return {
+    ...(provider ? { provider } : {}),
+    ...(id ? { id } : {}),
+    ...(externalRef ? { externalRef } : {}),
+  };
+}
+
+function workItemRefFromArgs(args: Record<string, unknown>): WorkItemRef {
+  const ref = args.ref;
+  if (ref !== undefined && ref !== null) {
+    return workItemRefFromRecord(asRecord(ref, "arguments.ref"), "arguments.ref");
+  }
+
+  return workItemRefFromRecord(args, "arguments");
+}
+
+function hasOwn(record: Record<string, unknown>, key: string): boolean {
+  return Object.prototype.hasOwnProperty.call(record, key);
+}
+
+function workItemPatchFromArgs(args: Record<string, unknown>): WorkItemPatch {
+  const patch: WorkItemPatch = {};
+  if (hasOwn(args, "title")) {
+    patch.title = requiredString(args, "title", "arguments");
+  }
+  if (hasOwn(args, "description")) {
+    patch.description = optionalNullableString(args, "description", "arguments") ?? null;
+  }
+  if (hasOwn(args, "status")) {
+    patch.status = optionalWorkStatus(args, "status", "arguments");
+  }
+  if (hasOwn(args, "labels")) {
+    patch.labels = optionalStringArray(args, "labels", "arguments") ?? [];
+  }
+  if (hasOwn(args, "assignees")) {
+    patch.assignees = optionalStringArray(args, "assignees", "arguments") ?? [];
+  }
+  if (hasOwn(args, "milestone")) {
+    patch.milestone = optionalNullableString(args, "milestone", "arguments") ?? null;
+  }
+  if (Object.keys(patch).length === 0) {
+    throw new Error("arguments must include at least one work item field to update");
+  }
+
+  return patch;
 }
 
 function toolResult(value: unknown, isError = false): {
@@ -420,6 +756,78 @@ export async function callPharoNexusMcpTool(
             project: requiredString(args, "project", "arguments"),
           }),
         });
+      case "work_item_create": {
+        const service = createWorkItemService({ homePath: homePathFromArgs(args) });
+        return toolResult({
+          ok: true,
+          workItem: await service.createWorkItem({
+            ...projectSelectorFromArgs(args),
+            title: requiredString(args, "title", "arguments"),
+            description: optionalNullableString(args, "description", "arguments"),
+            status: optionalWorkStatus(args, "status", "arguments"),
+            labels: optionalStringArray(args, "labels", "arguments"),
+            assignees: optionalStringArray(args, "assignees", "arguments"),
+            milestone: optionalNullableString(args, "milestone", "arguments"),
+          }),
+        });
+      }
+      case "work_item_list": {
+        const service = createWorkItemService({ homePath: homePathFromArgs(args) });
+        return toolResult({
+          ok: true,
+          workItems: await service.listWorkItems({
+            ...projectSelectorFromArgs(args),
+            status: optionalWorkStatusQuery(args, "status", "arguments"),
+            labels: optionalStringArray(args, "labels", "arguments"),
+            assignees: optionalStringArray(args, "assignees", "arguments"),
+            search: optionalString(args, "search", "arguments"),
+            limit: optionalNumber(args, "limit", "arguments"),
+          }),
+        });
+      }
+      case "work_item_get": {
+        const service = createWorkItemService({ homePath: homePathFromArgs(args) });
+        return toolResult({
+          ok: true,
+          workItem: await service.getWorkItem({
+            ...projectSelectorFromArgs(args),
+            ...workItemRefFromArgs(args),
+          }),
+        });
+      }
+      case "work_item_update": {
+        const service = createWorkItemService({ homePath: homePathFromArgs(args) });
+        return toolResult({
+          ok: true,
+          workItem: await service.updateWorkItem({
+            ...projectSelectorFromArgs(args),
+            ref: workItemRefFromArgs(args),
+            patch: workItemPatchFromArgs(args),
+          }),
+        });
+      }
+      case "work_item_comment": {
+        const service = createWorkItemService({ homePath: homePathFromArgs(args) });
+        return toolResult({
+          ok: true,
+          comment: await service.addComment({
+            ...projectSelectorFromArgs(args),
+            ref: workItemRefFromArgs(args),
+            body: requiredString(args, "body", "arguments"),
+          }),
+        });
+      }
+      case "work_item_set_status": {
+        const service = createWorkItemService({ homePath: homePathFromArgs(args) });
+        return toolResult({
+          ok: true,
+          workItem: await service.setStatus({
+            ...projectSelectorFromArgs(args),
+            ref: workItemRefFromArgs(args),
+            status: parseWorkStatus(requiredString(args, "status", "arguments"), "arguments.status"),
+          }),
+        });
+      }
       default:
         return toolResult(
           {

@@ -191,7 +191,16 @@ describe("PharoNexus MCP server tools", () => {
       "pharo_nexus_project_sync_kanban",
       "pharo_nexus_project_list",
       "pharo_nexus_project_status",
+      "work_item_create",
+      "work_item_list",
+      "work_item_get",
+      "work_item_update",
+      "work_item_comment",
+      "work_item_set_status",
     ]);
+    expect(listPharoNexusMcpTools().map((tool) => tool.name)).not.toContain(
+      "pharo_nexus_work_item_create",
+    );
   });
 
   it("creates, lists, and reads a project through MCP tool calls", async () => {
@@ -266,6 +275,170 @@ describe("PharoNexus MCP server tools", () => {
         vibeKanbanProjectId: "vk-mcp",
       },
     });
+  });
+
+  it("manages local work items through neutral MCP tool calls", async () => {
+    const homePath = makeTempDir("pharo-nexus-home-");
+    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "Tracked");
+    initPharoNexusHome({ homePath });
+    const createProject = await callPharoNexusMcpTool(
+      "pharo_nexus_project_create",
+      {
+        homePath,
+        name: "Tracked",
+        root: projectRoot,
+        gitInit: true,
+        syncVibeKanban: false,
+      },
+      { gitRunner: fakeGitRunner },
+    );
+    expect(createProject.isError).toBeUndefined();
+    saveProjectConfig(projectRoot, {
+      ...loadProjectConfig(projectRoot),
+      workTracking: {
+        provider: "local",
+        storePath: path.join(".tracker", "items.json"),
+      },
+    });
+
+    const createPayload = parseToolText(
+      await callPharoNexusMcpTool("work_item_create", {
+        homePath,
+        project: "tracked",
+        title: "Local MCP item",
+        description: "Created through neutral MCP",
+        labels: ["mcp", "local"],
+      }),
+    );
+    expect(createPayload).toMatchObject({
+      ok: true,
+      workItem: {
+        id: "local-1",
+        title: "Local MCP item",
+        provider: "local",
+        labels: ["mcp", "local"],
+      },
+    });
+
+    const listPayload = parseToolText(
+      await callPharoNexusMcpTool("work_item_list", {
+        homePath,
+        project: "tracked",
+        labels: ["mcp"],
+      }),
+    );
+    expect(listPayload).toMatchObject({
+      ok: true,
+      workItems: [
+        {
+          id: "local-1",
+          title: "Local MCP item",
+        },
+      ],
+    });
+
+    const updatePayload = parseToolText(
+      await callPharoNexusMcpTool("work_item_update", {
+        homePath,
+        project: "tracked",
+        id: "local-1",
+        status: "in_progress",
+        assignees: ["alice"],
+      }),
+    );
+    expect(updatePayload).toMatchObject({
+      ok: true,
+      workItem: {
+        id: "local-1",
+        status: "in_progress",
+        assignees: ["alice"],
+      },
+    });
+
+    const commentPayload = parseToolText(
+      await callPharoNexusMcpTool("work_item_comment", {
+        homePath,
+        project: "tracked",
+        ref: {
+          id: "local-1",
+        },
+        body: "Commented through MCP",
+      }),
+    );
+    expect(commentPayload).toMatchObject({
+      ok: true,
+      comment: {
+        id: "local-comment-1",
+        body: "Commented through MCP",
+      },
+    });
+
+    const statusPayload = parseToolText(
+      await callPharoNexusMcpTool("work_item_set_status", {
+        homePath,
+        project: "tracked",
+        externalRef: {
+          provider: "local",
+          itemId: "local-1",
+        },
+        status: "done",
+      }),
+    );
+    expect(statusPayload).toMatchObject({
+      ok: true,
+      workItem: {
+        id: "local-1",
+        status: "done",
+      },
+    });
+
+    const getPayload = parseToolText(
+      await callPharoNexusMcpTool("work_item_get", {
+        homePath,
+        project: "tracked",
+        id: "local-1",
+      }),
+    );
+    expect(getPayload).toMatchObject({
+      ok: true,
+      workItem: {
+        id: "local-1",
+        status: "done",
+      },
+    });
+    expect(fs.existsSync(path.join(projectRoot, ".tracker", "items.json"))).toBe(
+      true,
+    );
+  });
+
+  it("reports unsupported work tracking providers through neutral MCP tools", async () => {
+    const homePath = makeTempDir("pharo-nexus-home-");
+    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "Legacy");
+    initPharoNexusHome({ homePath });
+    const createProject = await callPharoNexusMcpTool(
+      "pharo_nexus_project_create",
+      {
+        homePath,
+        name: "Legacy",
+        root: projectRoot,
+        gitInit: true,
+        syncVibeKanban: false,
+      },
+      { gitRunner: fakeGitRunner },
+    );
+    expect(createProject.isError).toBeUndefined();
+
+    const result = await callPharoNexusMcpTool("work_item_create", {
+      homePath,
+      project: "legacy",
+      title: "Cannot route to Vibe yet",
+    });
+
+    expect(result.isError).toBe(true);
+    expect(parseToolText(result)).toMatchObject({
+      ok: false,
+    });
+    expect(JSON.stringify(parseToolText(result))).toContain("vibe-kanban");
   });
 
   it("resolves project status by managed config id before MCP path fallback", async () => {
