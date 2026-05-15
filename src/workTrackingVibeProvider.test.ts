@@ -28,18 +28,21 @@ describe("Vibe work tracker provider", () => {
       fetch: fetchMock,
     });
 
-    await expect(
-      provider.ensureProject({
-        homePath: "C:\\dev\\code\\pharo-nexus",
-        projectRoot: "C:\\dev\\code\\pharo-nexus\\MetaPharoNexus",
-        sourceRoot: "C:\\dev\\code\\git\\PharoNexus",
-        projectId: "meta-pharo-nexus",
-        projectName: "MetaPharoNexus",
-      }),
-    ).resolves.toEqual({
+    const result = await provider.ensureProject({
+      homePath: "C:\\dev\\code\\pharo-nexus",
+      projectRoot: "C:\\dev\\code\\pharo-nexus\\MetaPharoNexus",
+      sourceRoot: "C:\\dev\\code\\git\\PharoNexus",
+      projectId: "meta-pharo-nexus",
+      projectName: "MetaPharoNexus",
+    });
+
+    expect(result).toMatchObject({
       provider: "vibe-kanban",
       id: "repo-1",
       name: "MetaPharoNexus",
+      vibeKanbanRepo: {
+        projectId: "repo-1",
+      },
       externalRef: {
         provider: "vibe-kanban",
         host: "localhost",
@@ -109,17 +112,20 @@ describe("Vibe work tracker provider", () => {
       fetch: fetchMock,
     });
 
-    await expect(
-      provider.ensureBoard({
-        homePath: "C:\\dev\\code\\pharo-nexus",
-        projectRoot: "C:\\dev\\code\\pharo-nexus\\MetaPharoNexus",
-        projectId: "meta-pharo-nexus",
-        projectName: "MetaPharoNexus",
-      }),
-    ).resolves.toEqual({
+    const result = await provider.ensureBoard({
+      homePath: "C:\\dev\\code\\pharo-nexus",
+      projectRoot: "C:\\dev\\code\\pharo-nexus\\MetaPharoNexus",
+      projectId: "meta-pharo-nexus",
+      projectName: "MetaPharoNexus",
+    });
+
+    expect(result).toMatchObject({
       provider: "vibe-kanban",
       id: "board-1",
       name: "MetaPharoNexus",
+      vibeKanbanBoard: {
+        boardId: "board-1",
+      },
       externalRef: {
         provider: "vibe-kanban",
         host: null,

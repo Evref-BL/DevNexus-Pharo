@@ -1,9 +1,11 @@
 import {
   ensureVibeKanbanBoard,
   type EnsureVibeKanbanBoardOptions,
+  type EnsureVibeKanbanBoardResult,
 } from "./vibeKanbanBoardAdapter.js";
 import {
   registerVibeKanbanProject,
+  type RegisterVibeKanbanProjectResult,
 } from "./vibeKanbanProjectAdapter.js";
 import type { VibeKanbanApiOptions } from "./vibeKanbanMcpConfig.js";
 import type {
@@ -25,6 +27,14 @@ import type {
 export interface VibeWorkTrackerProviderOptions extends VibeKanbanApiOptions {
   config?: VibeKanbanWorkTrackingConfig;
   color?: string;
+}
+
+export interface VibeTrackerProjectRef extends TrackerProjectRef {
+  vibeKanbanRepo: RegisterVibeKanbanProjectResult;
+}
+
+export interface VibeTrackerBoardRef extends TrackerBoardRef {
+  vibeKanbanBoard: EnsureVibeKanbanBoardResult;
 }
 
 export class VibeWorkTrackerProviderError extends Error {
@@ -67,7 +77,7 @@ export class VibeWorkTrackerProvider implements WorkTrackerProvider {
 
   async ensureProject(
     context: PharoNexusProjectContext,
-  ): Promise<TrackerProjectRef> {
+  ): Promise<VibeTrackerProjectRef> {
     const projectRoot = sourceRootFor(context);
     const result = await registerVibeKanbanProject({
       ...this.vibeProjectOptions(),
@@ -81,6 +91,7 @@ export class VibeWorkTrackerProvider implements WorkTrackerProvider {
       provider: "vibe-kanban",
       id: result.projectId,
       name,
+      vibeKanbanRepo: result,
       externalRef: {
         provider: "vibe-kanban",
         host: this.options.host ?? null,
@@ -91,7 +102,9 @@ export class VibeWorkTrackerProvider implements WorkTrackerProvider {
     };
   }
 
-  async ensureBoard(context: PharoNexusProjectContext): Promise<TrackerBoardRef> {
+  async ensureBoard(
+    context: PharoNexusProjectContext,
+  ): Promise<VibeTrackerBoardRef> {
     const result = await ensureVibeKanbanBoard({
       ...this.vibeBoardOptions(),
       name: context.projectName,
@@ -102,6 +115,7 @@ export class VibeWorkTrackerProvider implements WorkTrackerProvider {
       provider: "vibe-kanban",
       id: result.boardId,
       name: result.board.name,
+      vibeKanbanBoard: result,
       externalRef: {
         provider: "vibe-kanban",
         host: this.options.host ?? null,

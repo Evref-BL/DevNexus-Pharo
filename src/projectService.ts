@@ -23,15 +23,15 @@ import {
   type PharoNexusProjectReference,
 } from "./config.js";
 import {
-  ensureVibeKanbanBoard,
   type EnsureVibeKanbanBoardResult,
 } from "./vibeKanbanBoardAdapter.js";
 import {
-  registerVibeKanbanProject,
   updateVibeKanbanProject,
   type RegisterVibeKanbanProjectResult,
   type UpdateVibeKanbanProjectResult,
 } from "./vibeKanbanProjectAdapter.js";
+import { createVibeWorkTrackerProvider } from "./workTrackingVibeProvider.js";
+import type { PharoNexusProjectContext } from "./workTrackingTypes.js";
 
 export interface PlexusProjectConfig {
   name: string;
@@ -1210,30 +1210,42 @@ export async function syncPharoNexusProjectKanban(
     status.projectRoot,
     sourceRoot,
   );
-  const vibeKanban = await registerVibeKanbanProject({
+  const vibeKanbanPort = options.port ?? homeConfig.ports.vibeKanban;
+  const vibeProvider = createVibeWorkTrackerProvider({
     host: options.host,
-    port: options.port ?? homeConfig.ports.vibeKanban,
+    port: vibeKanbanPort,
     fetch: options.fetch,
-    projectRoot: sourceRoot,
-    name: status.name,
+    config: {
+      provider: "vibe-kanban",
+      projectId: initialProjectConfig.kanban.projectId,
+    },
   });
+  const trackerContext: PharoNexusProjectContext = {
+    homePath,
+    projectRoot: status.projectRoot,
+    projectId: initialProjectConfig.id,
+    projectName: status.name,
+    sourceRoot,
+    workTracking: {
+      provider: "vibe-kanban",
+      projectId: initialProjectConfig.kanban.projectId,
+    },
+  };
+  const vibeKanbanProject = await vibeProvider.ensureProject(trackerContext);
+  const vibeKanban = vibeKanbanProject.vibeKanbanRepo;
   const vibeKanbanRepoSetup = await updateVibeKanbanProject({
     host: options.host,
-    port: options.port ?? homeConfig.ports.vibeKanban,
+    port: vibeKanbanPort,
     fetch: options.fetch,
-    projectId: vibeKanban.projectId,
+    projectId: vibeKanbanProject.id,
     setupScript,
   });
-  const vibeKanbanBoard = await ensureVibeKanbanBoard({
-    host: options.host,
-    port: options.port ?? homeConfig.ports.vibeKanban,
-    fetch: options.fetch,
-    name: status.name,
-  });
+  const vibeKanbanBoardRef = await vibeProvider.ensureBoard(trackerContext);
+  const vibeKanbanBoard = vibeKanbanBoardRef.vibeKanbanBoard;
   const linked = linkPharoNexusProjectKanban({
     homePath,
     project: status.projectRoot,
-    vibeKanbanProjectId: vibeKanbanBoard.boardId,
+    vibeKanbanProjectId: vibeKanbanBoardRef.id,
   });
   const updatedHomeConfig = loadHomeConfig(homePath);
   const projectConfig = loadProjectConfig(status.projectRoot);
@@ -1241,15 +1253,15 @@ export async function syncPharoNexusProjectKanban(
     updatedHomeConfig,
     status.projectRoot,
     projectConfig,
-    vibeKanbanBoard.boardId,
-    vibeKanban.projectId,
+    vibeKanbanBoardRef.id,
+    vibeKanbanProject.id,
   );
   saveHomeConfig(homePath, updatedHomeConfig);
 
   return {
     ...linked,
-    vibeKanbanProjectId: vibeKanbanBoard.boardId,
-    vibeKanbanRepoId: vibeKanban.projectId,
+    vibeKanbanProjectId: vibeKanbanBoardRef.id,
+    vibeKanbanRepoId: vibeKanbanProject.id,
     project: statusForProjectReference(reference),
     vibeKanbanRepo: vibeKanban,
     vibeKanbanRepoSetup,
