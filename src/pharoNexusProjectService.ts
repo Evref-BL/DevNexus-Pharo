@@ -15,6 +15,7 @@ import {
   type NexusProjectConfig,
 } from "./config.js";
 import {
+  buildVibeKanbanWorkspaceSetupScript,
   createVibeWorkTrackerProvider,
   scaffoldNexusProject,
   updateVibeKanbanProject,
@@ -28,7 +29,6 @@ import {
   assertGitRepository,
   assertNonEmptyString,
   buildProjectConfig,
-  buildVibeKanbanWorkspaceSetupScript,
   defaultGitRunner,
   defaultImportedProjectRoot,
   defaultSourceCheckoutDirectoryName,
