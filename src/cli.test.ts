@@ -178,6 +178,14 @@ describe("pharo-nexus cli", () => {
     );
     expect(fs.existsSync(path.join(projectRoot, "AGENTS.md"))).toBe(false);
     expect(fs.existsSync(codexConfigPath(projectRoot))).toBe(false);
+    expect(
+      fs.existsSync(path.join(projectRoot, ".dev-nexus", "skills", "diagnose", "SKILL.md")),
+    ).toBe(true);
+    expect(
+      fs.existsSync(
+        path.join(projectRoot, ".dev-nexus", "skills", "pharo-nexus-workflow", "SKILL.md"),
+      ),
+    ).toBe(false);
   });
 
   it("initializes Codex MCP config for a workspace while preserving existing settings", async () => {

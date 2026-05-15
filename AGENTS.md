@@ -43,6 +43,9 @@ depend on implementation details inside Pharo images.
   Codex configuration, agent instructions, worktrees, and project metadata.
 - The source Git checkout may be separate from that root, or may live in a
   subdirectory such as `git`; do not assume the project root is the source repo.
+- Installed support skills live under `.dev-nexus/skills` in the managed
+  project root. Load only the skill that matches the current task instead of
+  copying skill text into prompts or source files.
 - Do not create a new Kanban project for every task.
 - Prefer MCP tools for project creation, import, list, status, workspace, and
   image operations. Manual edits to PharoNexus/PLexus config files are for

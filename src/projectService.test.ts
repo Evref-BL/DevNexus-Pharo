@@ -182,6 +182,22 @@ describe("PharoNexus project service", () => {
       images: [],
     });
     expect(fs.existsSync(result.worktreesRoot)).toBe(true);
+    expect(
+      fs.existsSync(
+        path.join(result.projectRoot, ".dev-nexus", "skills", "diagnose", "SKILL.md"),
+      ),
+    ).toBe(true);
+    expect(
+      fs.existsSync(
+        path.join(
+          result.projectRoot,
+          ".dev-nexus",
+          "skills",
+          "pharo-nexus-workflow",
+          "SKILL.md",
+        ),
+      ),
+    ).toBe(true);
     expect(fs.readFileSync(result.agentsPath, "utf8")).toBe(defaultAgentsContent());
     expect(result.codexConfigPath).toBe(codexConfigPath(result.projectRoot));
     const codexConfig = fs.readFileSync(result.codexConfigPath, "utf8");
@@ -196,6 +212,8 @@ describe("PharoNexus project service", () => {
     expect(suggestedFirstPrompt).toContain(
       "This is a Codex and PharoNexus project for MyProject.",
     );
+    expect(suggestedFirstPrompt).toContain(".dev-nexus");
+    expect(suggestedFirstPrompt).toContain("PharoNexus skills: pharo-nexus-workflow");
     expect(suggestedFirstPrompt).toContain("Kanban project id: (not known yet)");
     expect(suggestedFirstPrompt).toContain("Record durable local context in NOTES.md");
     expect(suggestedFirstPrompt).toContain(
@@ -247,6 +265,22 @@ describe("PharoNexus project service", () => {
     expect(result.projectConfig.extensions).toBeUndefined();
     expect(fs.existsSync(path.join(result.projectRoot, "AGENTS.md"))).toBe(false);
     expect(fs.existsSync(codexConfigPath(result.projectRoot))).toBe(false);
+    expect(
+      fs.existsSync(
+        path.join(result.projectRoot, ".dev-nexus", "skills", "diagnose", "SKILL.md"),
+      ),
+    ).toBe(true);
+    expect(
+      fs.existsSync(
+        path.join(
+          result.projectRoot,
+          ".dev-nexus",
+          "skills",
+          "pharo-nexus-workflow",
+          "SKILL.md",
+        ),
+      ),
+    ).toBe(false);
     expect(getNexusProjectStatus({ homePath, project: "plain-tool" }).project)
       .toMatchObject({
         id: "plain-tool",
@@ -1091,6 +1125,14 @@ describe("PharoNexus project service", () => {
     expect(fs.existsSync(path.join(projectRoot, plexusProjectConfigFileName))).toBe(false);
     expect(fs.existsSync(path.join(projectRoot, "AGENTS.md"))).toBe(false);
     expect(fs.existsSync(codexConfigPath(projectRoot))).toBe(false);
+    expect(
+      fs.existsSync(path.join(projectRoot, ".dev-nexus", "skills", "diagnose", "SKILL.md")),
+    ).toBe(true);
+    expect(
+      fs.existsSync(
+        path.join(projectRoot, ".dev-nexus", "skills", "pharo-nexus-workflow", "SKILL.md"),
+      ),
+    ).toBe(false);
     expect(fs.existsSync(path.join(sourceRoot, devNexusProjectConfigFileName))).toBe(false);
     expect(fs.readFileSync(path.join(sourceRoot, "AGENTS.md"), "utf8")).toBe(
       "# Source owned\n",

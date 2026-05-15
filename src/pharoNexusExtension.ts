@@ -1,7 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import type { NexusExtension } from "dev-nexus";
+import {
+  defaultCoreSkillPack,
+  type NexusExtension,
+  type NexusSkillDefinition,
+} from "dev-nexus";
 import {
   type NexusProjectConfig,
 } from "./config.js";
@@ -56,6 +60,109 @@ export interface InstallPharoNexusProjectFilesOptions {
 }
 
 const suggestedFirstPromptFileName = "suggestedFirstPrompt.md";
+
+function skillMarkdown(name: string, description: string, body: string): string {
+  return [
+    "---",
+    `name: ${name}`,
+    `description: ${description}`,
+    "---",
+    "",
+    body.trim(),
+    "",
+  ].join("\n");
+}
+
+function pharoNexusSkill(
+  id: string,
+  name: string,
+  description: string,
+  body: string,
+): NexusSkillDefinition {
+  return {
+    manifest: {
+      id,
+      name,
+      description,
+      version: "0.1.0",
+      license: "Apache-2.0",
+      source: {
+        type: "curated",
+        uri: "pharo-nexus:specialization",
+      },
+      supportedAgents: ["codex"],
+      materialization: "copy",
+      sourceControl: "support",
+    },
+    files: {
+      "SKILL.md": skillMarkdown(name, description, body),
+    },
+  };
+}
+
+export const pharoNexusSkillPack: readonly NexusSkillDefinition[] = [
+  pharoNexusSkill(
+    "pharo-nexus-workflow",
+    "pharo-nexus-workflow",
+    "Workflow guidance for PharoNexus-managed projects, boards, worktrees, and publication decisions.",
+    `
+# PharoNexus Workflow
+
+Use this skill when working inside a PharoNexus-managed project.
+
+1. Identify whether the request belongs to the control project or an owning source project.
+2. Read local AGENTS.md, NOTES.md, and the project config before changing files.
+3. Use provider-neutral project and work-item tools where possible.
+4. Keep Vibe Kanban as tracker context only unless a task explicitly asks for Vibe diagnostics.
+5. Verify focused behavior before broader checks, then record commits and publication state.
+`,
+  ),
+  pharoNexusSkill(
+    "plexus-diagnostics",
+    "plexus-diagnostics",
+    "Diagnostic workflow for PLexus gateway status, route health, and safe project-boundary probes.",
+    `
+# PLexus Diagnostics
+
+Use this skill when checking PLexus gateway status or route behavior.
+
+1. Prefer non-mutating status calls before live open or route probes.
+2. Name the project path, state root, workspace id, target id, and cleanup boundary before live checks.
+3. Do not launch images or Docker unless the selected task documents isolation and cleanup.
+4. Route findings to the owning project board with reproduction details and expected behavior.
+`,
+  ),
+  pharoNexusSkill(
+    "pharo-launcher-lifecycle",
+    "pharo-launcher-lifecycle",
+    "Safety guidance for Pharo Launcher image creation, launch, inspection, and cleanup operations.",
+    `
+# Pharo Launcher Lifecycle
+
+Use this skill when a task touches image creation, launch, or cleanup.
+
+1. Treat image launch as host mutation unless an isolated runner is documented.
+2. Use disposable image copies for smoke probes when available.
+3. Record image identity, filesystem paths, processes, and cleanup commands.
+4. Stop and report a blocker if cleanup or ownership is unclear.
+`,
+  ),
+  pharoNexusSkill(
+    "mcp-pharo-execution",
+    "mcp-pharo-execution",
+    "Execution guidance for in-image MCP calls, JSON-RPC reachability, and routed Pharo tool checks.",
+    `
+# MCP Pharo Execution
+
+Use this skill when validating in-image MCP tool reachability or routed calls.
+
+1. Prove transport reachability before assuming tool behavior is wrong.
+2. Keep routed calls non-mutating until an isolated image boundary is explicit.
+3. Capture request shape, response payload, route id, and owning project.
+4. Add regression coverage at the lowest layer that owns the failure.
+`,
+  ),
+];
 
 function packageRootPath(): string {
   return path.dirname(path.dirname(fileURLToPath(import.meta.url)));
@@ -161,6 +268,12 @@ function buildSuggestedFirstPrompt(
 ): string {
   const sourceRoot = resolveProjectSourceRoot(projectRoot, projectConfig);
   const kanbanProjectId = projectConfig.kanban.projectId;
+  const genericSkills = defaultCoreSkillPack
+    .map((skill) => skill.manifest.id)
+    .join(", ");
+  const specializationSkills = pharoNexusSkillPack
+    .map((skill) => skill.manifest.id)
+    .join(", ");
 
   return [
     `This is a Codex and PharoNexus project for ${projectConfig.name}.`,
@@ -172,6 +285,7 @@ function buildSuggestedFirstPrompt(
     "- Check the matching Vibe Kanban board and current issues with the available PharoNexus and Vibe Kanban MCP tools.",
     "- Record durable local context in NOTES.md, including the Kanban board id and any source/workflow details future agents should know.",
     "- Edit AGENTS.md only when this project needs workflow guidance beyond the default PharoNexus contract.",
+    `- Use installed support skills under ${path.join(projectRoot, ".dev-nexus", "skills")} when relevant; generic skills: ${genericSkills}; PharoNexus skills: ${specializationSkills}.`,
     "- When changes are complete and verified, commit them in the relevant source repository unless the user explicitly asks not to. Push only when requested or when project instructions say to publish.",
     "",
     "Known at prompt generation time:",
@@ -295,6 +409,10 @@ export const pharoNexusExtension: NexusExtension<
       projectConfig,
       vibeKanbanProjectId: projectConfig.kanban.projectId,
     }),
+  projectSkills: ({ projectConfig }) =>
+    projectUsesPharoNexusExtension(projectConfig)
+      ? [...pharoNexusSkillPack]
+      : undefined,
   projectStatus: ({ projectRoot, projectConfig }) => {
     if (!projectUsesPharoNexusExtension(projectConfig)) {
       return undefined;

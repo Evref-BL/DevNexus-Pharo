@@ -4,6 +4,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   pharoNexusExtension,
+  pharoNexusSkillPack,
   pharoNexusProjectFilesFromExtensionResult,
 } from "./pharoNexusExtension.js";
 import { scaffoldNexusProject } from "dev-nexus";
@@ -123,6 +124,55 @@ describe("PharoNexus extension", () => {
       path.join(projectRoot, "config", "plexus.project.json"),
     );
     expect(fs.existsSync(files.plexusProjectConfigPath)).toBe(true);
+  });
+
+  it("adds PharoNexus specialization skills only for marked projects", () => {
+    const homePath = makeTempDir("pharo-nexus-home-");
+    const projectRoot = path.join(makeTempDir("pharo-nexus-project-"), "Project");
+    const worktreesRoot = path.join(projectRoot, "worktrees");
+    const config = projectConfig({
+      extensions: {
+        [pharoNexusProjectExtensionConfigKey]: {},
+      },
+    });
+
+    const scaffold = scaffoldNexusProject({
+      homePath,
+      projectRoot,
+      worktreesRoot,
+      projectConfig: config,
+      extensions: [pharoNexusExtension],
+    });
+
+    expect(scaffold.skills.installed.map((skill) => skill.id)).toEqual(
+      expect.arrayContaining([
+        "diagnose",
+        ...pharoNexusSkillPack.map((skill) => skill.manifest.id),
+      ]),
+    );
+    expect(
+      fs.existsSync(
+        path.join(
+          projectRoot,
+          ".dev-nexus",
+          "skills",
+          "pharo-nexus-workflow",
+          "SKILL.md",
+        ),
+      ),
+    ).toBe(true);
+
+    const unmanaged = scaffoldNexusProject({
+      homePath,
+      projectRoot: path.join(makeTempDir("pharo-nexus-project-"), "Plain"),
+      worktreesRoot: path.join(makeTempDir("pharo-nexus-worktrees-"), "worktrees"),
+      projectConfig: projectConfig(),
+      extensions: [pharoNexusExtension],
+    });
+
+    expect(unmanaged.skills.installed.map((skill) => skill.id)).not.toContain(
+      "pharo-nexus-workflow",
+    );
   });
 
   it("contributes PLexus status and tracker linking only for PharoNexus projects", () => {

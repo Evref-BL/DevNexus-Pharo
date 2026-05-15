@@ -373,6 +373,14 @@ describe("PharoNexus MCP server tools", () => {
       false,
     );
     expect(fs.existsSync(path.join(projectRoot, "AGENTS.md"))).toBe(false);
+    expect(
+      fs.existsSync(path.join(projectRoot, ".dev-nexus", "skills", "diagnose", "SKILL.md")),
+    ).toBe(true);
+    expect(
+      fs.existsSync(
+        path.join(projectRoot, ".dev-nexus", "skills", "pharo-nexus-workflow", "SKILL.md"),
+      ),
+    ).toBe(false);
 
     const statusPayload = parseToolText(
       await callPharoNexusMcpTool("project_status", {
