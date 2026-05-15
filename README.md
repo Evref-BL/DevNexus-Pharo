@@ -10,7 +10,8 @@ PharoNexus owns:
 - Vibe Kanban backend and local app startup
 - the PLexus gateway startup
 - Codex/Vibe MCP configuration for PharoNexus and PLexus
-- PharoNexus project creation, import, registry, and Kanban linkage
+- PharoNexus project creation, import, registry, work tracking, and local
+  Codex worktree metadata
 
 PLexus owns Pharo runtime/project/workspace behavior. pharo-launcher-mcp owns
 PharoLauncher access.
@@ -161,14 +162,32 @@ For `project create --from`, the source repository is cloned under
 `<project-root>\git`. For `project import <source-checkout>`, the managed
 project points at the existing source checkout.
 
-Link or sync a project with Vibe Kanban:
+Configure provider-neutral work tracking for a project:
 
 ```powershell
-pharo-nexus project create MyProject --git-init --vibe-project-id <id>
-pharo-nexus project create MyProject --git-init --sync-vibe-kanban
-pharo-nexus project import C:\dev\code\git\ExistingProject --name ExistingProject --sync-vibe-kanban
-pharo-nexus project link-kanban my-project --vibe-project-id <id>
-pharo-nexus project sync-kanban my-project
+pharo-nexus project configure-tracker MyProject --provider local --store-path .pharo-nexus\work-items.json
+pharo-nexus project configure-tracker MyProject --provider github --repository-owner example --repository-name MyProject
+pharo-nexus project configure-tracker MyProject --provider github --host github.enterprise.test --repository-owner example --repository-name MyProject
+```
+
+The GitHub provider uses the GitHub Issues REST API. It reads credentials in
+this order: explicit provider token from code, `GITHUB_TOKEN`, `GH_TOKEN`, then
+`git credential fill`. If Git Credential Manager is configured as Git's
+credential helper, cached GitHub or GitHub Enterprise tokens are reused through
+that standard Git credential protocol. Automation calls use non-interactive
+credential lookup by default with `GCM_INTERACTIVE=0` and
+`GIT_TERMINAL_PROMPT=0`, so they fail instead of hanging if no cached credential
+exists.
+
+Existing local Vibe Kanban installations can still be used as a tracker
+provider for board/repo registration:
+
+```powershell
+pharo-nexus project create MyProject --git-init --tracker-project-id <id>
+pharo-nexus project create MyProject --git-init --sync-tracker
+pharo-nexus project import C:\dev\code\git\ExistingProject --name ExistingProject --sync-tracker
+pharo-nexus project link-tracker my-project --tracker-project-id <id>
+pharo-nexus project sync-tracker my-project
 ```
 
 List and inspect projects:
@@ -217,12 +236,25 @@ pharo-nexus mcp-stdio
 PharoNexus exposes these project-management tools:
 
 ```text
-pharo_nexus_project_create
-pharo_nexus_project_import
-pharo_nexus_project_link_kanban
-pharo_nexus_project_sync_kanban
-pharo_nexus_project_list
-pharo_nexus_project_status
+project_create
+project_import
+project_configure_tracker
+project_link_tracker
+project_sync_tracker
+project_list
+project_status
+work_item_create
+work_item_list
+work_item_get
+work_item_update
+work_item_comment
+work_item_set_status
+codex_worktree_prepare
+codex_worktree_guide
+codex_worktree_list
+codex_worktree_status
+codex_worktree_record_execution
+codex_worktree_archive
 ```
 
 ## Configuration Notes

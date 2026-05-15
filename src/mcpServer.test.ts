@@ -209,6 +209,7 @@ describe("PharoNexus MCP server tools", () => {
       "project_create",
       "project_import",
       "project_link_tracker",
+      "project_configure_tracker",
       "project_sync_tracker",
       "project_list",
       "project_status",
@@ -291,6 +292,33 @@ describe("PharoNexus MCP server tools", () => {
       },
     });
 
+    const configurePayload = parseToolText(
+      await callPharoNexusMcpTool("project_configure_tracker", {
+        homePath,
+        project: "mcp-project",
+        provider: "github",
+        repositoryOwner: "example",
+        repositoryName: "project",
+      }),
+    );
+    expect(configurePayload).toMatchObject({
+      ok: true,
+      workTracking: {
+        provider: "github",
+        repository: {
+          owner: "example",
+          name: "project",
+        },
+      },
+      project: {
+        id: "mcp-project",
+        workTracking: {
+          provider: "github",
+        },
+        vibeKanbanProjectId: "vk-mcp",
+      },
+    });
+
     const statusPayload = parseToolText(
       await callPharoNexusMcpTool("project_status", {
         homePath,
@@ -302,6 +330,9 @@ describe("PharoNexus MCP server tools", () => {
       project: {
         id: "mcp-project",
         projectRoot,
+        workTracking: {
+          provider: "github",
+        },
         vibeKanbanProjectId: "vk-mcp",
       },
     });

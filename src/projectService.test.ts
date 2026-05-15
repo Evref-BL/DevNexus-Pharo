@@ -10,8 +10,10 @@ import {
   loadProjectConfig,
   pharoNexusProjectConfigFileName,
   plexusProjectConfigFileName,
+  saveProjectConfig,
 } from "./config.js";
 import {
+  configurePharoNexusProjectTracker,
   createPharoNexusProject,
   getPharoNexusProjectStatus,
   importPharoNexusProject,
@@ -299,6 +301,7 @@ describe("PharoNexus project service", () => {
             defaultBranch: "main",
             sourceRoot: "git",
           },
+          workTracking: null,
           vibeKanbanProjectId: null,
           vibeKanbanRepoId: null,
           projectConfigPath: path.join(projectRoot, pharoNexusProjectConfigFileName),
@@ -487,6 +490,94 @@ describe("PharoNexus project service", () => {
         projectId: "vk-unregistered",
       },
     });
+  });
+
+  it("configures GitHub work tracking without changing PLexus Kanban metadata", () => {
+    const homePath = makeTempDir("pharo-nexus-home-");
+    initPharoNexusHome({ homePath });
+    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "GitHubTracked");
+    createPharoNexusProject({
+      homePath,
+      name: "GitHubTracked",
+      root: projectRoot,
+      vibeKanbanProjectId: "vk-existing",
+      gitRunner: fakeGitRunner([], { branch: "main" }),
+    });
+
+    const result = configurePharoNexusProjectTracker({
+      homePath,
+      project: projectRoot,
+      provider: "github",
+      host: "github.enterprise.test",
+      repositoryOwner: "example",
+      repositoryName: "project",
+    });
+
+    expect(result.workTracking).toEqual({
+      provider: "github",
+      host: "github.enterprise.test",
+      repository: {
+        owner: "example",
+        name: "project",
+      },
+    });
+    expect(loadProjectConfig(projectRoot).workTracking).toEqual(result.workTracking);
+    expect(
+      JSON.parse(fs.readFileSync(result.plexusProjectConfigPath, "utf8")),
+    ).toMatchObject({
+      kanban: {
+        provider: "vibe-kanban",
+        projectId: "vk-existing",
+      },
+    });
+    expect(result.project).toMatchObject({
+      id: "git-hub-tracked",
+      workTracking: result.workTracking,
+      vibeKanbanProjectId: "vk-existing",
+    });
+  });
+
+  it("configures local work tracking for an initialized path and registers it", () => {
+    const homePath = makeTempDir("pharo-nexus-home-");
+    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "LocalTracked");
+    initPharoNexusHome({ homePath });
+    fs.mkdirSync(projectRoot, { recursive: true });
+    saveProjectConfig(projectRoot, {
+      version: 1,
+      id: "local-tracked",
+      name: "LocalTracked",
+      home: null,
+      repo: {
+        kind: "local",
+        remoteUrl: null,
+        defaultBranch: "main",
+      },
+      plexusProjectConfig: plexusProjectConfigFileName,
+      worktreesRoot: "worktrees",
+      kanban: {
+        provider: "vibe-kanban",
+        projectId: null,
+      },
+    });
+
+    const result = configurePharoNexusProjectTracker({
+      homePath,
+      project: projectRoot,
+      provider: "local",
+      storePath: ".tracker/items.json",
+    });
+
+    expect(result.workTracking).toEqual({
+      provider: "local",
+      storePath: ".tracker/items.json",
+    });
+    expect(loadHomeConfig(homePath).projects).toEqual([
+      {
+        id: "local-tracked",
+        name: "LocalTracked",
+        plexusProjectRoot: projectRoot,
+      },
+    ]);
   });
 
   it("syncs a project to Vibe Kanban and stores the repo and board ids", async () => {
@@ -946,6 +1037,7 @@ describe("PharoNexus project service", () => {
       name: "Missing",
       projectRoot,
       repo: null,
+      workTracking: null,
       vibeKanbanProjectId: "kanban-missing",
       vibeKanbanRepoId: null,
       projectConfigPath: path.join(projectRoot, pharoNexusProjectConfigFileName),

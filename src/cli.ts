@@ -50,12 +50,15 @@ import {
   stopPharoNexus,
 } from "./pharoNexusRuntime.js";
 import {
+  configurePharoNexusProjectTracker,
   createPharoNexusProject,
   getPharoNexusProjectStatus,
   importPharoNexusProject,
   linkPharoNexusProjectTracker,
   listPharoNexusProjects,
   syncPharoNexusProjectTracker,
+  type ConfigurePharoNexusProjectTrackerProvider,
+  type ConfigurePharoNexusProjectTrackerResult,
   type CreatePharoNexusProjectResult,
   type GetPharoNexusProjectStatusResult,
   type ImportPharoNexusProjectResult,
@@ -102,6 +105,7 @@ export function usage(): string {
     "  pharo-nexus codex worktree archive <id> [options]",
     "  pharo-nexus project create <name> [--from <git-url> | --git-init] [options]",
     "  pharo-nexus project import <path> [--name <name>] [options]",
+    "  pharo-nexus project configure-tracker <id-or-path> --provider <local|github> [options]",
     "  pharo-nexus project link-tracker <id-or-path> --tracker-project-id <id> [options]",
     "  pharo-nexus project sync-tracker <id-or-path> [options]",
     "  pharo-nexus project list [options]",
@@ -222,6 +226,15 @@ export function usage(): string {
     "  --sync-tracker",
     "  --vibe-host <host>",
     "  --vibe-port <port>",
+    "  --home <path>",
+    "  --json",
+    "",
+    "Options for project configure-tracker:",
+    "  --provider <local|github>",
+    "  --repository-owner <owner>    required for GitHub",
+    "  --repository-name <name>      required for GitHub",
+    "  --host <host>                 optional GitHub Enterprise host",
+    "  --store-path <path>           optional local provider store path",
     "  --home <path>",
     "  --json",
     "",
@@ -1519,6 +1532,17 @@ interface ParsedProjectImportCommand {
   json?: boolean;
 }
 
+interface ParsedProjectConfigureTrackerCommand {
+  homePath: string;
+  project: string;
+  provider: ConfigurePharoNexusProjectTrackerProvider;
+  host?: string;
+  repositoryOwner?: string;
+  repositoryName?: string;
+  storePath?: string;
+  json?: boolean;
+}
+
 interface ParsedProjectLinkTrackerCommand {
   homePath: string;
   project: string;
@@ -1672,6 +1696,77 @@ function parseProjectImportCommand(argv: string[]): ParsedProjectImportCommand {
   return parsed as ParsedProjectImportCommand;
 }
 
+function parseProjectConfigureTrackerCommand(
+  argv: string[],
+): ParsedProjectConfigureTrackerCommand {
+  const [, command, project, ...rest] = argv;
+  if (command !== "configure-tracker") {
+    throw new Error("project requires configure-tracker");
+  }
+
+  if (!project || project.startsWith("--")) {
+    throw new Error("project configure-tracker requires a project id or path");
+  }
+
+  const parsed: Partial<ParsedProjectConfigureTrackerCommand> = {
+    homePath: defaultHomePath(),
+    project,
+  };
+  for (let index = 0; index < rest.length; index += 1) {
+    const arg = rest[index];
+    const next = (): string => {
+      index += 1;
+      if (index >= rest.length) {
+        throw new Error(`${arg} requires a value`);
+      }
+
+      return rest[index];
+    };
+
+    switch (arg) {
+      case "--provider":
+        parsed.provider = parseTrackerProvider(next());
+        break;
+      case "--repository-owner":
+        parsed.repositoryOwner = next();
+        break;
+      case "--repository-name":
+        parsed.repositoryName = next();
+        break;
+      case "--host":
+        parsed.host = next();
+        break;
+      case "--store-path":
+        parsed.storePath = next();
+        break;
+      case "--home":
+        parsed.homePath = next();
+        break;
+      case "--json":
+        parsed.json = true;
+        break;
+      default:
+        throw new Error(`Unknown project configure-tracker option: ${arg}`);
+    }
+  }
+
+  if (!parsed.provider) {
+    throw new Error("--provider is required");
+  }
+
+  return parsed as ParsedProjectConfigureTrackerCommand;
+}
+
+function parseTrackerProvider(
+  value: string,
+): ConfigurePharoNexusProjectTrackerProvider {
+  if (value === "local" || value === "github") {
+    return value;
+  }
+
+  throw new Error("--provider must be local or github");
+}
+
 function parseProjectLinkTrackerCommand(
   argv: string[],
 ): ParsedProjectLinkTrackerCommand {
@@ -1772,7 +1867,9 @@ function parseProjectSyncTrackerCommand(
 function parseProjectListCommand(argv: string[]): ParsedProjectListCommand {
   const [, command, ...rest] = argv;
   if (command !== "list") {
-    throw new Error("project requires create, import, link-tracker, sync-tracker, list, or status");
+    throw new Error(
+      "project requires create, import, configure-tracker, link-tracker, sync-tracker, list, or status",
+    );
   }
 
   const parsed: Partial<ParsedProjectListCommand> = {
@@ -1807,7 +1904,9 @@ function parseProjectListCommand(argv: string[]): ParsedProjectListCommand {
 function parseProjectStatusCommand(argv: string[]): ParsedProjectStatusCommand {
   const [, command, project, ...rest] = argv;
   if (command !== "status") {
-    throw new Error("project requires create, import, link-tracker, sync-tracker, list, or status");
+    throw new Error(
+      "project requires create, import, configure-tracker, link-tracker, sync-tracker, list, or status",
+    );
   }
 
   if (!project || project.startsWith("--")) {
@@ -1948,6 +2047,34 @@ function printProjectLinkTrackerResult(
   console.log(JSON.stringify(payload, null, 2));
 }
 
+function printProjectConfigureTrackerResult(
+  result: ConfigurePharoNexusProjectTrackerResult,
+  json: boolean | undefined,
+): void {
+  const payload = { ok: true, ...result };
+  if (json) {
+    console.log(JSON.stringify(payload, null, 2));
+    return;
+  }
+
+  console.log("PharoNexus project tracker configured.");
+  console.log(`  Project: ${result.project.id} (${result.project.name})`);
+  console.log(`  Provider: ${result.workTracking.provider}`);
+  if (result.workTracking.provider === "github") {
+    console.log(
+      `  Repository: ${result.workTracking.repository.owner}/${result.workTracking.repository.name}`,
+    );
+    console.log(`  Host: ${result.workTracking.host ?? "github.com"}`);
+  }
+  if (result.workTracking.provider === "local" && result.workTracking.storePath) {
+    console.log(`  Store: ${result.workTracking.storePath}`);
+  }
+  console.log(`  Config: ${result.projectConfigPath}`);
+  console.log("");
+  console.log("JSON:");
+  console.log(JSON.stringify(payload, null, 2));
+}
+
 function printProjectSyncTrackerResult(
   result: SyncPharoNexusProjectTrackerResult,
   json: boolean | undefined,
@@ -1975,6 +2102,9 @@ function printProjectStatus(project: PharoNexusProjectStatus): void {
   console.log(`    Repo origin: ${project.repo?.remoteUrl ?? "(none)"}`);
   console.log(
     `    Default branch: ${project.repo?.defaultBranch ?? "(unknown)"}`,
+  );
+  console.log(
+    `    Work tracker: ${project.workTracking?.provider ?? "(legacy/default)"}`,
   );
   console.log(
     `    Vibe Kanban project: ${project.vibeKanbanProjectId ?? "(unlinked)"}`,
@@ -2089,6 +2219,13 @@ async function handleProjectCommand(argv: string[]): Promise<number> {
     return 0;
   }
 
+  if (command === "configure-tracker") {
+    const parsed = parseProjectConfigureTrackerCommand(argv);
+    const result = configurePharoNexusProjectTracker(parsed);
+    printProjectConfigureTrackerResult(result, parsed.json);
+    return 0;
+  }
+
   if (command === "sync-tracker") {
     const parsed = parseProjectSyncTrackerCommand(argv);
     const result = await syncPharoNexusProjectTracker({
@@ -2115,7 +2252,9 @@ async function handleProjectCommand(argv: string[]): Promise<number> {
     return 0;
   }
 
-  throw new Error("project requires create, import, link-tracker, sync-tracker, list, or status");
+  throw new Error(
+    "project requires create, import, configure-tracker, link-tracker, sync-tracker, list, or status",
+  );
 }
 
 async function handlePlexusGatewayCommand(argv: string[]): Promise<number> {

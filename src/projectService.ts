@@ -31,7 +31,10 @@ import {
   type UpdateVibeKanbanProjectResult,
 } from "./vibeKanbanProjectAdapter.js";
 import { createVibeWorkTrackerProvider } from "./workTrackingVibeProvider.js";
-import type { PharoNexusProjectContext } from "./workTrackingTypes.js";
+import type {
+  PharoNexusProjectContext,
+  WorkTrackingConfig,
+} from "./workTrackingTypes.js";
 
 export interface PlexusProjectConfig {
   name: string;
@@ -115,6 +118,7 @@ export interface PharoNexusProjectStatus {
   name: string;
   projectRoot: string;
   repo: PharoNexusProjectConfig["repo"] | null;
+  workTracking: WorkTrackingConfig | null;
   vibeKanbanProjectId: string | null;
   vibeKanbanRepoId: string | null;
   projectConfigPath: string;
@@ -148,6 +152,27 @@ export interface LinkPharoNexusProjectTrackerOptions {
   homePath: string;
   project: string;
   trackerProjectId: string;
+}
+
+export type ConfigurePharoNexusProjectTrackerProvider = "local" | "github";
+
+export interface ConfigurePharoNexusProjectTrackerOptions {
+  homePath: string;
+  project: string;
+  provider: ConfigurePharoNexusProjectTrackerProvider;
+  host?: string;
+  repositoryOwner?: string;
+  repositoryName?: string;
+  storePath?: string;
+}
+
+export interface ConfigurePharoNexusProjectTrackerResult {
+  homePath: string;
+  project: PharoNexusProjectStatus;
+  projectConfigPath: string;
+  plexusProjectConfigPath: string;
+  projectConfig: PharoNexusProjectConfig;
+  workTracking: WorkTrackingConfig;
 }
 
 export interface LinkPharoNexusProjectTrackerResult {
@@ -665,6 +690,7 @@ function statusForProjectReference(
     name: config?.name ?? reference.name,
     projectRoot,
     repo: config?.repo ?? null,
+    workTracking: config?.workTracking ?? null,
     vibeKanbanProjectId:
       config?.kanban.projectId ?? reference.vibeKanbanProjectId ?? null,
     vibeKanbanRepoId: reference.vibeKanbanRepoId ?? null,
@@ -807,6 +833,50 @@ function updatePlexusProjectKanban(
 
   saveJsonFile(plexusConfigPath, updated);
   return updated;
+}
+
+function buildConfiguredWorkTracking(
+  options: ConfigurePharoNexusProjectTrackerOptions,
+): WorkTrackingConfig {
+  if (options.provider === "local") {
+    const storePath = optionalNonEmptyString(options.storePath, "storePath");
+    return {
+      provider: "local",
+      ...(storePath !== undefined ? { storePath } : {}),
+    };
+  }
+
+  if (options.provider === "github") {
+    const owner = optionalNonEmptyString(
+      options.repositoryOwner,
+      "repositoryOwner",
+    );
+    const name = optionalNonEmptyString(options.repositoryName, "repositoryName");
+    if (!owner) {
+      throw new PharoNexusProjectError(
+        "repositoryOwner is required for github tracker configuration",
+      );
+    }
+    if (!name) {
+      throw new PharoNexusProjectError(
+        "repositoryName is required for github tracker configuration",
+      );
+    }
+
+    const host = optionalNonEmptyString(options.host, "host");
+    return {
+      provider: "github",
+      ...(host !== undefined ? { host } : {}),
+      repository: {
+        owner,
+        name,
+      },
+    };
+  }
+
+  throw new PharoNexusProjectError(
+    `Unsupported tracker provider: ${options.provider}`,
+  );
 }
 
 function upsertProjectReference(
@@ -1187,6 +1257,46 @@ export function linkPharoNexusProjectTracker(
     projectConfigPath: projectConfigFilePath,
     plexusProjectConfigPath: plexusConfigPath,
     plexusProjectConfig,
+  };
+}
+
+export function configurePharoNexusProjectTracker(
+  options: ConfigurePharoNexusProjectTrackerOptions,
+): ConfigurePharoNexusProjectTrackerResult {
+  assertNonEmptyString(options.project, "project");
+  assertNonEmptyString(options.provider, "provider");
+
+  const homePath = resolvePharoNexusHome(options.homePath);
+  const homeConfig = loadHomeConfig(homePath);
+  const existingReference = findProjectReference(homeConfig, options.project);
+  const projectRoot = existingReference
+    ? path.resolve(existingReference.plexusProjectRoot)
+    : projectRootFromInput(options.project);
+  const projectConfig = loadProjectConfig(projectRoot);
+  const workTracking = buildConfiguredWorkTracking(options);
+  const updatedProjectConfig: PharoNexusProjectConfig = {
+    ...projectConfig,
+    workTracking,
+  };
+  const projectConfigFilePath = saveProjectConfig(projectRoot, updatedProjectConfig);
+  const reference = upsertProjectReference(
+    homeConfig,
+    projectRoot,
+    updatedProjectConfig,
+    null,
+  );
+  saveHomeConfig(homePath, homeConfig);
+
+  return {
+    homePath,
+    project: statusForProjectReference(reference),
+    projectConfigPath: projectConfigFilePath,
+    plexusProjectConfigPath: projectPlexusConfigPath(
+      projectRoot,
+      updatedProjectConfig,
+    ),
+    projectConfig: updatedProjectConfig,
+    workTracking,
   };
 }
 

@@ -7,6 +7,7 @@ import { main, usage } from "./cli.js";
 import { codexConfigPath } from "./codexConfig.js";
 import {
   initPharoNexusHome,
+  loadProjectConfig,
   loadHomeConfig,
   pharoNexusProjectConfigFileName,
   plexusProjectConfigFileName,
@@ -48,6 +49,7 @@ describe("pharo-nexus cli", () => {
     expect(usage()).toContain("pharo-nexus codex worktree record <id>");
     expect(usage()).toContain("pharo-nexus codex worktree archive <id>");
     expect(usage()).toContain("pharo-nexus project create <name>");
+    expect(usage()).toContain("pharo-nexus project configure-tracker <id-or-path>");
     expect(usage()).toContain("pharo-nexus project link-tracker <id-or-path>");
     expect(usage()).toContain("pharo-nexus project sync-tracker <id-or-path>");
     expect(usage()).toContain("pharo-nexus vibe-kanban start <home>");
@@ -60,6 +62,8 @@ describe("pharo-nexus cli", () => {
     expect(usage()).toContain("--interactive");
     expect(usage()).toContain("--tracker-project-id");
     expect(usage()).toContain("--sync-tracker");
+    expect(usage()).toContain("--repository-owner");
+    expect(usage()).toContain("--repository-name");
     expect(usage()).toContain("--no-open-browser");
     expect(usage()).toContain("--state <active|archived>");
     expect(usage()).toContain("--id <worktree-id>");
@@ -737,6 +741,76 @@ describe("pharo-nexus cli", () => {
       id: "linked",
       vibeKanbanProjectId: "vk-linked",
     });
+  });
+
+  it("configures GitHub work tracking from the CLI", async () => {
+    const homePath = path.join(makeTempDir("pharo-nexus-parent-"), "home");
+    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "GitHubTracked");
+    initHome(homePath);
+    const homeConfig = loadHomeConfig(homePath);
+    homeConfig.projects.push({
+      id: "github-tracked",
+      name: "GitHubTracked",
+      plexusProjectRoot: projectRoot,
+    });
+    saveHomeConfig(homePath, homeConfig);
+    saveProjectConfig(projectRoot, {
+      version: 1,
+      id: "github-tracked",
+      name: "GitHubTracked",
+      home: null,
+      repo: {
+        kind: "git",
+        remoteUrl: "https://github.com/example/project.git",
+        defaultBranch: "main",
+      },
+      plexusProjectConfig: plexusProjectConfigFileName,
+      worktreesRoot: "worktrees",
+      kanban: {
+        provider: "vibe-kanban",
+        projectId: null,
+      },
+    });
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+
+    await expect(
+      main([
+        "project",
+        "configure-tracker",
+        "github-tracked",
+        "--home",
+        homePath,
+        "--provider",
+        "github",
+        "--host",
+        "github.enterprise.test",
+        "--repository-owner",
+        "example",
+        "--repository-name",
+        "project",
+        "--json",
+      ]),
+    ).resolves.toBe(0);
+
+    const payload = JSON.parse(String(log.mock.calls[0]?.[0]));
+    expect(payload).toMatchObject({
+      ok: true,
+      workTracking: {
+        provider: "github",
+        host: "github.enterprise.test",
+        repository: {
+          owner: "example",
+          name: "project",
+        },
+      },
+      project: {
+        id: "github-tracked",
+        workTracking: {
+          provider: "github",
+        },
+      },
+    });
+    expect(loadProjectConfig(projectRoot).workTracking).toEqual(payload.workTracking);
   });
 
   it("syncs a project repo and board to Vibe Kanban from the CLI", async () => {

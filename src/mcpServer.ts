@@ -15,6 +15,7 @@ import {
 import { commentCodexWorktreeHandoff } from "./codexWorktreeTrackerHandoff.js";
 import { defaultPharoNexusHomePath, loadProjectConfig } from "./config.js";
 import {
+  configurePharoNexusProjectTracker,
   createPharoNexusProject,
   getPharoNexusProjectStatus,
   importPharoNexusProject,
@@ -129,6 +130,24 @@ const tools: McpTool[] = [
         trackerProjectId: { type: "string" },
       },
       required: ["project", "trackerProjectId"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "project_configure_tracker",
+    description: "Configure a PharoNexus project's provider-neutral work tracker.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        homePath: { type: "string" },
+        project: { type: "string" },
+        provider: { type: "string" },
+        host: { type: "string" },
+        repositoryOwner: { type: "string" },
+        repositoryName: { type: "string" },
+        storePath: { type: "string" },
+      },
+      required: ["project", "provider"],
       additionalProperties: false,
     },
   },
@@ -534,6 +553,17 @@ function requiredString(
   return value;
 }
 
+function trackerProviderFromArgs(
+  record: Record<string, unknown>,
+): "local" | "github" {
+  const value = requiredString(record, "provider", "arguments");
+  if (value === "local" || value === "github") {
+    return value;
+  }
+
+  throw new Error("arguments.provider must be local or github");
+}
+
 const workStatuses = new Set<WorkStatus>([
   "todo",
   "ready",
@@ -929,6 +959,27 @@ export async function callPharoNexusMcpTool(
               "trackerProjectId",
               "arguments",
             ),
+          }),
+        });
+      case "project_configure_tracker":
+        return toolResult({
+          ok: true,
+          ...configurePharoNexusProjectTracker({
+            homePath: homePathFromArgs(args),
+            project: requiredString(args, "project", "arguments"),
+            provider: trackerProviderFromArgs(args),
+            host: optionalString(args, "host", "arguments"),
+            repositoryOwner: optionalString(
+              args,
+              "repositoryOwner",
+              "arguments",
+            ),
+            repositoryName: optionalString(
+              args,
+              "repositoryName",
+              "arguments",
+            ),
+            storePath: optionalString(args, "storePath", "arguments"),
           }),
         });
       case "project_sync_tracker":
