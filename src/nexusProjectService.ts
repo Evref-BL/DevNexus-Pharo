@@ -1,8 +1,31 @@
-import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { scaffoldNexusProject } from "dev-nexus";
-import type { NexusExtension } from "dev-nexus";
+import {
+  assertFileDoesNotExist,
+  assertGitRepository,
+  assertNonEmptyString,
+  defaultImportedProjectRoot,
+  defaultProjectGitRunner,
+  defaultSourceCheckoutDirectoryName,
+  detectDefaultBranch,
+  detectOriginUrl,
+  directoryExistsAndIsNonEmpty,
+  ensureUniqueProject,
+  loadProjectConfigIfExists,
+  NexusProjectError,
+  optionalNonEmptyString,
+  pathForProjectConfig,
+  resolveProjectSourceRoot,
+  runProjectGitCommand,
+  safeProjectDirectoryName,
+  samePath,
+  scaffoldNexusProject,
+  slugify,
+  type NexusExtension,
+  type ProjectGitCommandResult,
+  type ProjectGitRunner,
+  type WorkTrackingConfig,
+} from "dev-nexus";
 import {
   loadHomeConfig,
   loadProjectConfig,
@@ -18,18 +41,35 @@ import {
   type NexusProjectConfig,
   type NexusProjectReference,
 } from "./config.js";
-import type {
-  WorkTrackingConfig,
-} from "dev-nexus";
 
-export interface GitCommandResult {
-  args: string[];
-  stdout: string;
-  stderr: string;
-  exitCode: number | null;
-}
+const defaultGitRunner = defaultProjectGitRunner;
+const runGitCommand = runProjectGitCommand;
+const safeDirectoryName = safeProjectDirectoryName;
 
-export type GitRunner = (args: readonly string[], cwd?: string) => GitCommandResult;
+export type GitCommandResult = ProjectGitCommandResult;
+export type GitRunner = ProjectGitRunner;
+
+export {
+  assertFileDoesNotExist,
+  assertGitRepository,
+  assertNonEmptyString,
+  defaultImportedProjectRoot,
+  defaultGitRunner,
+  defaultSourceCheckoutDirectoryName,
+  detectDefaultBranch,
+  detectOriginUrl,
+  directoryExistsAndIsNonEmpty,
+  ensureUniqueProject,
+  loadProjectConfigIfExists,
+  NexusProjectError,
+  optionalNonEmptyString,
+  pathForProjectConfig,
+  resolveProjectSourceRoot,
+  runGitCommand,
+  safeDirectoryName,
+  samePath,
+  slugify,
+};
 
 export interface CreateNexusProjectOptions {
   homePath: string;
@@ -193,273 +233,6 @@ export function registerNexusProjectExtension(
 
 export function registeredNexusProjectExtensions(): readonly NexusProjectServiceExtension[] {
   return nexusProjectServiceExtensions;
-}
-
-export class NexusProjectError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "NexusProjectError";
-  }
-}
-
-export function assertNonEmptyString(value: string, name: string): void {
-  if (value.trim().length === 0) {
-    throw new NexusProjectError(`${name} must be a non-empty string`);
-  }
-}
-
-export function optionalNonEmptyString(
-  value: string | undefined,
-  name: string,
-): string | undefined {
-  if (value === undefined) {
-    return undefined;
-  }
-
-  assertNonEmptyString(value, name);
-  return value.trim();
-}
-
-export function slugify(value: string): string {
-  const withWordBreaks = value
-    .trim()
-    .replace(/([a-z0-9])([A-Z])/g, "$1-$2")
-    .replace(/([A-Z]+)([A-Z][a-z])/g, "$1-$2");
-  const slug = withWordBreaks
-    .toLowerCase()
-    .replace(/[^a-z0-9._-]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-
-  if (!slug) {
-    throw new NexusProjectError(
-      "Project name must contain at least one filesystem-safe character",
-    );
-  }
-
-  return slug;
-}
-
-export function safeDirectoryName(value: string): string {
-  const sanitized = value
-    .trim()
-    .replace(/[<>:"/\\|?*\u0000-\u001F]+/g, "-")
-    .replace(/\s+/g, "-")
-    .replace(/^-+|-+$/g, "");
-
-  return sanitized || slugify(value);
-}
-
-export function directoryExistsAndIsNonEmpty(directoryPath: string): boolean {
-  if (!fs.existsSync(directoryPath)) {
-    return false;
-  }
-
-  const stat = fs.statSync(directoryPath);
-  if (!stat.isDirectory()) {
-    throw new NexusProjectError(
-      `Project root exists and is not a directory: ${directoryPath}`,
-    );
-  }
-
-  return fs.readdirSync(directoryPath).length > 0;
-}
-
-export function assertFileDoesNotExist(filePath: string): void {
-  if (fs.existsSync(filePath)) {
-    throw new NexusProjectError(`Refusing to overwrite existing file: ${filePath}`);
-  }
-}
-
-export const defaultSourceCheckoutDirectoryName = "git";
-
-export function resolveProjectSourceRoot(
-  projectRoot: string,
-  projectConfig: NexusProjectConfig,
-): string {
-  const sourceRoot = projectConfig.repo.sourceRoot;
-  if (!sourceRoot) {
-    return path.resolve(projectRoot);
-  }
-
-  return path.isAbsolute(sourceRoot)
-    ? path.resolve(sourceRoot)
-    : path.resolve(projectRoot, sourceRoot);
-}
-
-export function defaultGitRunner(args: readonly string[], cwd?: string): GitCommandResult {
-  const result = spawnSync("git", [...args], {
-    cwd,
-    encoding: "utf8",
-    shell: false,
-    windowsHide: true,
-  });
-
-  if (result.error) {
-    throw new NexusProjectError(
-      `Failed to run git ${args.join(" ")}: ${result.error.message}`,
-    );
-  }
-
-  const commandResult: GitCommandResult = {
-    args: [...args],
-    stdout: result.stdout ?? "",
-    stderr: result.stderr ?? "",
-    exitCode: result.status,
-  };
-
-  if (result.status !== 0) {
-    throw new NexusProjectError(
-      `git ${args.join(" ")} failed with exit code ${result.status}: ${
-        commandResult.stderr.trim() || commandResult.stdout.trim()
-      }`,
-    );
-  }
-
-  return commandResult;
-}
-
-export function runGitCommand(
-  gitRunner: GitRunner,
-  commands: GitCommandResult[],
-  args: readonly string[],
-  cwd?: string,
-): GitCommandResult {
-  const result = gitRunner(args, cwd);
-  commands.push(result);
-
-  if (result.exitCode !== 0) {
-    throw new NexusProjectError(
-      `git ${args.join(" ")} failed with exit code ${result.exitCode}: ${
-        result.stderr.trim() || result.stdout.trim()
-      }`,
-    );
-  }
-
-  return result;
-}
-
-function tryGitCommand(
-  gitRunner: GitRunner,
-  commands: GitCommandResult[],
-  args: readonly string[],
-  cwd?: string,
-): GitCommandResult | undefined {
-  try {
-    return runGitCommand(gitRunner, commands, args, cwd);
-  } catch {
-    return undefined;
-  }
-}
-
-export function detectDefaultBranch(
-  gitRunner: GitRunner,
-  commands: GitCommandResult[],
-  projectRoot: string,
-): string | null {
-  const result = tryGitCommand(
-    gitRunner,
-    commands,
-    ["-C", projectRoot, "symbolic-ref", "--short", "HEAD"],
-  );
-  const branch = result?.stdout.trim();
-
-  return branch && branch !== "HEAD" ? branch : null;
-}
-
-export function assertGitRepository(
-  gitRunner: GitRunner,
-  commands: GitCommandResult[],
-  projectRoot: string,
-): void {
-  const result = runGitCommand(
-    gitRunner,
-    commands,
-    ["-C", projectRoot, "rev-parse", "--is-inside-work-tree"],
-  );
-
-  if (result.stdout.trim() !== "true") {
-    throw new NexusProjectError(
-      `Path is not inside a Git work tree: ${projectRoot}`,
-    );
-  }
-}
-
-export function detectOriginUrl(
-  gitRunner: GitRunner,
-  commands: GitCommandResult[],
-  projectRoot: string,
-): string | null {
-  const result = tryGitCommand(
-    gitRunner,
-    commands,
-    ["-C", projectRoot, "config", "--get", "remote.origin.url"],
-  );
-  const remoteUrl = result?.stdout.trim();
-
-  return remoteUrl || null;
-}
-
-export function ensureUniqueProject(
-  config: NexusHomeConfig,
-  projectId: string,
-  projectRoot: string,
-): void {
-  const normalizedRoot = path.resolve(projectRoot).toLowerCase();
-  const duplicate = config.projects.find(
-    (project) =>
-      project.id === projectId ||
-      path.resolve(project.projectRoot).toLowerCase() === normalizedRoot,
-  );
-
-  if (duplicate) {
-    throw new NexusProjectError(
-      `Project is already registered: ${duplicate.id}`,
-    );
-  }
-}
-
-function normalizedPathForCompare(filePath: string): string {
-  const resolved = path.resolve(filePath);
-  return process.platform === "win32" ? resolved.toLowerCase() : resolved;
-}
-
-function samePath(left: string, right: string): boolean {
-  return normalizedPathForCompare(left) === normalizedPathForCompare(right);
-}
-
-export function pathForProjectConfig(projectRoot: string, targetPath: string): string {
-  const relative = path.relative(projectRoot, targetPath);
-  if (
-    relative &&
-    !relative.startsWith("..") &&
-    !path.isAbsolute(relative)
-  ) {
-    return relative;
-  }
-
-  return path.resolve(targetPath);
-}
-
-export function defaultImportedProjectRoot(
-  homeConfig: NexusHomeConfig,
-  projectName: string,
-  sourceRoot: string,
-): string {
-  const directoryName = safeDirectoryName(projectName);
-  const candidate = path.join(homeConfig.paths.projectsRoot, directoryName);
-  return samePath(candidate, sourceRoot)
-    ? path.join(homeConfig.paths.projectsRoot, `${directoryName}-PharoNexus`)
-    : candidate;
-}
-
-export function loadProjectConfigIfExists(
-  projectRoot: string,
-): NexusProjectConfig | undefined {
-  if (!fs.existsSync(projectConfigPath(projectRoot))) {
-    return undefined;
-  }
-
-  return loadProjectConfig(projectRoot);
 }
 
 function projectRootFromInput(input: string): string {
