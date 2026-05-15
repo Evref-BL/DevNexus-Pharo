@@ -17,3 +17,4 @@ export * from "./workItemService.js";
 export * from "./workTrackingLocalProvider.js";
 export * from "./workTrackingService.js";
 export * from "./workTrackingTypes.js";
+export * from "./workTrackingVibeProvider.js";

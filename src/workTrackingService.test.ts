@@ -137,6 +137,30 @@ describe("work tracking service", () => {
     await expect(provider.listWorkItems()).resolves.toEqual([]);
   });
 
+  it("creates a Vibe work tracker provider when Vibe API options are supplied", () => {
+    const legacyVibeConfig = validateProjectConfig({
+      version: 1,
+      id: "legacy-project",
+      name: "Legacy Project",
+      kanban: {
+        provider: "vibe-kanban",
+        projectId: "vk-project",
+      },
+    });
+
+    const provider = createProjectWorkTrackerProvider(legacyVibeConfig, {
+      vibeKanban: {
+        host: "localhost",
+        port: 3000,
+        fetch: async () => new Response(),
+      },
+    });
+
+    expect(provider.provider).toBe("vibe-kanban");
+    expect(provider.capabilities.board).toBe(true);
+    expect(provider.capabilities.createItem).toBe(false);
+  });
+
   it("reports unsupported work tracking providers before MCP tools use them", () => {
     expect(() =>
       createWorkTrackerProvider({
@@ -168,7 +192,7 @@ describe("work tracking service", () => {
     });
 
     expect(() => createProjectWorkTrackerProvider(legacyVibeConfig)).toThrow(
-      /not implemented yet: vibe-kanban/,
+      /requires Vibe Kanban API options/,
     );
   });
 });

@@ -2,7 +2,9 @@ import type {
   PharoNexusProjectConfig,
   PharoNexusProjectKanbanConfig,
 } from "./config.js";
+import type { VibeKanbanApiOptions } from "./vibeKanbanMcpConfig.js";
 import { createLocalWorkTrackerProvider } from "./workTrackingLocalProvider.js";
+import { createVibeWorkTrackerProvider } from "./workTrackingVibeProvider.js";
 import type {
   VibeKanbanWorkTrackingConfig,
   WorkTrackingConfig,
@@ -12,6 +14,7 @@ import type {
 export interface CreateWorkTrackerProviderOptions {
   projectRoot?: string;
   now?: () => Date | string;
+  vibeKanban?: VibeKanbanApiOptions;
 }
 
 export class WorkTrackingServiceError extends Error {
@@ -58,6 +61,19 @@ export function createWorkTrackerProvider(
       projectRoot: options.projectRoot,
       config,
       now: options.now,
+    });
+  }
+
+  if (config.provider === "vibe-kanban") {
+    if (!options.vibeKanban) {
+      throw new WorkTrackingServiceError(
+        "Vibe Kanban provider requires Vibe Kanban API options",
+      );
+    }
+
+    return createVibeWorkTrackerProvider({
+      ...options.vibeKanban,
+      config,
     });
   }
 
