@@ -2,7 +2,7 @@
   "name": "pharo-nexus",
   "version": "0.1.0",
   "private": true,
-  "description": "Developer-environment orchestrator for Vibe Kanban, PLexus, and Pharo project workspaces.",
+  "description": "Pharo specialization layer for DevNexus, PLexus, and Pharo project workspaces.",
   "license": "Apache-2.0",
   "type": "module",
   "bin": {

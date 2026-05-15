@@ -31,7 +31,7 @@ afterEach(() => {
 
 describe("local work tracker provider", () => {
   it("creates and persists work items under the default project store", async () => {
-    const projectRoot = makeTempDir("pharo-nexus-project-");
+    const projectRoot = makeTempDir("dev-nexus-project-");
     const provider = createLocalWorkTrackerProvider({
       projectRoot,
       now: fixedClock("2026-05-15T09:00:00.000Z"),
@@ -83,7 +83,7 @@ describe("local work tracker provider", () => {
   });
 
   it("lists, filters, updates, and changes status locally", async () => {
-    const projectRoot = makeTempDir("pharo-nexus-project-");
+    const projectRoot = makeTempDir("dev-nexus-project-");
     const provider = createLocalWorkTrackerProvider({
       projectRoot,
       now: fixedClock(
@@ -151,7 +151,7 @@ describe("local work tracker provider", () => {
   });
 
   it("adds durable comments and updates the item timestamp", async () => {
-    const projectRoot = makeTempDir("pharo-nexus-project-");
+    const projectRoot = makeTempDir("dev-nexus-project-");
     const provider = createLocalWorkTrackerProvider({
       projectRoot,
       now: fixedClock(
@@ -186,7 +186,7 @@ describe("local work tracker provider", () => {
   });
 
   it("supports configured store paths, detection, and actionable errors", async () => {
-    const projectRoot = makeTempDir("pharo-nexus-project-");
+    const projectRoot = makeTempDir("dev-nexus-project-");
     const provider = createLocalWorkTrackerProvider({
       projectRoot,
       config: {
@@ -202,7 +202,7 @@ describe("local work tracker provider", () => {
     ).toBe(path.join(projectRoot, ".custom", "items.json"));
 
     await provider.ensureProject({
-      homePath: makeTempDir("pharo-nexus-home-"),
+      homePath: makeTempDir("dev-nexus-home-"),
       projectRoot,
       projectId: "project-1",
       projectName: "Project One",

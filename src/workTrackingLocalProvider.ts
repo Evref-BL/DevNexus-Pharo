@@ -17,7 +17,7 @@ import type {
   WorkTrackerProvider,
 } from "./workTrackingTypes.js";
 
-export const localWorkTrackingDirectoryName = ".pharo-nexus";
+export const localWorkTrackingDirectoryName = ".dev-nexus";
 export const localWorkTrackingStoreFileName = "work-items.json";
 export const localWorkTrackingStoreVersion = 1;
 
@@ -128,7 +128,7 @@ export class LocalWorkTrackerProvider implements WorkTrackerProvider {
         provider: "local",
         storePath: path.relative(resolveProjectRoot(input.projectRoot), storePath),
       },
-      reason: "Found local PharoNexus work item store",
+      reason: "Found local DevNexus work item store",
     };
   }
 
