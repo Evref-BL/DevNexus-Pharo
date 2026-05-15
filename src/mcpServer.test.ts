@@ -213,12 +213,12 @@ describe("PharoNexus MCP server tools", () => {
       "project_sync_tracker",
       "project_list",
       "project_status",
-      "codex_worktree_prepare",
-      "codex_worktree_guide",
-      "codex_worktree_list",
-      "codex_worktree_status",
-      "codex_worktree_record_execution",
-      "codex_worktree_archive",
+      "worktree_prepare",
+      "worktree_guide",
+      "worktree_list",
+      "worktree_status",
+      "worktree_record_execution",
+      "worktree_archive",
       "work_item_create",
       "work_item_list",
       "work_item_get",
@@ -231,6 +231,9 @@ describe("PharoNexus MCP server tools", () => {
     );
     expect(listPharoNexusMcpTools().map((tool) => tool.name)).not.toContain(
       "pharo_nexus_codex_worktree_prepare",
+    );
+    expect(listPharoNexusMcpTools().map((tool) => tool.name)).not.toContain(
+      "codex_worktree_prepare",
     );
   });
 
@@ -953,7 +956,7 @@ describe("PharoNexus MCP server tools", () => {
 
     const preparePayload = parseToolText(
       await callPharoNexusMcpTool(
-        "codex_worktree_prepare",
+        "worktree_prepare",
         {
           homePath,
           project: "codex-mcp",
@@ -987,7 +990,7 @@ describe("PharoNexus MCP server tools", () => {
 
     const listPayload = parseToolText(
       await callPharoNexusMcpTool(
-        "codex_worktree_list",
+        "worktree_list",
         {
           homePath,
           project: "codex-mcp",
@@ -1013,7 +1016,7 @@ describe("PharoNexus MCP server tools", () => {
 
     const statusPayload = parseToolText(
       await callPharoNexusMcpTool(
-        "codex_worktree_status",
+        "worktree_status",
         {
           homePath,
           id: "codex-mcp:codex/fcd-900",
@@ -1033,7 +1036,7 @@ describe("PharoNexus MCP server tools", () => {
     });
 
     const guidePayload = parseToolText(
-      await callPharoNexusMcpTool("codex_worktree_guide", {
+      await callPharoNexusMcpTool("worktree_guide", {
         homePath,
         id: "codex-mcp:codex/fcd-900",
         commentWorkItem: true,
@@ -1063,7 +1066,7 @@ describe("PharoNexus MCP server tools", () => {
 
     const recordPayload = parseToolText(
       await callPharoNexusMcpTool(
-        "codex_worktree_record_execution",
+        "worktree_record_execution",
         {
           homePath,
           id: "codex-mcp:codex/fcd-900",
@@ -1102,7 +1105,7 @@ describe("PharoNexus MCP server tools", () => {
 
     const archivePayload = parseToolText(
       await callPharoNexusMcpTool(
-        "codex_worktree_archive",
+        "worktree_archive",
         {
           homePath,
           id: "codex-mcp:codex/fcd-900",

@@ -200,8 +200,8 @@ const tools: McpTool[] = [
     },
   },
   {
-    name: "codex_worktree_prepare",
-    description: "Prepare a local Codex Git worktree for a managed project.",
+    name: "worktree_prepare",
+    description: "Prepare a local Git worktree for direct Codex work on a managed project.",
     inputSchema: {
       type: "object",
       properties: {
@@ -218,7 +218,7 @@ const tools: McpTool[] = [
     },
   },
   {
-    name: "codex_worktree_guide",
+    name: "worktree_guide",
     description: "Return read-only guidance for the direct local Codex worktree workflow without starting agents.",
     inputSchema: {
       type: "object",
@@ -245,8 +245,8 @@ const tools: McpTool[] = [
     },
   },
   {
-    name: "codex_worktree_list",
-    description: "List recorded local Codex worktrees from the PharoNexus home metadata store.",
+    name: "worktree_list",
+    description: "List recorded local worktrees from the home metadata store.",
     inputSchema: {
       type: "object",
       properties: {
@@ -258,8 +258,8 @@ const tools: McpTool[] = [
     },
   },
   {
-    name: "codex_worktree_status",
-    description: "Show one recorded local Codex worktree status from the PharoNexus home metadata store.",
+    name: "worktree_status",
+    description: "Show one recorded local worktree status from the home metadata store.",
     inputSchema: {
       type: "object",
       properties: {
@@ -271,8 +271,8 @@ const tools: McpTool[] = [
     },
   },
   {
-    name: "codex_worktree_record_execution",
-    description: "Record commit ids, verification, and publication decisions for a local Codex worktree metadata record.",
+    name: "worktree_record_execution",
+    description: "Record commit ids, verification, and publication decisions for a local worktree metadata record.",
     inputSchema: {
       type: "object",
       properties: {
@@ -312,8 +312,8 @@ const tools: McpTool[] = [
     },
   },
   {
-    name: "codex_worktree_archive",
-    description: "Archive a local Codex worktree metadata record, optionally removing the Git worktree.",
+    name: "worktree_archive",
+    description: "Archive a local worktree metadata record, optionally removing the Git worktree.",
     inputSchema: {
       type: "object",
       properties: {
@@ -1068,7 +1068,7 @@ export async function callPharoNexusMcpTool(
             project: requiredString(args, "project", "arguments"),
           }),
         });
-      case "codex_worktree_guide":
+      case "worktree_guide":
         return toolResult({
           ok: true,
           ...buildCodexWorktreeGuide({
@@ -1086,7 +1086,7 @@ export async function callPharoNexusMcpTool(
             ),
           }),
         });
-      case "codex_worktree_prepare": {
+      case "worktree_prepare": {
         const workItemId = optionalString(args, "workItemId", "arguments");
         const homePath = homePathFromArgs(args);
         const prepared = prepareCodexWorktree({
@@ -1112,7 +1112,7 @@ export async function callPharoNexusMcpTool(
           ...(trackerComment ? { trackerComment } : {}),
         });
       }
-      case "codex_worktree_list":
+      case "worktree_list":
         return toolResult({
           ok: true,
           ...listCodexWorktrees({
@@ -1121,7 +1121,7 @@ export async function callPharoNexusMcpTool(
             state: optionalCodexWorktreeState(args, "state", "arguments"),
           }),
         });
-      case "codex_worktree_status":
+      case "worktree_status":
         return toolResult({
           ok: true,
           ...getCodexWorktreeStatus({
@@ -1129,7 +1129,7 @@ export async function callPharoNexusMcpTool(
             id: requiredString(args, "id", "arguments"),
           }),
         });
-      case "codex_worktree_record_execution": {
+      case "worktree_record_execution": {
         const publicationValue = args.publicationDecision;
         const publication = publicationValue === undefined || publicationValue === null
           ? undefined
@@ -1204,7 +1204,7 @@ export async function callPharoNexusMcpTool(
           }),
         });
       }
-      case "codex_worktree_archive": {
+      case "worktree_archive": {
         const homePath = homePathFromArgs(args);
         const archived = archiveCodexWorktree({
           homePath,
