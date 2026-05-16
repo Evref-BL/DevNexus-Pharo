@@ -1,8 +1,9 @@
 # PharoNexus
 
-PharoNexus is the user-environment orchestrator above Vibe Kanban and PLexus.
-It starts the local service graph, keeps project metadata consistent, and gives
-agents MCP tools for creating and managing Pharo projects.
+PharoNexus is the Pharo plugin and user-environment layer for DevNexus. It
+starts the local service graph, keeps project metadata consistent, and gives
+agents MCP tools for creating and managing Pharo projects without replacing
+DevNexus as the generic project, work-item, worktree, and target infrastructure.
 
 PharoNexus owns:
 
@@ -13,6 +14,9 @@ PharoNexus owns:
   MCP facade
 - PharoNexus project creation, import, registry, work tracking, and local
   Codex worktree metadata
+- the DevNexus plugin declaration that contributes Pharo skills, scoped PLexus
+  setup obligations, Pharo MCP projection, worker briefing fragments, and
+  cleanup expectations for Pharo-capable agents
 
 PLexus owns Pharo runtime/project/workspace behavior. pharo-launcher-mcp owns
 PharoLauncher access.

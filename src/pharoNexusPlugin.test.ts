@@ -204,8 +204,8 @@ describe("PharoNexus DevNexus plugin", () => {
     expect(contextFragment).toMatchObject({
       id: "context-pharo-runtime-boundary",
       targetAgents: ["codex", "claude"],
-      targetComponents: ["pharo-nexus", "mcp-pharo"],
     });
+    expect(contextFragment.targetComponents).toBeUndefined();
     expect(contextFragment.body).toContain(
       "PharoNexus composes with DevNexus and does not choose or supervise implementation work",
     );
@@ -216,8 +216,8 @@ describe("PharoNexus DevNexus plugin", () => {
     expect(briefingFragment).toMatchObject({
       id: "briefing-pharo-agent-setup",
       targetAgents: ["codex", "claude"],
-      targetComponents: ["pharo-nexus", "mcp-pharo"],
     });
+    expect(briefingFragment.targetComponents).toBeUndefined();
     expect(briefingFragment.body).toContain(
       "Prefer scoped PLexus and gateway tools for image operations",
     );

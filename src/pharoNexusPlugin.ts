@@ -159,7 +159,6 @@ export function pharoNexusDevNexusPluginConfig(): NexusProjectPluginConfig {
           "If that surface is missing or unreachable, report the infrastructure blocker instead of editing Smalltalk source files from disk as a substitute.",
         ].join(" "),
         targetAgents: ["codex", "claude"],
-        targetComponents: ["pharo-nexus", "mcp-pharo"],
         provenance: "DevNexus dogfood Pharo plugin plan",
       },
       {
@@ -172,7 +171,6 @@ export function pharoNexusDevNexusPluginConfig(): NexusProjectPluginConfig {
           "Do not run live images, Docker, PLexus open/close, or gateway live routes unless the selected work item documents the approved isolated runner and cleanup plan.",
         ].join(" "),
         targetAgents: ["codex", "claude"],
-        targetComponents: ["pharo-nexus", "mcp-pharo"],
         provenance: "DevNexus dogfood Pharo plugin plan",
       },
     ],
