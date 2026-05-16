@@ -230,6 +230,34 @@ directory containing `dev-nexus.project.json`. Pharo/PLexus paths, such as
 `extensions.pharo-nexus.plexusProjectConfig`, are interpreted by the
 PharoNexus extension.
 
+## Image Execution Policy
+
+PharoNexus writes a PLexus-facing `imageExecution` policy into
+`plexus.project.json` for managed projects. The default policy is disabled and
+requires disposable images plus an explicit cleanup plan before any launch work.
+
+Docker-backed image execution must be enabled explicitly with a runner image:
+
+```json
+{
+  "imageExecution": {
+    "mode": "docker",
+    "requireDisposableImage": true,
+    "requireCleanupPlan": true,
+    "docker": {
+      "image": "ghcr.io/example/pharo-runner:test",
+      "network": "none",
+      "autoRemove": true,
+      "mountProjectReadOnly": true
+    }
+  }
+}
+```
+
+This policy is configuration only. PharoNexus must not launch Docker, PLexus
+projects, or Pharo images unless the selected task names the isolated runner,
+disposable image boundary, and cleanup command sequence.
+
 ## Project Creation
 
 `pharo-nexus project create <name>` is the project factory entrypoint used by

@@ -12,6 +12,7 @@ import {
   saveProjectConfig,
 } from "./config.js";
 import {
+  defaultPlexusImageExecutionPolicy,
   pharoNexusProjectExtensionConfigKey,
   plexusProjectConfigFileName,
 } from "./pharoNexusExtension.js";
@@ -180,6 +181,7 @@ describe("PharoNexus project service", () => {
         projectId: "my-project",
       },
       images: [],
+      imageExecution: defaultPlexusImageExecutionPolicy,
     });
     expect(fs.existsSync(result.worktreesRoot)).toBe(true);
     expect(

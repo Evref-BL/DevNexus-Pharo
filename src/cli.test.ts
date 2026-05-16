@@ -3,6 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { defaultCoreSkillPack } from "dev-nexus";
 import { main, usage } from "./cli.js";
 import { codexConfigPath } from "./codexConfig.js";
 import {
@@ -14,13 +15,17 @@ import {
   saveProjectConfig,
 } from "./config.js";
 import {
+  defaultPlexusImageExecutionPolicy,
   pharoNexusProjectExtensionConfigKey,
+  pharoNexusSkillPack,
   plexusProjectConfigFileName,
 } from "./pharoNexusExtension.js";
 import type { GitCommandResult, GitRunner } from "./nexusProjectService.js";
 import { createWorkItemService } from "./workItemService.js";
 
 const tempDirs: string[] = [];
+const expectedPharoNexusSkillCount =
+  defaultCoreSkillPack.length + pharoNexusSkillPack.length;
 
 function makeTempDir(prefix: string): string {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
@@ -733,8 +738,8 @@ describe("pharo-nexus cli", () => {
       },
       skillStatus: {
         summary: {
-          expected: 9,
-          missing: 9,
+          expected: expectedPharoNexusSkillCount,
+          missing: expectedPharoNexusSkillCount,
         },
       },
     });
@@ -746,13 +751,13 @@ describe("pharo-nexus cli", () => {
       refresh: {
         before: {
           summary: {
-            missing: 9,
+            missing: expectedPharoNexusSkillCount,
           },
         },
         after: {
           summary: {
-            expected: 9,
-            installed: 9,
+            expected: expectedPharoNexusSkillCount,
+            installed: expectedPharoNexusSkillCount,
             missing: 0,
           },
         },

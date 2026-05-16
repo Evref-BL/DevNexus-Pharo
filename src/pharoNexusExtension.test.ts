@@ -3,9 +3,12 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  defaultPlexusImageExecutionPolicy,
   pharoNexusExtension,
   pharoNexusSkillPack,
   pharoNexusProjectFilesFromExtensionResult,
+  projectPlexusImageExecutionPolicy,
+  resolvePlexusImageExecutionPolicy,
 } from "./pharoNexusExtension.js";
 import { scaffoldNexusProject } from "dev-nexus";
 import {
@@ -79,6 +82,7 @@ describe("PharoNexus extension", () => {
         projectId: "vk-pharo-project",
       },
       images: [],
+      imageExecution: defaultPlexusImageExecutionPolicy,
     });
     expect(files.plexusProjectConfigPath).toBe(
       path.join(projectRoot, plexusProjectConfigFileName),
@@ -94,6 +98,7 @@ describe("PharoNexus extension", () => {
         projectId: "vk-pharo-project",
       },
       images: [],
+      imageExecution: defaultPlexusImageExecutionPolicy,
     });
   });
 
@@ -124,6 +129,91 @@ describe("PharoNexus extension", () => {
       path.join(projectRoot, "config", "plexus.project.json"),
     );
     expect(fs.existsSync(files.plexusProjectConfigPath)).toBe(true);
+  });
+
+  it("resolves safe image execution policy before PLexus launch work", () => {
+    expect(resolvePlexusImageExecutionPolicy(undefined)).toEqual(
+      defaultPlexusImageExecutionPolicy,
+    );
+    expect(
+      projectPlexusImageExecutionPolicy({
+        extensions: {
+          [pharoNexusProjectExtensionConfigKey]: {
+            imageExecution: {
+              mode: "docker",
+              docker: {
+                image: "ghcr.io/example/pharo-runner:test",
+                network: "bridge",
+              },
+            },
+          },
+        },
+      }),
+    ).toEqual({
+      mode: "docker",
+      requireDisposableImage: true,
+      requireCleanupPlan: true,
+      docker: {
+        image: "ghcr.io/example/pharo-runner:test",
+        network: "bridge",
+        autoRemove: true,
+        mountProjectReadOnly: true,
+      },
+    });
+    expect(() =>
+      resolvePlexusImageExecutionPolicy({
+        mode: "docker",
+        docker: {},
+      }),
+    ).toThrow(/docker\.image is required/);
+  });
+
+  it("writes configured Docker image execution policy into PLexus metadata", () => {
+    const homePath = makeTempDir("pharo-nexus-home-");
+    const projectRoot = path.join(makeTempDir("pharo-nexus-project-"), "Project");
+    const worktreesRoot = path.join(projectRoot, "worktrees");
+    const config = projectConfig({
+      extensions: {
+        [pharoNexusProjectExtensionConfigKey]: {
+          imageExecution: {
+            mode: "docker",
+            requireDisposableImage: true,
+            requireCleanupPlan: true,
+            docker: {
+              image: "ghcr.io/example/pharo-runner:test",
+              network: "none",
+              autoRemove: true,
+              mountProjectReadOnly: true,
+            },
+          },
+        },
+      },
+    });
+
+    const scaffold = scaffoldNexusProject({
+      homePath,
+      projectRoot,
+      worktreesRoot,
+      projectConfig: config,
+      extensions: [pharoNexusExtension],
+    });
+    const files = pharoNexusProjectFilesFromExtensionResult(
+      scaffold.extensionResults[pharoNexusExtension.id],
+    );
+
+    expect(JSON.parse(fs.readFileSync(files.plexusProjectConfigPath, "utf8"))).toMatchObject({
+      imageExecution: {
+        mode: "docker",
+        requireDisposableImage: true,
+        requireCleanupPlan: true,
+        docker: {
+          image: "ghcr.io/example/pharo-runner:test",
+          network: "none",
+          autoRemove: true,
+          mountProjectReadOnly: true,
+        },
+      },
+    });
   });
 
   it("adds PharoNexus specialization skills only for marked projects", () => {
@@ -224,6 +314,7 @@ describe("PharoNexus extension", () => {
           projectId: "vk-linked",
         },
         images: [],
+        imageExecution: defaultPlexusImageExecutionPolicy,
       },
     });
     expect(JSON.parse(fs.readFileSync(plexusPath, "utf8"))).toEqual(

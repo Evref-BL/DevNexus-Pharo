@@ -3,13 +3,18 @@ import http from "node:http";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { defaultCoreSkillPack } from "dev-nexus";
 import {
   initNexusHome,
   loadHomeConfig,
   loadProjectConfig,
   saveProjectConfig,
 } from "./config.js";
-import { plexusProjectConfigFileName } from "./pharoNexusExtension.js";
+import {
+  defaultPlexusImageExecutionPolicy,
+  pharoNexusSkillPack,
+  plexusProjectConfigFileName,
+} from "./pharoNexusExtension.js";
 import {
   callPharoNexusMcpTool,
   listPharoNexusMcpTools,
@@ -18,6 +23,9 @@ import {
 import type { GitCommandResult, GitRunner } from "./nexusProjectService.js";
 
 const tempDirs: string[] = [];
+const expectedGenericSkillCount = defaultCoreSkillPack.length;
+const expectedPharoNexusSkillCount =
+  defaultCoreSkillPack.length + pharoNexusSkillPack.length;
 
 function makeTempDir(prefix: string): string {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
@@ -412,8 +420,8 @@ describe("PharoNexus MCP server tools", () => {
       },
       skillStatus: {
         summary: {
-          expected: 5,
-          installed: 5,
+          expected: expectedGenericSkillCount,
+          installed: expectedGenericSkillCount,
           missing: 0,
           stale: 0,
         },
@@ -462,7 +470,7 @@ describe("PharoNexus MCP server tools", () => {
       ok: true,
       skillStatus: {
         summary: {
-          expected: 9,
+          expected: expectedPharoNexusSkillCount,
           missing: 1,
           stale: 1,
         },
@@ -486,8 +494,8 @@ describe("PharoNexus MCP server tools", () => {
         },
         after: {
           summary: {
-            expected: 9,
-            installed: 9,
+            expected: expectedPharoNexusSkillCount,
+            installed: expectedPharoNexusSkillCount,
             missing: 0,
             stale: 0,
           },
@@ -983,6 +991,7 @@ describe("PharoNexus MCP server tools", () => {
           projectId: "board-my-library",
         },
         images: [],
+        imageExecution: defaultPlexusImageExecutionPolicy,
       },
       trackerSync: {
         vibeKanbanProjectId: "board-my-library",

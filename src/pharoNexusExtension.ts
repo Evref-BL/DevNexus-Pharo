@@ -21,6 +21,7 @@ export interface PlexusProjectConfig {
     projectId: string;
   };
   images: unknown[];
+  imageExecution: PlexusImageExecutionPolicy;
 }
 
 export interface PharoNexusProjectFiles {
@@ -33,8 +34,38 @@ export interface PharoNexusProjectFiles {
 export const plexusProjectConfigFileName = "plexus.project.json";
 export const pharoNexusProjectExtensionConfigKey = "pharo-nexus";
 
+export type PlexusImageExecutionMode = "disabled" | "docker";
+export type PlexusImageExecutionDockerNetwork = "none" | "bridge";
+
+export interface PlexusImageExecutionDockerPolicy {
+  image: string | null;
+  network: PlexusImageExecutionDockerNetwork;
+  autoRemove: boolean;
+  mountProjectReadOnly: boolean;
+}
+
+export interface PlexusImageExecutionPolicy {
+  mode: PlexusImageExecutionMode;
+  requireDisposableImage: boolean;
+  requireCleanupPlan: boolean;
+  docker: PlexusImageExecutionDockerPolicy;
+}
+
+export const defaultPlexusImageExecutionPolicy: PlexusImageExecutionPolicy = {
+  mode: "disabled",
+  requireDisposableImage: true,
+  requireCleanupPlan: true,
+  docker: {
+    image: null,
+    network: "none",
+    autoRemove: true,
+    mountProjectReadOnly: true,
+  },
+};
+
 export interface PharoNexusProjectExtensionConfig {
   plexusProjectConfig?: string;
+  imageExecution?: PlexusImageExecutionPolicy;
 }
 
 export function pharoNexusProjectExtensionEntry(
@@ -210,9 +241,81 @@ export function pharoNexusProjectExtensionConfig(
       `extensions.${pharoNexusProjectExtensionConfigKey}.plexusProjectConfig must be a string`,
     );
   }
+  const imageExecution =
+    value.imageExecution === undefined
+      ? undefined
+      : resolvePlexusImageExecutionPolicy(
+          value.imageExecution,
+          `extensions.${pharoNexusProjectExtensionConfigKey}.imageExecution`,
+        );
 
   return {
     ...(plexusProjectConfig ? { plexusProjectConfig } : {}),
+    ...(imageExecution ? { imageExecution } : {}),
+  };
+}
+
+export function projectPlexusImageExecutionPolicy(
+  config?: Pick<NexusProjectConfig, "extensions">,
+): PlexusImageExecutionPolicy {
+  if (!config) {
+    return clonePlexusImageExecutionPolicy(defaultPlexusImageExecutionPolicy);
+  }
+
+  return (
+    pharoNexusProjectExtensionConfig(config).imageExecution ??
+    clonePlexusImageExecutionPolicy(defaultPlexusImageExecutionPolicy)
+  );
+}
+
+export function resolvePlexusImageExecutionPolicy(
+  value: unknown,
+  pathName = "imageExecution",
+): PlexusImageExecutionPolicy {
+  const record = value === undefined ? {} : assertRecord(value, pathName);
+  const dockerRecord =
+    record.docker === undefined
+      ? {}
+      : assertRecord(record.docker, `${pathName}.docker`);
+  const mode = imageExecutionMode(
+    record.mode,
+    `${pathName}.mode`,
+    defaultPlexusImageExecutionPolicy.mode,
+  );
+  const docker = {
+    image:
+      nullableString(dockerRecord.image, `${pathName}.docker.image`) ??
+      defaultPlexusImageExecutionPolicy.docker.image,
+    network: dockerNetwork(
+      dockerRecord.network,
+      `${pathName}.docker.network`,
+      defaultPlexusImageExecutionPolicy.docker.network,
+    ),
+    autoRemove:
+      optionalBoolean(dockerRecord.autoRemove, `${pathName}.docker.autoRemove`) ??
+      defaultPlexusImageExecutionPolicy.docker.autoRemove,
+    mountProjectReadOnly:
+      optionalBoolean(
+        dockerRecord.mountProjectReadOnly,
+        `${pathName}.docker.mountProjectReadOnly`,
+      ) ?? defaultPlexusImageExecutionPolicy.docker.mountProjectReadOnly,
+  };
+
+  if (mode === "docker" && !docker.image) {
+    throw new Error(`${pathName}.docker.image is required when mode is docker`);
+  }
+
+  return {
+    mode,
+    requireDisposableImage:
+      optionalBoolean(
+        record.requireDisposableImage,
+        `${pathName}.requireDisposableImage`,
+      ) ?? defaultPlexusImageExecutionPolicy.requireDisposableImage,
+    requireCleanupPlan:
+      optionalBoolean(record.requireCleanupPlan, `${pathName}.requireCleanupPlan`) ??
+      defaultPlexusImageExecutionPolicy.requireCleanupPlan,
+    docker,
   };
 }
 
@@ -319,6 +422,8 @@ export function buildPlexusProjectConfig(
   name: string,
   projectId: string,
   vibeKanbanProjectId: string | null = null,
+  imageExecutionPolicy: PlexusImageExecutionPolicy =
+    defaultPlexusImageExecutionPolicy,
 ): PlexusProjectConfig {
   return {
     name,
@@ -327,6 +432,7 @@ export function buildPlexusProjectConfig(
       projectId: vibeKanbanProjectId ?? projectId,
     },
     images: [],
+    imageExecution: clonePlexusImageExecutionPolicy(imageExecutionPolicy),
   };
 }
 
@@ -335,10 +441,17 @@ export function updatePlexusProjectKanban(
   projectName: string,
   projectId: string,
   vibeKanbanProjectId: string,
+  imageExecutionPolicy: PlexusImageExecutionPolicy =
+    defaultPlexusImageExecutionPolicy,
 ): PlexusProjectConfig {
   const existing = fs.existsSync(plexusConfigPath)
     ? readJsonFile<Record<string, unknown>>(plexusConfigPath)
-    : buildPlexusProjectConfig(projectName, projectId, vibeKanbanProjectId);
+    : buildPlexusProjectConfig(
+        projectName,
+        projectId,
+        vibeKanbanProjectId,
+        imageExecutionPolicy,
+      );
   const existingKanban =
     existing.kanban && typeof existing.kanban === "object" && !Array.isArray(existing.kanban)
       ? (existing.kanban as Record<string, unknown>)
@@ -352,6 +465,13 @@ export function updatePlexusProjectKanban(
       projectId: vibeKanbanProjectId,
     },
     images: Array.isArray(existing.images) ? existing.images : [],
+    imageExecution:
+      existing.imageExecution === undefined
+        ? clonePlexusImageExecutionPolicy(imageExecutionPolicy)
+        : resolvePlexusImageExecutionPolicy(
+            existing.imageExecution,
+            "plexus.project.imageExecution",
+          ),
   } as unknown as PlexusProjectConfig;
 
   saveJsonFile(plexusConfigPath, updated);
@@ -365,15 +485,34 @@ export function installPharoNexusProjectFiles(
     options.projectRoot,
     options.projectConfig,
   );
-  let plexusProjectConfig = fs.existsSync(plexusConfigPath)
-    ? readJsonFile<PlexusProjectConfig>(plexusConfigPath)
+  const imageExecutionPolicy = projectPlexusImageExecutionPolicy(
+    options.projectConfig,
+  );
+  const existingPlexusProjectConfig = fs.existsSync(plexusConfigPath)
+    ? readJsonFile<Record<string, unknown>>(plexusConfigPath)
+    : null;
+  let plexusProjectConfig = existingPlexusProjectConfig
+    ? ({
+        ...existingPlexusProjectConfig,
+        images: Array.isArray(existingPlexusProjectConfig.images)
+          ? existingPlexusProjectConfig.images
+          : [],
+        imageExecution:
+          existingPlexusProjectConfig.imageExecution === undefined
+            ? clonePlexusImageExecutionPolicy(imageExecutionPolicy)
+            : resolvePlexusImageExecutionPolicy(
+                existingPlexusProjectConfig.imageExecution,
+                "plexus.project.imageExecution",
+              ),
+      } as PlexusProjectConfig)
     : buildPlexusProjectConfig(
         options.projectConfig.name,
         options.projectConfig.id,
         options.vibeKanbanProjectId ?? options.projectConfig.kanban.projectId,
+        imageExecutionPolicy,
       );
 
-  if (!fs.existsSync(plexusConfigPath)) {
+  if (!existingPlexusProjectConfig) {
     saveJsonFile(plexusConfigPath, plexusProjectConfig);
   } else if (options.vibeKanbanProjectId) {
     plexusProjectConfig = updatePlexusProjectKanban(
@@ -381,7 +520,10 @@ export function installPharoNexusProjectFiles(
       options.projectConfig.name,
       options.projectConfig.id,
       options.vibeKanbanProjectId,
+      imageExecutionPolicy,
     );
+  } else if (existingPlexusProjectConfig.imageExecution === undefined) {
+    saveJsonFile(plexusConfigPath, plexusProjectConfig);
   }
 
   return {
@@ -437,10 +579,85 @@ export const pharoNexusExtension: NexusExtension<
         projectConfig.name,
         projectConfig.id,
         trackerProjectId,
+        projectPlexusImageExecutionPolicy(projectConfig),
       ),
     };
   },
 };
+
+function clonePlexusImageExecutionPolicy(
+  policy: PlexusImageExecutionPolicy,
+): PlexusImageExecutionPolicy {
+  return {
+    mode: policy.mode,
+    requireDisposableImage: policy.requireDisposableImage,
+    requireCleanupPlan: policy.requireCleanupPlan,
+    docker: { ...policy.docker },
+  };
+}
+
+function assertRecord(value: unknown, pathName: string): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(`${pathName} must be an object`);
+  }
+
+  return value as Record<string, unknown>;
+}
+
+function imageExecutionMode(
+  value: unknown,
+  pathName: string,
+  fallback: PlexusImageExecutionMode,
+): PlexusImageExecutionMode {
+  if (value === undefined) {
+    return fallback;
+  }
+  if (value === "disabled" || value === "docker") {
+    return value;
+  }
+
+  throw new Error(`${pathName} must be disabled or docker`);
+}
+
+function dockerNetwork(
+  value: unknown,
+  pathName: string,
+  fallback: PlexusImageExecutionDockerNetwork,
+): PlexusImageExecutionDockerNetwork {
+  if (value === undefined) {
+    return fallback;
+  }
+  if (value === "none" || value === "bridge") {
+    return value;
+  }
+
+  throw new Error(`${pathName} must be none or bridge`);
+}
+
+function optionalBoolean(value: unknown, pathName: string): boolean | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (typeof value === "boolean") {
+    return value;
+  }
+
+  throw new Error(`${pathName} must be a boolean`);
+}
+
+function nullableString(value: unknown, pathName: string): string | null | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (value === null) {
+    return null;
+  }
+  if (typeof value === "string" && value.trim().length > 0) {
+    return value.trim();
+  }
+
+  throw new Error(`${pathName} must be a non-empty string or null`);
+}
 
 export function pharoNexusProjectFilesFromExtensionResult(
   value: unknown,

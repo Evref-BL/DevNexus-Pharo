@@ -356,6 +356,10 @@ Vibe backend modes are configured in `dev-nexus.home.json`:
 - `dind`: local self-hosted Vibe backend inside a Docker-in-Docker container
 - `external`: remote or manually managed Vibe backend
 
+Managed project `plexus.project.json` files include an `imageExecution` policy.
+It defaults to `disabled` and requires disposable images plus an explicit
+cleanup plan before future PLexus image launch work can opt into Docker mode.
+
 For GitHub sign-in with the self-hosted Vibe backend, set GitHub OAuth
 credentials before startup:
 

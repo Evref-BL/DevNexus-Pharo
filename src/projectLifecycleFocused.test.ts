@@ -15,6 +15,7 @@ import {
   validateProjectConfig,
 } from "./config.js";
 import {
+  defaultPlexusImageExecutionPolicy,
   pharoNexusProjectExtensionConfigKey,
   plexusProjectConfigFileName,
   projectPlexusConfigPath,
@@ -289,6 +290,7 @@ describe("PharoNexus focused project lifecycle contracts", () => {
         projectId: "plexus-generated",
       },
       images: [],
+      imageExecution: defaultPlexusImageExecutionPolicy,
     });
   });
 

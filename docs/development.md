@@ -132,6 +132,12 @@ containing `dev-nexus.project.json`. Pharo/PLexus-specific paths such as
 `extensions.pharo-nexus.plexusProjectConfig` are interpreted by the PharoNexus
 extension, not by the generic project config loader.
 
+`plexus.project.json` also contains the PharoNexus-authored `imageExecution`
+policy consumed by future PLexus image work. Its default mode is `disabled`;
+Docker mode requires an explicit runner image and keeps
+`requireDisposableImage`, `requireCleanupPlan`, `autoRemove`, and
+`mountProjectReadOnly` enabled by default.
+
 For imported or cloned source repositories, `repo.sourceRoot` points from the
 managed project root to the source checkout. The source checkout should not
 receive PharoNexus metadata unless it is already a managed PharoNexus project.
