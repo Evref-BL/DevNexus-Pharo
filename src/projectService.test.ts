@@ -33,6 +33,10 @@ import {
   importPharoNexusProject,
   syncPharoNexusProjectTracker,
 } from "./pharoNexusProjectService.js";
+import {
+  pharoNexusPluginId,
+  pharoNexusPluginName,
+} from "./pharoNexusPlugin.js";
 
 const tempDirs: string[] = [];
 
@@ -47,6 +51,21 @@ function defaultAgentsContent(): string {
     path.join(path.dirname(path.dirname(fileURLToPath(import.meta.url))), "AGENTS.md"),
     "utf8",
   );
+}
+
+function pharoNexusPluginConfigExpectation() {
+  return expect.objectContaining({
+    id: pharoNexusPluginId,
+    name: pharoNexusPluginName,
+  });
+}
+
+function expectPharoNexusPluginConfig(config: {
+  plugins?: Array<{ id: string; name?: string }>;
+}): void {
+  expect(config.plugins).toContainEqual(pharoNexusPluginConfigExpectation());
+  expect(config.plugins?.filter((plugin) => plugin.id === pharoNexusPluginId))
+    .toHaveLength(1);
 }
 
 afterEach(() => {
@@ -154,7 +173,9 @@ describe("PharoNexus project service", () => {
         "HEAD",
       ],
     ]);
-    expect(loadProjectConfig(result.projectRoot)).toEqual({
+    const persistedProjectConfig = loadProjectConfig(result.projectRoot);
+    expect(result.projectConfig).toEqual(persistedProjectConfig);
+    expect(persistedProjectConfig).toEqual({
       version: 1,
       id: "my-project",
       name: "MyProject",
@@ -184,6 +205,7 @@ describe("PharoNexus project service", () => {
       extensions: {
         [pharoNexusProjectExtensionConfigKey]: {},
       },
+      plugins: [pharoNexusPluginConfigExpectation()],
     });
     expect(
       JSON.parse(fs.readFileSync(result.plexusProjectConfigPath, "utf8")),
@@ -279,6 +301,7 @@ describe("PharoNexus project service", () => {
       false,
     );
     expect(result.projectConfig.extensions).toBeUndefined();
+    expect(result.projectConfig.plugins).toBeUndefined();
     expect(fs.existsSync(path.join(result.projectRoot, "AGENTS.md"))).toBe(false);
     expect(fs.existsSync(codexConfigPath(result.projectRoot))).toBe(false);
     expect(
@@ -1095,6 +1118,8 @@ describe("PharoNexus project service", () => {
         defaultBranch: "main",
       },
     });
+    expectPharoNexusPluginConfig(result.projectConfig);
+    expectPharoNexusPluginConfig(loadProjectConfig(projectRoot));
     expect(fs.existsSync(path.join(projectRoot, devNexusProjectConfigFileName))).toBe(true);
     expect(fs.existsSync(path.join(projectRoot, plexusProjectConfigFileName))).toBe(true);
     expect(fs.existsSync(path.join(projectRoot, "worktrees"))).toBe(true);
@@ -1160,6 +1185,7 @@ describe("PharoNexus project service", () => {
       },
     });
     expect(result.projectConfig.extensions).toBeUndefined();
+    expect(result.projectConfig.plugins).toBeUndefined();
     expect(fs.existsSync(path.join(projectRoot, devNexusProjectConfigFileName))).toBe(true);
     expect(fs.existsSync(path.join(projectRoot, plexusProjectConfigFileName))).toBe(false);
     expect(fs.existsSync(path.join(projectRoot, "AGENTS.md"))).toBe(false);
@@ -1287,7 +1313,9 @@ describe("PharoNexus project service", () => {
       extensions: {
         [pharoNexusProjectExtensionConfigKey]: {},
       },
+      plugins: [pharoNexusPluginConfigExpectation()],
     });
+    expect(loadProjectConfig(projectRoot)).toEqual(result.projectConfig);
     expect(fs.readFileSync(result.suggestedFirstPromptPath, "utf8")).toBe(
       "# Existing project-owned prompt\n",
     );
@@ -1299,6 +1327,61 @@ describe("PharoNexus project service", () => {
         vibeKanbanProjectId: "kanban-existing",
       },
     ]);
+  });
+
+  it("imports an existing project config without duplicating the PharoNexus plugin", () => {
+    const homePath = makeTempDir("pharo-nexus-home-");
+    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "ExistingPlugins");
+    fs.mkdirSync(projectRoot, { recursive: true });
+    initNexusHome({ homePath });
+    const existingPlugin = {
+      id: "other-plugin",
+      name: "Other Plugin",
+      version: "1.0.0",
+      enabled: true,
+      capabilities: [],
+    };
+    const existingConfig = {
+      version: 1 as const,
+      id: "existing-plugins",
+      name: "Existing Plugins",
+      home: null,
+      repo: {
+        kind: "local" as const,
+        remoteUrl: null,
+        defaultBranch: "main",
+      },
+      worktreesRoot: "worktrees",
+      kanban: {
+        provider: "vibe-kanban" as const,
+        projectId: null,
+      },
+      plugins: [
+        existingPlugin,
+        {
+          id: pharoNexusPluginId,
+          name: "Existing PharoNexus",
+          version: "0.0.0",
+          enabled: true,
+          capabilities: [],
+        },
+      ],
+    };
+    fs.writeFileSync(
+      path.join(projectRoot, devNexusProjectConfigFileName),
+      `${JSON.stringify(existingConfig, null, 2)}\n`,
+      "utf8",
+    );
+
+    const result = importPharoNexusProject({
+      homePath,
+      root: projectRoot,
+      gitRunner: fakeGitRunner([], { branch: "main" }),
+    });
+
+    expect(result.projectConfig.plugins).toContainEqual(existingPlugin);
+    expectPharoNexusPluginConfig(result.projectConfig);
+    expect(loadProjectConfig(projectRoot).plugins).toEqual(result.projectConfig.plugins);
   });
 
   it("reports registered projects even when project files are missing", () => {

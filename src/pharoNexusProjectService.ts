@@ -8,6 +8,7 @@ import {
   loadHomeConfig,
   loadProjectConfig,
   resolveNexusHome,
+  saveProjectConfig,
   saveHomeConfig,
   type NexusProjectConfig,
 } from "./config.js";
@@ -47,6 +48,7 @@ import {
   projectUsesPharoNexusExtension,
   type PlexusProjectConfig,
 } from "./pharoNexusExtension.js";
+import { pharoNexusDevNexusPluginConfig } from "./pharoNexusPlugin.js";
 
 registerNexusProjectExtension(pharoNexusExtension);
 
@@ -150,6 +152,46 @@ function assertNormalProjectDoesNotUseControlProject(
   }
 }
 
+function withPharoNexusDevNexusPlugin(
+  projectConfig: NexusProjectConfig,
+): NexusProjectConfig {
+  const pluginConfig = pharoNexusDevNexusPluginConfig();
+  const plugins = projectConfig.plugins ?? [];
+  const nextPlugins = [];
+  let addedPharoNexusPlugin = false;
+
+  for (const plugin of plugins) {
+    if (plugin.id !== pluginConfig.id) {
+      nextPlugins.push(plugin);
+      continue;
+    }
+
+    if (!addedPharoNexusPlugin) {
+      nextPlugins.push(pluginConfig);
+      addedPharoNexusPlugin = true;
+    }
+  }
+
+  if (!addedPharoNexusPlugin) {
+    nextPlugins.push(pluginConfig);
+  }
+
+  return {
+    ...projectConfig,
+    plugins: nextPlugins,
+  };
+}
+
+function saveProjectConfigWithPharoNexusPlugin(
+  projectRoot: string,
+  projectConfig: NexusProjectConfig,
+): NexusProjectConfig {
+  const updatedProjectConfig = withPharoNexusDevNexusPlugin(projectConfig);
+  saveProjectConfig(projectRoot, updatedProjectConfig);
+
+  return updatedProjectConfig;
+}
+
 export function createPharoNexusProject(
   options: CreatePharoNexusProjectOptions,
 ): CreatePharoNexusProjectResult {
@@ -183,6 +225,10 @@ export function createPharoNexusProject(
   const pharoFiles = pharoNexusProjectFilesFromExtensionResult(
     result.scaffold.extensionResults[pharoNexusExtension.id],
   );
+  const projectConfig = saveProjectConfigWithPharoNexusPlugin(
+    result.projectRoot,
+    result.projectConfig,
+  );
   const codex = initCodexWorkspace({
     homePath,
     workspacePath: result.projectRoot,
@@ -199,7 +245,7 @@ export function createPharoNexusProject(
     agentsPath: pharoFiles.agentsPath,
     suggestedFirstPromptPath: pharoFiles.suggestedFirstPromptPath,
     codexConfigPath: codex.configPath,
-    projectConfig: result.projectConfig,
+    projectConfig,
     plexusProjectConfig: pharoFiles.plexusProjectConfig,
     codex,
     git: result.git,
@@ -249,6 +295,10 @@ export function importPharoNexusProject(
   const pharoFiles = pharoNexusProjectFilesFromExtensionResult(
     result.scaffold.extensionResults[pharoNexusExtension.id],
   );
+  const projectConfig = saveProjectConfigWithPharoNexusPlugin(
+    result.projectRoot,
+    result.projectConfig,
+  );
   const codex = initCodexWorkspace({
     homePath,
     workspacePath: result.projectRoot,
@@ -265,7 +315,7 @@ export function importPharoNexusProject(
     agentsPath: pharoFiles.agentsPath,
     suggestedFirstPromptPath: pharoFiles.suggestedFirstPromptPath,
     codexConfigPath: codex.configPath,
-    projectConfig: result.projectConfig,
+    projectConfig,
     plexusProjectConfig: pharoFiles.plexusProjectConfig,
     codex,
     git: result.git,

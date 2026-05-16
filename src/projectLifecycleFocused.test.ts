@@ -29,6 +29,10 @@ import {
   createPharoNexusProject,
   importPharoNexusProject,
 } from "./pharoNexusProjectService.js";
+import {
+  pharoNexusPluginId,
+  pharoNexusPluginName,
+} from "./pharoNexusPlugin.js";
 
 const tempDirs: string[] = [];
 
@@ -90,6 +94,19 @@ function fakeGitRunner(
       exitCode: 0,
     };
   };
+}
+
+function expectPharoNexusPluginConfig(config: {
+  plugins?: Array<{ id: string; name?: string }>;
+}): void {
+  expect(config.plugins).toContainEqual(
+    expect.objectContaining({
+      id: pharoNexusPluginId,
+      name: pharoNexusPluginName,
+    }),
+  );
+  expect(config.plugins?.filter((plugin) => plugin.id === pharoNexusPluginId))
+    .toHaveLength(1);
 }
 
 describe("PharoNexus focused project lifecycle contracts", () => {
@@ -176,7 +193,8 @@ describe("PharoNexus focused project lifecycle contracts", () => {
     expect(result.projectRoot).toBe(path.join(projectsRoot, "Scratch-Project"));
     expect(result.git.operation).toBe("init");
     expect(gitCalls[0]).toEqual(["init", result.projectRoot]);
-    expect(loadProjectConfig(result.projectRoot)).toMatchObject({
+    const projectConfig = loadProjectConfig(result.projectRoot);
+    expect(projectConfig).toMatchObject({
       id: "scratch-project",
       repo: {
         kind: "local",
@@ -184,6 +202,8 @@ describe("PharoNexus focused project lifecycle contracts", () => {
         defaultBranch: "main",
       },
     });
+    expect(result.projectConfig).toEqual(projectConfig);
+    expectPharoNexusPluginConfig(projectConfig);
     expect(fs.existsSync(result.worktreesRoot)).toBe(true);
   });
 
@@ -220,6 +240,8 @@ describe("PharoNexus focused project lifecycle contracts", () => {
         sourceRoot,
       },
     });
+    expectPharoNexusPluginConfig(result.projectConfig);
+    expectPharoNexusPluginConfig(loadProjectConfig(projectRoot));
     expect(fs.existsSync(path.join(projectRoot, devNexusProjectConfigFileName))).toBe(true);
     expect(fs.existsSync(path.join(sourceRoot, devNexusProjectConfigFileName))).toBe(false);
   });
