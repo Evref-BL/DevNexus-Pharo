@@ -4,6 +4,7 @@ export * from "./codexWorktreeService.js";
 export * from "./codexWorktreeTrackerHandoff.js";
 export * from "./config.js";
 export * from "./mcpServer.js";
+export * from "./pharoNexusPlugin.js";
 export * from "./pharoNexusExtension.js";
 export * from "./pharoNexusMcpService.js";
 export * from "./pharoNexusProjectService.js";
