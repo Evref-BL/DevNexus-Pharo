@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import path from "node:path";
 import {
   initCodexWorkspace,
   type InitCodexWorkspaceResult,
@@ -22,11 +24,16 @@ import {
 } from "dev-nexus";
 import {
   assertNonEmptyString,
+  defaultImportedProjectRoot,
   getNexusProjectStatus,
   linkNexusProjectTracker,
+  loadProjectConfigIfExists,
   NexusProjectError,
   registerNexusProjectExtension,
   resolveProjectSourceRoot,
+  safeDirectoryName,
+  samePath,
+  slugify,
   statusForProjectReference,
   upsertProjectReference,
   type GitCommandResult,
@@ -125,11 +132,40 @@ export interface SyncPharoNexusProjectTrackerResult
   };
 }
 
+function assertNormalProjectDoesNotUseControlProject(
+  homeConfig: { controlProject: { id: string; root: string } },
+  projectId: string,
+  projectRoot: string,
+  operation: "create" | "import",
+): void {
+  if (projectId === homeConfig.controlProject.id) {
+    throw new NexusProjectError(
+      `Cannot ${operation} normal project with reserved control project id: ${projectId}`,
+    );
+  }
+  if (samePath(projectRoot, homeConfig.controlProject.root)) {
+    throw new NexusProjectError(
+      `Cannot ${operation} normal project at reserved control project root: ${homeConfig.controlProject.root}`,
+    );
+  }
+}
+
 export function createPharoNexusProject(
   options: CreatePharoNexusProjectOptions,
 ): CreatePharoNexusProjectResult {
   const homePath = resolveNexusHome(options.homePath);
   const homeConfig = loadHomeConfig(homePath);
+  const projectId = slugify(options.name);
+  const projectRoot = path.resolve(
+    options.root ??
+      path.join(homeConfig.paths.projectsRoot, safeDirectoryName(options.name)),
+  );
+  assertNormalProjectDoesNotUseControlProject(
+    homeConfig,
+    projectId,
+    projectRoot,
+    "create",
+  );
   const result = createNexusProjectInRegistry({
     homePath,
     registry: homeConfig,
@@ -175,6 +211,28 @@ export function importPharoNexusProject(
 ): ImportPharoNexusProjectResult {
   const homePath = resolveNexusHome(options.homePath);
   const homeConfig = loadHomeConfig(homePath);
+  const sourceRoot = path.resolve(options.root);
+  if (!fs.existsSync(sourceRoot) || !fs.statSync(sourceRoot).isDirectory()) {
+    throw new NexusProjectError(
+      `Project source root must be an existing directory: ${sourceRoot}`,
+    );
+  }
+  const existingProjectConfig = loadProjectConfigIfExists(sourceRoot);
+  const projectName =
+    existingProjectConfig?.name ?? options.name ?? path.basename(sourceRoot);
+  const projectId = existingProjectConfig?.id ?? slugify(projectName);
+  const projectRoot = existingProjectConfig
+    ? sourceRoot
+    : path.resolve(
+        options.projectRoot ??
+          defaultImportedProjectRoot(homeConfig, projectName, sourceRoot),
+      );
+  assertNormalProjectDoesNotUseControlProject(
+    homeConfig,
+    projectId,
+    projectRoot,
+    "import",
+  );
   const result = importNexusProjectInRegistry({
     homePath,
     registry: homeConfig,

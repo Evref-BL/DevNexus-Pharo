@@ -21,6 +21,7 @@ import {
   resolveNexusHomePath,
   saveProjectConfig,
   saveNexusHomeConfigFile,
+  samePath,
   validateNexusAgentConfig,
   validateNexusHomeConfigBase,
   validateProjectConfig,
@@ -861,6 +862,24 @@ function validateIntegrations(
   };
 }
 
+function assertProjectsDoNotCollideWithControlProject(
+  projects: NexusProjectReference[],
+  controlProject: NexusControlProjectReference,
+): void {
+  for (const project of projects) {
+    if (project.id === controlProject.id) {
+      throw new NexusConfigError(
+        `Project id is reserved for the control project: ${controlProject.id}`,
+      );
+    }
+    if (samePath(project.projectRoot, controlProject.root)) {
+      throw new NexusConfigError(
+        `Project root is reserved for the control project: ${controlProject.root}`,
+      );
+    }
+  }
+}
+
 export function validateHomeConfig(
   value: unknown,
   homePathForDefaults?: string,
@@ -879,6 +898,10 @@ export function validateHomeConfig(
   const controlProject = validateControlProjectReference(
     record.controlProject,
     homePathForDefaults,
+  );
+  assertProjectsDoNotCollideWithControlProject(
+    baseConfig.projects,
+    controlProject,
   );
 
   const vibeKanbanPort = requiredPort(ports, "vibeKanban");

@@ -8,6 +8,7 @@ import {
   initNexusHome,
   loadHomeConfig,
   loadProjectConfig,
+  pharoNexusControlProjectId,
   devNexusProjectConfigFileName,
   saveProjectConfig,
 } from "./config.js";
@@ -1305,6 +1306,64 @@ describe("PharoNexus project service", () => {
         gitRunner: fakeGitRunner(gitCalls),
       }),
     ).toThrow(NexusProjectError);
+    expect(gitCalls).toEqual([]);
+  });
+
+  it("rejects reserved control project collisions before running git", () => {
+    const homePath = makeTempDir("pharo-nexus-home-");
+    initNexusHome({ homePath });
+    const homeConfig = loadHomeConfig(homePath);
+    const gitCalls: string[][] = [];
+
+    expect(() =>
+      createPharoNexusProject({
+        homePath,
+        name: "Pharo Nexus Control",
+        gitRunner: fakeGitRunner(gitCalls),
+      }),
+    ).toThrow(/reserved control project id/);
+    expect(gitCalls).toEqual([]);
+
+    expect(() =>
+      createPharoNexusProject({
+        homePath,
+        name: "Normal Project",
+        root: homeConfig.controlProject.root,
+        gitRunner: fakeGitRunner(gitCalls),
+      }),
+    ).toThrow(/reserved control project root/);
+    expect(gitCalls).toEqual([]);
+  });
+
+  it("rejects imported reserved control project ids before running git", () => {
+    const homePath = makeTempDir("pharo-nexus-home-");
+    initNexusHome({ homePath });
+    const sourceRoot = makeTempDir("pharo-nexus-source-");
+    saveProjectConfig(sourceRoot, {
+      version: 1,
+      id: pharoNexusControlProjectId,
+      name: "Reserved Control",
+      home: null,
+      repo: {
+        kind: "git",
+        remoteUrl: null,
+        defaultBranch: "main",
+      },
+      worktreesRoot: "worktrees",
+      kanban: {
+        provider: "vibe-kanban",
+        projectId: null,
+      },
+    });
+    const gitCalls: string[][] = [];
+
+    expect(() =>
+      importPharoNexusProject({
+        homePath,
+        root: sourceRoot,
+        gitRunner: fakeGitRunner(gitCalls),
+      }),
+    ).toThrow(/reserved control project id/);
     expect(gitCalls).toEqual([]);
   });
 

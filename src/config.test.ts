@@ -765,6 +765,34 @@ describe("PharoNexus home config", () => {
     expect(() => validateHomeConfig(config)).toThrow(NexusConfigError);
   });
 
+  it("rejects normal projects that collide with the reserved control project", () => {
+    const config = createDefaultHomeConfig(makeTempDir("pharo-nexus-home-"));
+    config.projects = [
+      {
+        id: pharoNexusControlProjectId,
+        name: "Colliding Project",
+        projectRoot: path.join(config.paths.projectsRoot, "CollidingProject"),
+      },
+    ];
+
+    expect(() => validateHomeConfig(config)).toThrow(
+      /reserved for the control project/,
+    );
+
+    const rootCollision = createDefaultHomeConfig(makeTempDir("pharo-nexus-home-"));
+    rootCollision.projects = [
+      {
+        id: "normal-project",
+        name: "Normal Project",
+        projectRoot: rootCollision.controlProject.root,
+      },
+    ];
+
+    expect(() => validateHomeConfig(rootCollision)).toThrow(
+      /reserved for the control project/,
+    );
+  });
+
   it("initializes a home directory, writes config, and creates runtime directories", () => {
     const homePath = makeTempDir("pharo-nexus-home-");
 
