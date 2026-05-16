@@ -1,6 +1,6 @@
-# PharoNexus exposes this supervised HTTP MCP endpoint after `pharo-nexus start`.
+# DevNexus-Pharo exposes this supervised HTTP MCP endpoint after `dev-nexus-pharo start`.
 
-[mcp_servers.pharo_nexus]
+[mcp_servers.dev_nexus_pharo]
 type = "http"
 enabled = true
 required = true
