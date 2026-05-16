@@ -7,14 +7,14 @@ import {
   type NexusHomeConfig,
   type NexusProjectConfig,
 } from "./config.js";
-import { defaultPharoNexusMcpHealthPath } from "./mcpServer.js";
+import { defaultDevNexusPharoMcpHealthPath } from "./mcpServer.js";
 
 export const codexConfigDirectoryName = ".codex";
 export const codexConfigFileName = "config.toml";
 export const defaultVibeKanbanCodexMcpServerName = "vibe_kanban";
 export const defaultPharoCodexMcpServerName = "pharo";
 
-const pharoNexusExtensionConfigKey = "pharo-nexus";
+const devNexusPharoExtensionConfigKey = "dev-nexus-pharo";
 
 export interface PharoMcpToolContract {
   name: string;
@@ -236,8 +236,8 @@ function defaultTargetId(projectId: string, workspaceId: string): string {
   return `${projectId}--${workspaceId}`;
 }
 
-function projectUsesPharoNexus(projectConfig: NexusProjectConfig | undefined): boolean {
-  return Boolean(projectConfig?.extensions?.[pharoNexusExtensionConfigKey]);
+function projectUsesDevNexusPharo(projectConfig: NexusProjectConfig | undefined): boolean {
+  return Boolean(projectConfig?.extensions?.[devNexusPharoExtensionConfigKey]);
 }
 
 function workspaceProjectConfig(
@@ -260,7 +260,7 @@ function shouldIncludePharoMcp(
     return options.includePharo;
   }
 
-  return projectUsesPharoNexus(projectConfig);
+  return projectUsesDevNexusPharo(projectConfig);
 }
 
 function buildPharoMcpServer(
@@ -329,7 +329,7 @@ export function buildCodexMcpServers(
       type: "http",
       enabled: true,
       required: true,
-      url: `http://${host}:${config.ports.pharoNexusMcp}/mcp`,
+      url: `http://${host}:${config.ports.devNexusPharoMcp}/mcp`,
       defaultToolsApprovalMode: "approve",
     },
     [plexusServerName]: {
@@ -437,7 +437,7 @@ async function postJsonRpc(
                 protocolVersion: "2024-11-05",
                 capabilities: {},
                 clientInfo: {
-                  name: "pharo-nexus-codex-doctor",
+                  name: "dev-nexus-pharo-codex-doctor",
                   version: "0.1.0",
                 },
               },
@@ -579,7 +579,7 @@ export async function doctorCodexWorkspace(
     checks.push({
       name: "config",
       status: "failed",
-      message: `Codex config is missing at ${configPath}. Run "pharo-nexus codex init ${workspacePath}" first.`,
+      message: `Codex config is missing at ${configPath}. Run "dev-nexus-pharo codex init ${workspacePath}" first.`,
     });
     return {
       workspacePath,
@@ -621,7 +621,7 @@ export async function doctorCodexWorkspace(
     {
       name: nexusServerName,
       url: servers[nexusServerName]?.url ?? "",
-      healthPath: defaultPharoNexusMcpHealthPath,
+      healthPath: defaultDevNexusPharoMcpHealthPath,
       expectedTools: [
         "project_create",
         "project_import",

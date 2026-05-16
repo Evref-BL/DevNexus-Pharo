@@ -1,49 +1,49 @@
 import fs from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
-  pharoNexusDevNexusPluginConfig,
-  pharoNexusPluginId,
-  pharoNexusPluginName,
-  pharoNexusPluginVersion,
-} from "./pharoNexusPlugin.js";
+  devNexusPharoDevNexusPluginConfig,
+  devNexusPharoPluginId,
+  devNexusPharoPluginName,
+  devNexusPharoPluginVersion,
+} from "./devNexusPharoPlugin.js";
 
-type PharoNexusCapability =
-  ReturnType<typeof pharoNexusDevNexusPluginConfig>["capabilities"][number];
+type DevNexusPharoCapability =
+  ReturnType<typeof devNexusPharoDevNexusPluginConfig>["capabilities"][number];
 
-function capabilitiesOfKind<K extends PharoNexusCapability["kind"]>(
+function capabilitiesOfKind<K extends DevNexusPharoCapability["kind"]>(
   kind: K,
-): Array<Extract<PharoNexusCapability, { kind: K }>> {
-  return pharoNexusDevNexusPluginConfig().capabilities.filter(
-    (capability): capability is Extract<PharoNexusCapability, { kind: K }> =>
+): Array<Extract<DevNexusPharoCapability, { kind: K }>> {
+  return devNexusPharoDevNexusPluginConfig().capabilities.filter(
+    (capability): capability is Extract<DevNexusPharoCapability, { kind: K }> =>
       capability.kind === kind,
   );
 }
 
-function pharoNexusSkillPackIds(): string[] {
+function devNexusPharoSkillPackIds(): string[] {
   const extensionSource = fs.readFileSync(
-    new URL("./pharoNexusExtension.ts", import.meta.url),
+    new URL("./devNexusPharoExtension.ts", import.meta.url),
     "utf8",
   );
-  expect(extensionSource).toContain("export const pharoNexusSkillPack");
+  expect(extensionSource).toContain("export const devNexusPharoSkillPack");
 
-  return [...extensionSource.matchAll(/pharoNexusSkill\(\s*"([^"]+)"/gu)].map(
+  return [...extensionSource.matchAll(/devNexusPharoSkill\(\s*"([^"]+)"/gu)].map(
     (match) => match[1],
   );
 }
 
-describe("PharoNexus DevNexus plugin", () => {
-  it("declares a complete non-empty PharoNexus capability surface", () => {
-    const config = pharoNexusDevNexusPluginConfig();
+describe("DevNexusPharo DevNexus plugin", () => {
+  it("declares a complete non-empty DevNexusPharo capability surface", () => {
+    const config = devNexusPharoDevNexusPluginConfig();
 
     expect(config).toMatchObject({
-      id: pharoNexusPluginId,
-      name: pharoNexusPluginName,
-      version: pharoNexusPluginVersion,
+      id: devNexusPharoPluginId,
+      name: devNexusPharoPluginName,
+      version: devNexusPharoPluginVersion,
       enabled: true,
     });
     expect(config.capabilities).not.toHaveLength(0);
     expect(config.capabilities.map((capability) => capability.id)).toEqual([
-      "skill-pharo-nexus-workflow",
+      "skill-dev-nexus-pharo-workflow",
       "skill-plexus-diagnostics",
       "skill-pharo-launcher-lifecycle",
       "skill-mcp-pharo-execution",
@@ -76,11 +76,11 @@ describe("PharoNexus DevNexus plugin", () => {
     );
   });
 
-  it("projects stable skill capabilities for every PharoNexus skill", () => {
+  it("projects stable skill capabilities for every DevNexusPharo skill", () => {
     const projectedSkills = capabilitiesOfKind("projected_skill");
 
     expect(projectedSkills.map((capability) => capability.skillId).sort()).toEqual(
-      pharoNexusSkillPackIds().sort(),
+      devNexusPharoSkillPackIds().sort(),
     );
     expect(
       projectedSkills.map((capability) => ({
@@ -90,8 +90,8 @@ describe("PharoNexus DevNexus plugin", () => {
       })),
     ).toEqual([
       {
-        id: "skill-pharo-nexus-workflow",
-        skillId: "pharo-nexus-workflow",
+        id: "skill-dev-nexus-pharo-workflow",
+        skillId: "dev-nexus-pharo-workflow",
         targetAgents: ["codex"],
       },
       {
@@ -207,7 +207,7 @@ describe("PharoNexus DevNexus plugin", () => {
     });
     expect(contextFragment.targetComponents).toBeUndefined();
     expect(contextFragment.body).toContain(
-      "PharoNexus composes with DevNexus and does not choose or supervise implementation work",
+      "DevNexus-Pharo composes with DevNexus and does not choose or supervise implementation work",
     );
     expect(contextFragment.body).toContain("direct pharo MCP tools");
     expect(contextFragment.body).toContain("report the infrastructure blocker");

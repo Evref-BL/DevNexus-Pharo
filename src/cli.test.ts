@@ -16,16 +16,16 @@ import {
 } from "./config.js";
 import {
   defaultPlexusImageExecutionPolicy,
-  pharoNexusProjectExtensionConfigKey,
-  pharoNexusSkillPack,
+  devNexusPharoProjectExtensionConfigKey,
+  devNexusPharoSkillPack,
   plexusProjectConfigFileName,
-} from "./pharoNexusExtension.js";
+} from "./devNexusPharoExtension.js";
 import type { GitCommandResult, GitRunner } from "./nexusProjectService.js";
 import { createWorkItemService } from "./workItemService.js";
 
 const tempDirs: string[] = [];
-const expectedPharoNexusSkillCount =
-  defaultCoreSkillPack.length + pharoNexusSkillPack.length;
+const expectedDevNexusPharoSkillCount =
+  defaultCoreSkillPack.length + devNexusPharoSkillPack.length;
 
 function makeTempDir(prefix: string): string {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
@@ -41,34 +41,34 @@ afterEach(() => {
   }
 });
 
-describe("pharo-nexus cli", () => {
+describe("dev-nexus-pharo cli", () => {
   it("documents the top-level commands", () => {
-    expect(usage()).toContain("pharo-nexus init [home]");
-    expect(usage()).toContain("pharo-nexus start [home]");
-    expect(usage()).toContain("pharo-nexus status [home]");
-    expect(usage()).toContain("pharo-nexus stop [home]");
-    expect(usage()).toContain("pharo-nexus mcp");
-    expect(usage()).toContain("pharo-nexus codex init <workspace>");
-    expect(usage()).toContain("pharo-nexus codex doctor <workspace>");
-    expect(usage()).toContain("pharo-nexus codex worktree guide");
-    expect(usage()).toContain("pharo-nexus codex worktree list");
-    expect(usage()).toContain("pharo-nexus codex worktree status <id>");
-    expect(usage()).toContain("pharo-nexus codex worktree prepare <project>");
-    expect(usage()).toContain("pharo-nexus codex worktree record <id>");
-    expect(usage()).toContain("pharo-nexus codex worktree archive <id>");
-    expect(usage()).toContain("pharo-nexus project create <name>");
-    expect(usage()).toContain("pharo-nexus project configure-tracker <id-or-path>");
-    expect(usage()).toContain("pharo-nexus project link-tracker <id-or-path>");
-    expect(usage()).toContain("pharo-nexus project sync-tracker <id-or-path>");
-    expect(usage()).toContain("pharo-nexus project skills status <id-or-path>");
-    expect(usage()).toContain("pharo-nexus project skills refresh <id-or-path>");
-    expect(usage()).toContain("pharo-nexus vibe-kanban start <home>");
-    expect(usage()).toContain("pharo-nexus vibe-kanban status <home>");
-    expect(usage()).toContain("pharo-nexus vibe-kanban stop <home>");
-    expect(usage()).toContain("pharo-nexus vibe-backend start <home>");
-    expect(usage()).toContain("pharo-nexus vibe-backend status <home>");
-    expect(usage()).toContain("pharo-nexus vibe-backend stop <home>");
-    expect(usage()).toContain("pharo-nexus vibe-kanban mcp-config install");
+    expect(usage()).toContain("dev-nexus-pharo init [home]");
+    expect(usage()).toContain("dev-nexus-pharo start [home]");
+    expect(usage()).toContain("dev-nexus-pharo status [home]");
+    expect(usage()).toContain("dev-nexus-pharo stop [home]");
+    expect(usage()).toContain("dev-nexus-pharo mcp");
+    expect(usage()).toContain("dev-nexus-pharo codex init <workspace>");
+    expect(usage()).toContain("dev-nexus-pharo codex doctor <workspace>");
+    expect(usage()).toContain("dev-nexus-pharo codex worktree guide");
+    expect(usage()).toContain("dev-nexus-pharo codex worktree list");
+    expect(usage()).toContain("dev-nexus-pharo codex worktree status <id>");
+    expect(usage()).toContain("dev-nexus-pharo codex worktree prepare <project>");
+    expect(usage()).toContain("dev-nexus-pharo codex worktree record <id>");
+    expect(usage()).toContain("dev-nexus-pharo codex worktree archive <id>");
+    expect(usage()).toContain("dev-nexus-pharo project create <name>");
+    expect(usage()).toContain("dev-nexus-pharo project configure-tracker <id-or-path>");
+    expect(usage()).toContain("dev-nexus-pharo project link-tracker <id-or-path>");
+    expect(usage()).toContain("dev-nexus-pharo project sync-tracker <id-or-path>");
+    expect(usage()).toContain("dev-nexus-pharo project skills status <id-or-path>");
+    expect(usage()).toContain("dev-nexus-pharo project skills refresh <id-or-path>");
+    expect(usage()).toContain("dev-nexus-pharo vibe-kanban start <home>");
+    expect(usage()).toContain("dev-nexus-pharo vibe-kanban status <home>");
+    expect(usage()).toContain("dev-nexus-pharo vibe-kanban stop <home>");
+    expect(usage()).toContain("dev-nexus-pharo vibe-backend start <home>");
+    expect(usage()).toContain("dev-nexus-pharo vibe-backend status <home>");
+    expect(usage()).toContain("dev-nexus-pharo vibe-backend stop <home>");
+    expect(usage()).toContain("dev-nexus-pharo vibe-kanban mcp-config install");
     expect(usage()).toContain("--interactive");
     expect(usage()).toContain("--tracker-project-id");
     expect(usage()).toContain("--sync-tracker");
@@ -89,7 +89,7 @@ describe("pharo-nexus cli", () => {
   });
 
   it("initializes a home from the CLI with human-readable feedback", async () => {
-    const homePath = path.join(makeTempDir("pharo-nexus-parent-"), "home");
+    const homePath = path.join(makeTempDir("dev-nexus-pharo-parent-"), "home");
     const log = vi.spyOn(console, "log").mockImplementation(() => {});
 
     await expect(
@@ -105,22 +105,22 @@ describe("pharo-nexus cli", () => {
 
     expect(loadHomeConfig(homePath).ports).toEqual({
       vibeKanban: 3100,
-      pharoNexusMcp: 7330,
+      devNexusPharoMcp: 7330,
       plexusMcp: 7332,
     });
     expect(log.mock.calls.map((call) => String(call[0]))).toEqual(
       expect.arrayContaining([
-        "PharoNexus home initialized.",
+        "DevNexus-Pharo home initialized.",
         `  Home: ${homePath}`,
         `  Config: ${path.join(homePath, "dev-nexus.home.json")}`,
-        "  pharo-nexus start",
+        "  dev-nexus-pharo start",
       ]),
     );
   });
 
-  it("uses PHARO_NEXUS_HOME when init has no explicit home", async () => {
-    const homePath = path.join(makeTempDir("pharo-nexus-parent-"), "env-home");
-    vi.stubEnv("PHARO_NEXUS_HOME", homePath);
+  it("uses DEV_NEXUS_PHARO_HOME when init has no explicit home", async () => {
+    const homePath = path.join(makeTempDir("dev-nexus-pharo-parent-"), "env-home");
+    vi.stubEnv("DEV_NEXUS_PHARO_HOME", homePath);
     vi.spyOn(console, "log").mockImplementation(() => {});
 
     await expect(main(["init"])).resolves.toBe(0);
@@ -131,7 +131,7 @@ describe("pharo-nexus cli", () => {
   });
 
   it("supports JSON output for init", async () => {
-    const homePath = path.join(makeTempDir("pharo-nexus-parent-"), "home");
+    const homePath = path.join(makeTempDir("dev-nexus-pharo-parent-"), "home");
     const log = vi.spyOn(console, "log").mockImplementation(() => {});
 
     await expect(
@@ -153,8 +153,8 @@ describe("pharo-nexus cli", () => {
   });
 
   it("creates a generic DevNexus project from the CLI", async () => {
-    const homePath = path.join(makeTempDir("pharo-nexus-parent-"), "home");
-    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "GenericCli");
+    const homePath = path.join(makeTempDir("dev-nexus-pharo-parent-"), "home");
+    const projectRoot = path.join(makeTempDir("dev-nexus-pharo-projects-"), "GenericCli");
     initHome(homePath);
     const log = vi.spyOn(console, "log").mockImplementation(() => {});
 
@@ -191,14 +191,14 @@ describe("pharo-nexus cli", () => {
     ).toBe(true);
     expect(
       fs.existsSync(
-        path.join(projectRoot, ".dev-nexus", "skills", "pharo-nexus-workflow", "SKILL.md"),
+        path.join(projectRoot, ".dev-nexus", "skills", "dev-nexus-pharo-workflow", "SKILL.md"),
       ),
     ).toBe(false);
   });
 
   it("initializes Codex MCP config for a workspace while preserving existing settings", async () => {
-    const homePath = path.join(makeTempDir("pharo-nexus-parent-"), "home");
-    const workspacePath = makeTempDir("pharo-nexus-workspace-");
+    const homePath = path.join(makeTempDir("dev-nexus-pharo-parent-"), "home");
+    const workspacePath = makeTempDir("dev-nexus-pharo-workspace-");
     initHome(homePath);
     const configPath = codexConfigPath(workspacePath);
     fs.mkdirSync(path.dirname(configPath), { recursive: true });
@@ -211,7 +211,7 @@ describe("pharo-nexus cli", () => {
 
     const content = fs.readFileSync(configPath, "utf8");
     expect(content).toContain('model = "gpt-5.3-codex"');
-    expect(content).toContain("[mcp_servers.pharo_nexus]");
+    expect(content).toContain("[mcp_servers.dev_nexus_pharo]");
     expect(content).toContain("[mcp_servers.plexus]");
     expect(content).toContain("[mcp_servers.vibe_kanban]");
     expect(log.mock.calls.map((call) => String(call[0]))).toContain(
@@ -220,8 +220,8 @@ describe("pharo-nexus cli", () => {
   });
 
   it("returns a non-zero doctor result when Codex config is missing", async () => {
-    const homePath = path.join(makeTempDir("pharo-nexus-parent-"), "home");
-    const workspacePath = makeTempDir("pharo-nexus-workspace-");
+    const homePath = path.join(makeTempDir("dev-nexus-pharo-parent-"), "home");
+    const workspacePath = makeTempDir("dev-nexus-pharo-workspace-");
     initHome(homePath);
     const log = vi.spyOn(console, "log").mockImplementation(() => {});
 
@@ -241,8 +241,8 @@ describe("pharo-nexus cli", () => {
   });
 
   it("prepares and archives Codex worktrees from the CLI", async () => {
-    const homePath = path.join(makeTempDir("pharo-nexus-parent-"), "home");
-    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "Prepared");
+    const homePath = path.join(makeTempDir("dev-nexus-pharo-parent-"), "home");
+    const projectRoot = path.join(makeTempDir("dev-nexus-pharo-projects-"), "Prepared");
     initHome(homePath);
     fs.mkdirSync(projectRoot, { recursive: true });
     const homeConfig = loadHomeConfig(homePath);
@@ -487,7 +487,7 @@ describe("pharo-nexus cli", () => {
   });
 
   it("prints direct Codex worktree workflow guidance from the CLI", async () => {
-    const homePath = path.join(makeTempDir("pharo-nexus-parent-"), "home");
+    const homePath = path.join(makeTempDir("dev-nexus-pharo-parent-"), "home");
     initHome(homePath);
     const log = vi.spyOn(console, "log").mockImplementation(() => {});
 
@@ -534,10 +534,10 @@ describe("pharo-nexus cli", () => {
     ]));
   });
 
-  it("uses PHARO_NEXUS_HOME for status when no home is passed", async () => {
-    const homePath = path.join(makeTempDir("pharo-nexus-parent-"), "home");
+  it("uses DEV_NEXUS_PHARO_HOME for status when no home is passed", async () => {
+    const homePath = path.join(makeTempDir("dev-nexus-pharo-parent-"), "home");
     initHome(homePath);
-    vi.stubEnv("PHARO_NEXUS_HOME", homePath);
+    vi.stubEnv("DEV_NEXUS_PHARO_HOME", homePath);
     const log = vi.spyOn(console, "log").mockImplementation(() => {});
 
     await expect(main(["status"])).resolves.toBe(0);
@@ -550,10 +550,10 @@ describe("pharo-nexus cli", () => {
   });
 
   it.runIf(gitIsAvailable())(
-    "creates a PharoNexus project from the CLI",
+    "creates a DevNexus-Pharo project from the CLI",
     async () => {
-      const homePath = path.join(makeTempDir("pharo-nexus-parent-"), "home");
-      const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "CliProject");
+      const homePath = path.join(makeTempDir("dev-nexus-pharo-parent-"), "home");
+      const projectRoot = path.join(makeTempDir("dev-nexus-pharo-projects-"), "CliProject");
       initHome(homePath);
       const log = vi.spyOn(console, "log").mockImplementation(() => {});
 
@@ -600,10 +600,10 @@ describe("pharo-nexus cli", () => {
   );
 
   it.runIf(gitIsAvailable())(
-    "imports an existing PharoNexus project from the CLI",
+    "imports an existing DevNexus-Pharo project from the CLI",
     async () => {
-      const homePath = path.join(makeTempDir("pharo-nexus-parent-"), "home");
-      const sourceRoot = path.join(makeTempDir("pharo-nexus-source-"), "ImportedCliProject");
+      const homePath = path.join(makeTempDir("dev-nexus-pharo-parent-"), "home");
+      const sourceRoot = path.join(makeTempDir("dev-nexus-pharo-source-"), "ImportedCliProject");
       initHome(homePath);
       fs.mkdirSync(sourceRoot, { recursive: true });
       spawnSync("git", ["init", sourceRoot], {
@@ -654,8 +654,8 @@ describe("pharo-nexus cli", () => {
   );
 
   it("lists and reports project status from the CLI", async () => {
-    const homePath = path.join(makeTempDir("pharo-nexus-parent-"), "home");
-    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "Listed");
+    const homePath = path.join(makeTempDir("dev-nexus-pharo-parent-"), "home");
+    const projectRoot = path.join(makeTempDir("dev-nexus-pharo-projects-"), "Listed");
     initHome(homePath);
     const homeConfig = loadHomeConfig(homePath);
     homeConfig.projects.push({
@@ -680,7 +680,7 @@ describe("pharo-nexus cli", () => {
         projectId: "kanban-listed",
       },
       extensions: {
-        [pharoNexusProjectExtensionConfigKey]: {},
+        [devNexusPharoProjectExtensionConfigKey]: {},
       },
     });
     fs.writeFileSync(
@@ -740,8 +740,8 @@ describe("pharo-nexus cli", () => {
       },
       skillStatus: {
         summary: {
-          expected: expectedPharoNexusSkillCount,
-          missing: expectedPharoNexusSkillCount,
+          expected: expectedDevNexusPharoSkillCount,
+          missing: expectedDevNexusPharoSkillCount,
         },
       },
     });
@@ -753,13 +753,13 @@ describe("pharo-nexus cli", () => {
       refresh: {
         before: {
           summary: {
-            missing: expectedPharoNexusSkillCount,
+            missing: expectedDevNexusPharoSkillCount,
           },
         },
         after: {
           summary: {
-            expected: expectedPharoNexusSkillCount,
-            installed: expectedPharoNexusSkillCount,
+            expected: expectedDevNexusPharoSkillCount,
+            installed: expectedDevNexusPharoSkillCount,
             missing: 0,
           },
         },
@@ -767,14 +767,14 @@ describe("pharo-nexus cli", () => {
     });
     expect(
       fs.existsSync(
-        path.join(projectRoot, ".dev-nexus", "skills", "pharo-nexus-workflow", "SKILL.md"),
+        path.join(projectRoot, ".dev-nexus", "skills", "dev-nexus-pharo-workflow", "SKILL.md"),
       ),
     ).toBe(true);
   });
 
   it("links a project to a Vibe Kanban project id from the CLI", async () => {
-    const homePath = path.join(makeTempDir("pharo-nexus-parent-"), "home");
-    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "Linked");
+    const homePath = path.join(makeTempDir("dev-nexus-pharo-parent-"), "home");
+    const projectRoot = path.join(makeTempDir("dev-nexus-pharo-projects-"), "Linked");
     initHome(homePath);
     const homeConfig = loadHomeConfig(homePath);
     homeConfig.projects.push({
@@ -799,7 +799,7 @@ describe("pharo-nexus cli", () => {
         projectId: null,
       },
       extensions: {
-        [pharoNexusProjectExtensionConfigKey]: {},
+        [devNexusPharoProjectExtensionConfigKey]: {},
       },
     });
     fs.writeFileSync(
@@ -848,8 +848,8 @@ describe("pharo-nexus cli", () => {
   });
 
   it("configures GitHub work tracking from the CLI", async () => {
-    const homePath = path.join(makeTempDir("pharo-nexus-parent-"), "home");
-    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "GitHubTracked");
+    const homePath = path.join(makeTempDir("dev-nexus-pharo-parent-"), "home");
+    const projectRoot = path.join(makeTempDir("dev-nexus-pharo-projects-"), "GitHubTracked");
     initHome(homePath);
     const homeConfig = loadHomeConfig(homePath);
     homeConfig.projects.push({
@@ -917,8 +917,8 @@ describe("pharo-nexus cli", () => {
   });
 
   it("configures GitLab work tracking from the CLI", async () => {
-    const homePath = path.join(makeTempDir("pharo-nexus-parent-"), "home");
-    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "GitLabTracked");
+    const homePath = path.join(makeTempDir("dev-nexus-pharo-parent-"), "home");
+    const projectRoot = path.join(makeTempDir("dev-nexus-pharo-projects-"), "GitLabTracked");
     initHome(homePath);
     const homeConfig = loadHomeConfig(homePath);
     homeConfig.projects.push({
@@ -983,8 +983,8 @@ describe("pharo-nexus cli", () => {
   });
 
   it("configures Jira work tracking from the CLI", async () => {
-    const homePath = path.join(makeTempDir("pharo-nexus-parent-"), "home");
-    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "JiraTracked");
+    const homePath = path.join(makeTempDir("dev-nexus-pharo-parent-"), "home");
+    const projectRoot = path.join(makeTempDir("dev-nexus-pharo-projects-"), "JiraTracked");
     initHome(homePath);
     const homeConfig = loadHomeConfig(homePath);
     homeConfig.projects.push({
@@ -1009,7 +1009,7 @@ describe("pharo-nexus cli", () => {
         projectId: null,
       },
       extensions: {
-        [pharoNexusProjectExtensionConfigKey]: {},
+        [devNexusPharoProjectExtensionConfigKey]: {},
       },
     });
     const log = vi.spyOn(console, "log").mockImplementation(() => {});
@@ -1053,8 +1053,8 @@ describe("pharo-nexus cli", () => {
   });
 
   it("syncs a project repo and board to Vibe Kanban from the CLI", async () => {
-    const homePath = path.join(makeTempDir("pharo-nexus-parent-"), "home");
-    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "Synced");
+    const homePath = path.join(makeTempDir("dev-nexus-pharo-parent-"), "home");
+    const projectRoot = path.join(makeTempDir("dev-nexus-pharo-projects-"), "Synced");
     initHome(homePath);
     const homeConfig = loadHomeConfig(homePath);
     homeConfig.ports.vibeKanban = 3400;
@@ -1080,7 +1080,7 @@ describe("pharo-nexus cli", () => {
         projectId: null,
       },
       extensions: {
-        [pharoNexusProjectExtensionConfigKey]: {},
+        [devNexusPharoProjectExtensionConfigKey]: {},
       },
     });
     const fetchMock = vi.fn(
@@ -1206,7 +1206,7 @@ describe("pharo-nexus cli", () => {
   });
 
   it("installs PLexus MCP config into Vibe Kanban from the CLI", async () => {
-    const homePath = path.join(makeTempDir("pharo-nexus-parent-"), "home");
+    const homePath = path.join(makeTempDir("dev-nexus-pharo-parent-"), "home");
     initHome(homePath);
     const log = vi.spyOn(console, "log").mockImplementation(() => {});
     const postedBodies: unknown[] = [];
@@ -1268,7 +1268,7 @@ describe("pharo-nexus cli", () => {
             command: "node",
             args: ["existing.js"],
           },
-          pharo_nexus: {
+          dev_nexus_pharo: {
             type: "http",
             url: "http://127.0.0.1:7330/mcp",
           },
@@ -1282,8 +1282,8 @@ describe("pharo-nexus cli", () => {
     expect(JSON.parse(String(log.mock.calls[0]?.[0]))).toMatchObject({
       ok: true,
       executor: "CODEX",
-      pharoNexus: {
-        serverName: "pharo_nexus",
+      devNexusPharo: {
+        serverName: "dev_nexus_pharo",
       },
       plexus: {
         serverName: "plexus_local",

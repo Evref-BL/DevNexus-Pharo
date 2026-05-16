@@ -16,20 +16,20 @@ import {
 } from "./config.js";
 import {
   defaultPlexusImageExecutionPolicy,
-  pharoNexusSkillPack,
+  devNexusPharoSkillPack,
   plexusProjectConfigFileName,
-} from "./pharoNexusExtension.js";
+} from "./devNexusPharoExtension.js";
 import {
-  callPharoNexusMcpTool,
-  listPharoNexusMcpTools,
-  startPharoNexusMcpHttpServer,
+  callDevNexusPharoMcpTool,
+  listDevNexusPharoMcpTools,
+  startDevNexusPharoMcpHttpServer,
 } from "./mcpServer.js";
 import type { GitCommandResult, GitRunner } from "./nexusProjectService.js";
 
 const tempDirs: string[] = [];
 const expectedGenericSkillCount = defaultCoreSkillPack.length;
-const expectedPharoNexusSkillCount =
-  defaultCoreSkillPack.length + pharoNexusSkillPack.length;
+const expectedDevNexusPharoSkillCount =
+  defaultCoreSkillPack.length + devNexusPharoSkillPack.length;
 
 function localComponent(
   id: string,
@@ -155,9 +155,9 @@ function fakeGitRunner(args: readonly string[], cwd?: string): GitCommandResult 
   };
 }
 
-describe("PharoNexus MCP server tools", () => {
+describe("DevNexus-Pharo MCP server tools", () => {
   it("serves MCP initialize and tools/list over HTTP", async () => {
-    const server = await startPharoNexusMcpHttpServer({
+    const server = await startDevNexusPharoMcpHttpServer({
       port: await freePort(),
     });
 
@@ -182,7 +182,7 @@ describe("PharoNexus MCP server tools", () => {
             tools: {},
           },
           serverInfo: {
-            name: "pharo-nexus",
+            name: "dev-nexus-pharo",
           },
         },
       });
@@ -215,7 +215,7 @@ describe("PharoNexus MCP server tools", () => {
   });
 
   it("rejects non-local MCP HTTP origins", async () => {
-    const server = await startPharoNexusMcpHttpServer({
+    const server = await startDevNexusPharoMcpHttpServer({
       port: await freePort(),
     });
 
@@ -239,7 +239,7 @@ describe("PharoNexus MCP server tools", () => {
   });
 
   it("lists project management tools", () => {
-    expect(listPharoNexusMcpTools().map((tool) => tool.name)).toEqual([
+    expect(listDevNexusPharoMcpTools().map((tool) => tool.name)).toEqual([
       "project_create",
       "project_import",
       "project_link_tracker",
@@ -266,23 +266,23 @@ describe("PharoNexus MCP server tools", () => {
       "work_item_comment",
       "work_item_set_status",
     ]);
-    expect(listPharoNexusMcpTools().map((tool) => tool.name)).not.toContain(
-      "pharo_nexus_work_item_create",
+    expect(listDevNexusPharoMcpTools().map((tool) => tool.name)).not.toContain(
+      "dev_nexus_pharo_work_item_create",
     );
-    expect(listPharoNexusMcpTools().map((tool) => tool.name)).not.toContain(
-      "pharo_nexus_codex_worktree_prepare",
+    expect(listDevNexusPharoMcpTools().map((tool) => tool.name)).not.toContain(
+      "dev_nexus_pharo_codex_worktree_prepare",
     );
-    expect(listPharoNexusMcpTools().map((tool) => tool.name)).not.toContain(
+    expect(listDevNexusPharoMcpTools().map((tool) => tool.name)).not.toContain(
       "codex_worktree_prepare",
     );
   });
 
   it("creates, lists, and reads a project through MCP tool calls", async () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
-    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "McpProject");
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
+    const projectRoot = path.join(makeTempDir("dev-nexus-pharo-projects-"), "McpProject");
     initNexusHome({ homePath });
 
-    const createResult = await callPharoNexusMcpTool(
+    const createResult = await callDevNexusPharoMcpTool(
       "project_create",
       {
         homePath,
@@ -306,7 +306,7 @@ describe("PharoNexus MCP server tools", () => {
     });
 
     const listPayload = parseToolText(
-      await callPharoNexusMcpTool("project_list", { homePath }),
+      await callDevNexusPharoMcpTool("project_list", { homePath }),
     );
     expect(listPayload).toMatchObject({
       ok: true,
@@ -320,7 +320,7 @@ describe("PharoNexus MCP server tools", () => {
     });
 
     const linkPayload = parseToolText(
-      await callPharoNexusMcpTool("project_link_tracker", {
+      await callDevNexusPharoMcpTool("project_link_tracker", {
         homePath,
         project: "mcp-project",
         trackerProjectId: "vk-mcp",
@@ -336,7 +336,7 @@ describe("PharoNexus MCP server tools", () => {
     });
 
     const configurePayload = parseToolText(
-      await callPharoNexusMcpTool("project_configure_tracker", {
+      await callDevNexusPharoMcpTool("project_configure_tracker", {
         homePath,
         project: "mcp-project",
         provider: "github",
@@ -363,7 +363,7 @@ describe("PharoNexus MCP server tools", () => {
     });
 
     const statusPayload = parseToolText(
-      await callPharoNexusMcpTool("project_status", {
+      await callDevNexusPharoMcpTool("project_status", {
         homePath,
         project: "mcp-project",
       }),
@@ -381,12 +381,12 @@ describe("PharoNexus MCP server tools", () => {
     });
   });
 
-  it("creates a generic DevNexus project through MCP without PharoNexus files", async () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
-    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "GenericMcp");
+  it("creates a generic DevNexus project through MCP without DevNexus-Pharo files", async () => {
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
+    const projectRoot = path.join(makeTempDir("dev-nexus-pharo-projects-"), "GenericMcp");
     initNexusHome({ homePath });
 
-    const createResult = await callPharoNexusMcpTool(
+    const createResult = await callDevNexusPharoMcpTool(
       "project_create",
       {
         homePath,
@@ -418,12 +418,12 @@ describe("PharoNexus MCP server tools", () => {
     ).toBe(true);
     expect(
       fs.existsSync(
-        path.join(projectRoot, ".dev-nexus", "skills", "pharo-nexus-workflow", "SKILL.md"),
+        path.join(projectRoot, ".dev-nexus", "skills", "dev-nexus-pharo-workflow", "SKILL.md"),
       ),
     ).toBe(false);
 
     const statusPayload = parseToolText(
-      await callPharoNexusMcpTool("project_status", {
+      await callDevNexusPharoMcpTool("project_status", {
         homePath,
         project: "generic-mcp",
       }),
@@ -438,7 +438,7 @@ describe("PharoNexus MCP server tools", () => {
     });
 
     const skillsPayload = parseToolText(
-      await callPharoNexusMcpTool("project_skill_status", {
+      await callDevNexusPharoMcpTool("project_skill_status", {
         homePath,
         project: "generic-mcp",
       }),
@@ -461,15 +461,15 @@ describe("PharoNexus MCP server tools", () => {
       (skillsPayload as {
         skillStatus: { skills: Array<{ id: string }> };
       }).skillStatus.skills.map((skill) => skill.id),
-    ).not.toContain("pharo-nexus-workflow");
+    ).not.toContain("dev-nexus-pharo-workflow");
   });
 
   it("inspects and refreshes specialization skills through MCP", async () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
-    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "SkillMcp");
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
+    const projectRoot = path.join(makeTempDir("dev-nexus-pharo-projects-"), "SkillMcp");
     initNexusHome({ homePath });
 
-    await callPharoNexusMcpTool(
+    await callDevNexusPharoMcpTool(
       "project_create",
       {
         homePath,
@@ -481,7 +481,7 @@ describe("PharoNexus MCP server tools", () => {
     );
 
     fs.rmSync(
-      path.join(projectRoot, ".dev-nexus", "skills", "pharo-nexus-workflow"),
+      path.join(projectRoot, ".dev-nexus", "skills", "dev-nexus-pharo-workflow"),
       { recursive: true, force: true },
     );
     fs.appendFileSync(
@@ -491,7 +491,7 @@ describe("PharoNexus MCP server tools", () => {
     );
 
     const statusPayload = parseToolText(
-      await callPharoNexusMcpTool("project_skill_status", {
+      await callDevNexusPharoMcpTool("project_skill_status", {
         homePath,
         project: "skill-mcp",
       }),
@@ -500,7 +500,7 @@ describe("PharoNexus MCP server tools", () => {
       ok: true,
       skillStatus: {
         summary: {
-          expected: expectedPharoNexusSkillCount,
+          expected: expectedDevNexusPharoSkillCount,
           missing: 1,
           stale: 1,
         },
@@ -508,7 +508,7 @@ describe("PharoNexus MCP server tools", () => {
     });
 
     const refreshPayload = parseToolText(
-      await callPharoNexusMcpTool("project_skill_refresh", {
+      await callDevNexusPharoMcpTool("project_skill_refresh", {
         homePath,
         project: "skill-mcp",
       }),
@@ -524,8 +524,8 @@ describe("PharoNexus MCP server tools", () => {
         },
         after: {
           summary: {
-            expected: expectedPharoNexusSkillCount,
-            installed: expectedPharoNexusSkillCount,
+            expected: expectedDevNexusPharoSkillCount,
+            installed: expectedDevNexusPharoSkillCount,
             missing: 0,
             stale: 0,
           },
@@ -534,16 +534,16 @@ describe("PharoNexus MCP server tools", () => {
     });
     expect(
       fs.existsSync(
-        path.join(projectRoot, ".dev-nexus", "skills", "pharo-nexus-workflow", "SKILL.md"),
+        path.join(projectRoot, ".dev-nexus", "skills", "dev-nexus-pharo-workflow", "SKILL.md"),
       ),
     ).toBe(true);
   });
 
   it("manages local work items through neutral MCP tool calls", async () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
-    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "Tracked");
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
+    const projectRoot = path.join(makeTempDir("dev-nexus-pharo-projects-"), "Tracked");
     initNexusHome({ homePath });
-    const createProject = await callPharoNexusMcpTool(
+    const createProject = await callDevNexusPharoMcpTool(
       "project_create",
       {
         homePath,
@@ -570,7 +570,7 @@ describe("PharoNexus MCP server tools", () => {
     });
 
     const createPayload = parseToolText(
-      await callPharoNexusMcpTool("work_item_create", {
+      await callDevNexusPharoMcpTool("work_item_create", {
         homePath,
         project: "tracked",
         title: "Local MCP item",
@@ -589,7 +589,7 @@ describe("PharoNexus MCP server tools", () => {
     });
 
     const addonCreatePayload = parseToolText(
-      await callPharoNexusMcpTool("work_item_create", {
+      await callDevNexusPharoMcpTool("work_item_create", {
         homePath,
         project: "tracked",
         componentId: "addon",
@@ -607,7 +607,7 @@ describe("PharoNexus MCP server tools", () => {
     });
 
     const listPayload = parseToolText(
-      await callPharoNexusMcpTool("work_item_list", {
+      await callDevNexusPharoMcpTool("work_item_list", {
         homePath,
         project: "tracked",
         labels: ["mcp"],
@@ -624,7 +624,7 @@ describe("PharoNexus MCP server tools", () => {
     });
 
     const addonListPayload = parseToolText(
-      await callPharoNexusMcpTool("work_item_list", {
+      await callDevNexusPharoMcpTool("work_item_list", {
         homePath,
         project: "tracked",
         componentId: "addon",
@@ -642,7 +642,7 @@ describe("PharoNexus MCP server tools", () => {
     });
 
     const updatePayload = parseToolText(
-      await callPharoNexusMcpTool("work_item_update", {
+      await callDevNexusPharoMcpTool("work_item_update", {
         homePath,
         project: "tracked",
         id: "local-1",
@@ -660,7 +660,7 @@ describe("PharoNexus MCP server tools", () => {
     });
 
     const commentPayload = parseToolText(
-      await callPharoNexusMcpTool("work_item_comment", {
+      await callDevNexusPharoMcpTool("work_item_comment", {
         homePath,
         project: "tracked",
         ref: {
@@ -678,7 +678,7 @@ describe("PharoNexus MCP server tools", () => {
     });
 
     const statusPayload = parseToolText(
-      await callPharoNexusMcpTool("work_item_set_status", {
+      await callDevNexusPharoMcpTool("work_item_set_status", {
         homePath,
         project: "tracked",
         externalRef: {
@@ -697,7 +697,7 @@ describe("PharoNexus MCP server tools", () => {
     });
 
     const getPayload = parseToolText(
-      await callPharoNexusMcpTool("work_item_get", {
+      await callDevNexusPharoMcpTool("work_item_get", {
         homePath,
         project: "tracked",
         id: "local-1",
@@ -719,10 +719,10 @@ describe("PharoNexus MCP server tools", () => {
   });
 
   it("delegates automation target tools to the native DevNexus MCP surface", async () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
-    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "Automated");
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
+    const projectRoot = path.join(makeTempDir("dev-nexus-pharo-projects-"), "Automated");
     initNexusHome({ homePath });
-    const createProject = await callPharoNexusMcpTool(
+    const createProject = await callDevNexusPharoMcpTool(
       "project_create",
       {
         homePath,
@@ -757,12 +757,12 @@ describe("PharoNexus MCP server tools", () => {
         target: {
           ...defaultNexusAutomationConfig.target,
           id: "adapter-alignment",
-          objective: "Verify PharoNexus can expose DevNexus target facts.",
+          objective: "Verify DevNexus-Pharo can expose DevNexus target facts.",
         },
       },
     });
 
-    await callPharoNexusMcpTool(
+    await callDevNexusPharoMcpTool(
       "work_item_create",
       {
         homePath,
@@ -776,7 +776,7 @@ describe("PharoNexus MCP server tools", () => {
     );
 
     const automationStatus = parseToolText(
-      await callPharoNexusMcpTool(
+      await callDevNexusPharoMcpTool(
         "automation_status",
         {
           homePath,
@@ -809,14 +809,14 @@ describe("PharoNexus MCP server tools", () => {
     });
 
     const recorded = parseToolText(
-      await callPharoNexusMcpTool(
+      await callDevNexusPharoMcpTool(
         "target_cycle_record",
         {
           homePath,
           project: "automated",
           cycleId: "cycle-1",
           status: "completed",
-          summary: "Native target cycle recorded through PharoNexus.",
+          summary: "Native target cycle recorded through DevNexus-Pharo.",
           eligibleWorkItemCount: 1,
           workItems: [
             {
@@ -846,7 +846,7 @@ describe("PharoNexus MCP server tools", () => {
     });
 
     const report = parseToolText(
-      await callPharoNexusMcpTool(
+      await callDevNexusPharoMcpTool(
         "target_report",
         {
           homePath,
@@ -873,10 +873,10 @@ describe("PharoNexus MCP server tools", () => {
   });
 
   it("configures GitLab work tracking through neutral MCP tool calls", async () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
-    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "GitLabMcp");
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
+    const projectRoot = path.join(makeTempDir("dev-nexus-pharo-projects-"), "GitLabMcp");
     initNexusHome({ homePath });
-    await callPharoNexusMcpTool(
+    await callDevNexusPharoMcpTool(
       "project_create",
       {
         homePath,
@@ -889,7 +889,7 @@ describe("PharoNexus MCP server tools", () => {
     );
 
     const configurePayload = parseToolText(
-      await callPharoNexusMcpTool("project_configure_tracker", {
+      await callDevNexusPharoMcpTool("project_configure_tracker", {
         homePath,
         project: "git-lab-mcp",
         provider: "gitlab",
@@ -917,10 +917,10 @@ describe("PharoNexus MCP server tools", () => {
   });
 
   it("configures Jira work tracking through neutral MCP tool calls", async () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
-    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "JiraMcp");
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
+    const projectRoot = path.join(makeTempDir("dev-nexus-pharo-projects-"), "JiraMcp");
     initNexusHome({ homePath });
-    await callPharoNexusMcpTool(
+    await callDevNexusPharoMcpTool(
       "project_create",
       {
         homePath,
@@ -933,7 +933,7 @@ describe("PharoNexus MCP server tools", () => {
     );
 
     const configurePayload = parseToolText(
-      await callPharoNexusMcpTool("project_configure_tracker", {
+      await callDevNexusPharoMcpTool("project_configure_tracker", {
         homePath,
         project: "jira-mcp",
         provider: "jira",
@@ -961,10 +961,10 @@ describe("PharoNexus MCP server tools", () => {
   });
 
   it("reports unsupported work tracking providers through neutral MCP tools", async () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
-    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "Legacy");
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
+    const projectRoot = path.join(makeTempDir("dev-nexus-pharo-projects-"), "Legacy");
     initNexusHome({ homePath });
-    const createProject = await callPharoNexusMcpTool(
+    const createProject = await callDevNexusPharoMcpTool(
       "project_create",
       {
         homePath,
@@ -977,7 +977,7 @@ describe("PharoNexus MCP server tools", () => {
     );
     expect(createProject.isError).toBeUndefined();
 
-    const result = await callPharoNexusMcpTool("work_item_create", {
+    const result = await callDevNexusPharoMcpTool("work_item_create", {
       homePath,
       project: "legacy",
       title: "Cannot route to Vibe yet",
@@ -993,11 +993,11 @@ describe("PharoNexus MCP server tools", () => {
   });
 
   it("resolves project status by managed config id before MCP path fallback", async () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
-    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "MCP-PL");
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
+    const projectRoot = path.join(makeTempDir("dev-nexus-pharo-projects-"), "MCP-PL");
     initNexusHome({ homePath });
 
-    const createResult = await callPharoNexusMcpTool(
+    const createResult = await callDevNexusPharoMcpTool(
       "project_create",
       {
         homePath,
@@ -1017,7 +1017,7 @@ describe("PharoNexus MCP server tools", () => {
     });
 
     const statusPayload = parseToolText(
-      await callPharoNexusMcpTool("project_status", {
+      await callDevNexusPharoMcpTool("project_status", {
         homePath,
         project: "pharo-launcher-mcp",
       }),
@@ -1033,13 +1033,13 @@ describe("PharoNexus MCP server tools", () => {
   });
 
   it("imports an existing repository through an MCP tool call", async () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
-    const sourceRoot = path.join(makeTempDir("pharo-nexus-source-"), "Imported");
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
+    const sourceRoot = path.join(makeTempDir("dev-nexus-pharo-source-"), "Imported");
     fs.mkdirSync(sourceRoot, { recursive: true });
     initNexusHome({ homePath });
     const projectRoot = path.join(homePath, "projects", "Imported");
 
-    const result = await callPharoNexusMcpTool(
+    const result = await callDevNexusPharoMcpTool(
       "project_import",
       {
         homePath,
@@ -1068,7 +1068,7 @@ describe("PharoNexus MCP server tools", () => {
   });
 
   it("supports the first usable control-project scenario through remoteUrl", async () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
     const gitCalls: string[][] = [];
     initNexusHome({ homePath });
     const gitRunner: GitRunner = (args: readonly string[]): GitCommandResult => {
@@ -1186,7 +1186,7 @@ describe("PharoNexus MCP server tools", () => {
       throw new Error(`Unexpected Vibe Kanban request: ${url}`);
     };
 
-    const result = await callPharoNexusMcpTool(
+    const result = await callDevNexusPharoMcpTool(
       "project_create",
       {
         homePath,
@@ -1259,7 +1259,7 @@ describe("PharoNexus MCP server tools", () => {
   });
 
   it("returns tool errors as MCP error results", async () => {
-    const result = await callPharoNexusMcpTool("project_status", {});
+    const result = await callDevNexusPharoMcpTool("project_status", {});
 
     expect(result.isError).toBe(true);
     expect(parseToolText(result)).toMatchObject({
@@ -1269,8 +1269,8 @@ describe("PharoNexus MCP server tools", () => {
   });
 
   it("prepares and archives Codex worktrees through neutral MCP tool calls", async () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
-    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "CodexMcp");
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
+    const projectRoot = path.join(makeTempDir("dev-nexus-pharo-projects-"), "CodexMcp");
     initNexusHome({ homePath });
     const calls: Array<{ args: string[]; cwd?: string }> = [];
     const gitRunner: GitRunner = (args: readonly string[], cwd?: string) => {
@@ -1278,7 +1278,7 @@ describe("PharoNexus MCP server tools", () => {
       return fakeGitRunner(args, cwd);
     };
 
-    const createResult = await callPharoNexusMcpTool(
+    const createResult = await callDevNexusPharoMcpTool(
       "project_create",
       {
         homePath,
@@ -1301,7 +1301,7 @@ describe("PharoNexus MCP server tools", () => {
       ],
     });
     const createWorkItemPayload = parseToolText(
-      await callPharoNexusMcpTool("work_item_create", {
+      await callDevNexusPharoMcpTool("work_item_create", {
         homePath,
         project: "codex-mcp",
         title: "FCD-900",
@@ -1309,7 +1309,7 @@ describe("PharoNexus MCP server tools", () => {
     ) as { workItem: { id: string } };
 
     const preparePayload = parseToolText(
-      await callPharoNexusMcpTool(
+      await callDevNexusPharoMcpTool(
         "worktree_prepare",
         {
           homePath,
@@ -1345,7 +1345,7 @@ describe("PharoNexus MCP server tools", () => {
     });
 
     const listPayload = parseToolText(
-      await callPharoNexusMcpTool(
+      await callDevNexusPharoMcpTool(
         "worktree_list",
         {
           homePath,
@@ -1371,7 +1371,7 @@ describe("PharoNexus MCP server tools", () => {
     });
 
     const statusPayload = parseToolText(
-      await callPharoNexusMcpTool(
+      await callDevNexusPharoMcpTool(
         "worktree_status",
         {
           homePath,
@@ -1392,7 +1392,7 @@ describe("PharoNexus MCP server tools", () => {
     });
 
     const guidePayload = parseToolText(
-      await callPharoNexusMcpTool("worktree_guide", {
+      await callDevNexusPharoMcpTool("worktree_guide", {
         homePath,
         id: "codex-mcp:codex/fcd-900",
         commentWorkItem: true,
@@ -1421,7 +1421,7 @@ describe("PharoNexus MCP server tools", () => {
     );
 
     const recordPayload = parseToolText(
-      await callPharoNexusMcpTool(
+      await callDevNexusPharoMcpTool(
         "worktree_record_execution",
         {
           homePath,
@@ -1460,7 +1460,7 @@ describe("PharoNexus MCP server tools", () => {
     });
 
     const archivePayload = parseToolText(
-      await callPharoNexusMcpTool(
+      await callDevNexusPharoMcpTool(
         "worktree_archive",
         {
           homePath,

@@ -207,10 +207,10 @@ function resolveCodexWorktreeComponent(
   return component;
 }
 
-function projectUsesPharoNexusExtension(
+function projectUsesDevNexusPharoExtension(
   projectConfig: Pick<NexusProjectConfig, "extensions">,
 ): boolean {
-  return Boolean(projectConfig.extensions?.["pharo-nexus"]);
+  return Boolean(projectConfig.extensions?.["dev-nexus-pharo"]);
 }
 
 function refreshCodexWorktreeMcpConfig(options: {
@@ -222,7 +222,7 @@ function refreshCodexWorktreeMcpConfig(options: {
   projectId: string;
   componentId: string;
 }): void {
-  if (!projectUsesPharoNexusExtension(options.projectConfig)) {
+  if (!projectUsesDevNexusPharoExtension(options.projectConfig)) {
     return;
   }
 

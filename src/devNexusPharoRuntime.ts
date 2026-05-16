@@ -16,8 +16,8 @@ import {
   ensureControlProject,
   legacyControlProjectRootPath,
   loadHomeConfig,
-  pharoNexusControlProjectId,
-  pharoNexusControlProjectName,
+  devNexusPharoControlProjectId,
+  devNexusPharoControlProjectName,
   projectConfigPath,
   resolveNexusHome,
   saveHomeConfig,
@@ -26,14 +26,14 @@ import {
   type NexusProjectConfig,
 } from "./config.js";
 import {
-  getPharoNexusMcpStatus,
-  startPharoNexusMcp,
-  stopPharoNexusMcp,
-  type PharoNexusMcpServiceState,
-  type PharoNexusMcpStatusResult,
-  type PharoNexusMcpStopResult,
-} from "./pharoNexusMcpService.js";
-import { defaultPharoNexusMcpHealthPath } from "./mcpServer.js";
+  getDevNexusPharoMcpStatus,
+  startDevNexusPharoMcp,
+  stopDevNexusPharoMcp,
+  type DevNexusPharoMcpServiceState,
+  type DevNexusPharoMcpStatusResult,
+  type DevNexusPharoMcpStopResult,
+} from "./devNexusPharoMcpService.js";
+import { defaultDevNexusPharoMcpHealthPath } from "./mcpServer.js";
 import {
   getPlexusGatewayStatus,
   startPlexusGateway,
@@ -47,8 +47,8 @@ import {
   type HttpPortHealthCheckResult,
 } from "dev-nexus";
 import {
-  installPharoNexusAndPlexusMcpForExecutor,
-  type InstallPharoNexusAndPlexusMcpConfigResult,
+  installDevNexusPharoAndPlexusMcpForExecutor,
+  type InstallDevNexusPharoAndPlexusMcpConfigResult,
 } from "./vibeKanbanMcpConfig.js";
 import {
   ensureVibeKanbanSelfHostedLogin,
@@ -72,9 +72,9 @@ import {
   type VibeKanbanBackendStopResult,
 } from "./vibeKanbanBackendService.js";
 
-export type PharoNexusProgressReporter = (message: string) => void;
+export type DevNexusPharoProgressReporter = (message: string) => void;
 
-export interface PharoNexusStartOptions {
+export interface DevNexusPharoStartOptions {
   homePath: string;
   config?: NexusHomeConfig;
   force?: boolean;
@@ -86,31 +86,31 @@ export interface PharoNexusStartOptions {
   vibeHealthTimeoutMs?: number;
   mcpHealthTimeoutMs?: number;
   backendHealthTimeoutMs?: number;
-  progress?: PharoNexusProgressReporter;
+  progress?: DevNexusPharoProgressReporter;
 }
 
-export interface PharoNexusStartResult {
+export interface DevNexusPharoStartResult {
   homePath: string;
-  controlProject: PharoNexusControlProjectStartResult;
+  controlProject: DevNexusPharoControlProjectStartResult;
   services: {
     vibeKanbanBackend?: VibeKanbanBackendServiceState;
-    pharoNexusMcp: PharoNexusMcpServiceState;
+    devNexusPharoMcp: DevNexusPharoMcpServiceState;
     plexusGateway: PlexusGatewayServiceState;
     vibeKanban: VibeKanbanServiceState;
   };
   health: {
     vibeKanbanBackend?: HttpPortHealthCheckResult;
-    pharoNexusMcp: HttpPortHealthCheckResult;
+    devNexusPharoMcp: HttpPortHealthCheckResult;
     vibeKanban: HttpPortHealthCheckResult;
   };
   auth?: {
     vibeKanban?: VibeKanbanAutoLoginResult;
   };
   browser?: BrowserOpenResult;
-  mcpConfig?: InstallPharoNexusAndPlexusMcpConfigResult;
+  mcpConfig?: InstallDevNexusPharoAndPlexusMcpConfigResult;
 }
 
-export interface PharoNexusControlProjectStartResult {
+export interface DevNexusPharoControlProjectStartResult {
   projectPath: string;
   configPath: string;
   config: NexusProjectConfig;
@@ -126,48 +126,48 @@ export interface PharoNexusControlProjectStartResult {
   gitError?: string;
 }
 
-export interface PharoNexusStatusOptions {
+export interface DevNexusPharoStatusOptions {
   homePath: string;
   config?: NexusHomeConfig;
   checkHealth?: boolean;
   healthTimeoutMs?: number;
 }
 
-export interface PharoNexusStatusResult {
+export interface DevNexusPharoStatusResult {
   homePath: string;
   running: boolean;
   stale: boolean;
   services: {
     vibeKanbanBackend: VibeKanbanBackendStatusResult;
-    pharoNexusMcp: PharoNexusMcpStatusResult;
+    devNexusPharoMcp: DevNexusPharoMcpStatusResult;
     plexusGateway: PlexusGatewayStatusResult;
     vibeKanban: VibeKanbanStatusResult;
   };
 }
 
-export interface PharoNexusStopOptions {
+export interface DevNexusPharoStopOptions {
   homePath: string;
   config?: NexusHomeConfig;
   force?: boolean;
   timeoutMs?: number;
   pollIntervalMs?: number;
-  progress?: PharoNexusProgressReporter;
+  progress?: DevNexusPharoProgressReporter;
 }
 
-export interface PharoNexusStopResult {
+export interface DevNexusPharoStopResult {
   homePath: string;
   services: {
     vibeKanban: VibeKanbanStopResult;
-    pharoNexusMcp: PharoNexusMcpStopResult;
+    devNexusPharoMcp: DevNexusPharoMcpStopResult;
     plexusGateway: PlexusGatewayStopResult;
     vibeKanbanBackend?: VibeKanbanBackendStopResult | VibeKanbanBackendStatusResult;
   };
 }
 
-export class PharoNexusRuntimeError extends Error {
+export class DevNexusPharoRuntimeError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = "PharoNexusRuntimeError";
+    this.name = "DevNexus-PharoRuntimeError";
   }
 }
 
@@ -208,7 +208,7 @@ async function ensurePlexusGatewayStarted(
   homePath: string,
   config: NexusHomeConfig,
   force: boolean | undefined,
-  progress?: PharoNexusProgressReporter,
+  progress?: DevNexusPharoProgressReporter,
 ): Promise<PlexusGatewayServiceState> {
   const status = await getPlexusGatewayStatus({ homePath });
   if (status.running && status.state && !force) {
@@ -222,29 +222,29 @@ async function ensurePlexusGatewayStarted(
   return startPlexusGateway({ homePath, config, force });
 }
 
-async function ensurePharoNexusMcpStarted(
+async function ensureDevNexusPharoMcpStarted(
   homePath: string,
   config: NexusHomeConfig,
   force: boolean | undefined,
-  progress?: PharoNexusProgressReporter,
-): Promise<PharoNexusMcpServiceState> {
-  const status = await getPharoNexusMcpStatus({ homePath });
+  progress?: DevNexusPharoProgressReporter,
+): Promise<DevNexusPharoMcpServiceState> {
+  const status = await getDevNexusPharoMcpStatus({ homePath });
   if (status.running && status.state && !force) {
     progress?.(
-      `PharoNexus MCP is already running with pid ${status.state.pid}.`,
+      `DevNexus-Pharo MCP is already running with pid ${status.state.pid}.`,
     );
     return status.state;
   }
 
-  progress?.("Starting PharoNexus MCP...");
-  return startPharoNexusMcp({ homePath, config, force });
+  progress?.("Starting DevNexus-Pharo MCP...");
+  return startDevNexusPharoMcp({ homePath, config, force });
 }
 
 async function ensureVibeKanbanStarted(
   homePath: string,
   config: NexusHomeConfig,
   force: boolean | undefined,
-  progress?: PharoNexusProgressReporter,
+  progress?: DevNexusPharoProgressReporter,
 ): Promise<EnsuredVibeKanbanService> {
   const status = await getVibeKanbanStatus({ homePath });
   if (status.running && status.state && !force) {
@@ -271,7 +271,7 @@ async function ensureVibeKanbanBackendReady(
   progress?: VibeKanbanBackendProgressReporter,
 ): Promise<VibeKanbanBackendStatusResult> {
   const backendConfig = config.integrations.vibeKanban.backend;
-  if (backendConfig.startOnPharoNexusStart) {
+  if (backendConfig.startOnDevNexusPharoStart) {
     progress?.("Preparing Vibe Kanban backend...");
     await startVibeKanbanBackend({
       homePath,
@@ -351,15 +351,15 @@ function migrateLegacyControlProject(
   homePath: string,
   config: NexusHomeConfig,
 ): void {
-  if (config.controlProject.id !== pharoNexusControlProjectId) {
+  if (config.controlProject.id !== devNexusPharoControlProjectId) {
     return;
   }
 
   const legacyRoot = legacyControlProjectRootPath(homePath);
   const currentRoot = path.resolve(config.controlProject.root);
-  const targetRoot = path.join(homePath, pharoNexusControlProjectName);
+  const targetRoot = path.join(homePath, devNexusPharoControlProjectName);
   const usesLegacyDefaultRoot = samePath(currentRoot, legacyRoot);
-  if (!usesLegacyDefaultRoot && config.controlProject.name === pharoNexusControlProjectName) {
+  if (!usesLegacyDefaultRoot && config.controlProject.name === devNexusPharoControlProjectName) {
     return;
   }
 
@@ -377,7 +377,7 @@ function migrateLegacyControlProject(
     config.controlProject.vibeKanbanRepoId = null;
   }
 
-  config.controlProject.name = pharoNexusControlProjectName;
+  config.controlProject.name = devNexusPharoControlProjectName;
   saveHomeConfig(homePath, config);
 
   const migratedProjectConfigPath = projectConfigPath(config.controlProject.root);
@@ -385,7 +385,7 @@ function migrateLegacyControlProject(
     const migratedProject = ensureControlProject(homePath, config.controlProject);
     const updatedProject: NexusProjectConfig = {
       ...migratedProject.config,
-      name: pharoNexusControlProjectName,
+      name: devNexusPharoControlProjectName,
       kanban: {
         ...migratedProject.config.kanban,
         projectId: config.controlProject.vibeKanbanProjectId,
@@ -403,8 +403,8 @@ function projectPathMatchesRepo(
     return true;
   }
 
-  return repo.name === pharoNexusControlProjectName ||
-    repo.display_name === pharoNexusControlProjectName;
+  return repo.name === devNexusPharoControlProjectName ||
+    repo.display_name === devNexusPharoControlProjectName;
 }
 
 async function resolveControlProjectRepoId(
@@ -463,7 +463,7 @@ async function resolveControlProjectRepoId(
 async function ensureControlProjectLinked(
   homePath: string,
   config: NexusHomeConfig,
-): Promise<PharoNexusControlProjectStartResult> {
+): Promise<DevNexusPharoControlProjectStartResult> {
   migrateLegacyControlProject(homePath, config);
   const controlProject = ensureControlProject(homePath, config.controlProject);
   const git = ensureGitRepository(controlProject.projectPath);
@@ -562,11 +562,11 @@ function vibeKanbanProjectUrl(port: number, projectId: string | null): string {
   return projectId ? `${baseUrl}projects/${projectId}` : baseUrl;
 }
 
-export async function startPharoNexus(
-  options: PharoNexusStartOptions,
-): Promise<PharoNexusStartResult> {
+export async function startDevNexusPharo(
+  options: DevNexusPharoStartOptions,
+): Promise<DevNexusPharoStartResult> {
   const homePath = resolveNexusHome(options.homePath);
-  options.progress?.(`Using PharoNexus home: ${homePath}`);
+  options.progress?.(`Using DevNexus-Pharo home: ${homePath}`);
   const config = loadConfig(homePath, options.config);
   const vibeKanbanBackend = await ensureVibeKanbanBackendReady(
     homePath,
@@ -591,7 +591,7 @@ export async function startPharoNexus(
   });
 
   if (!vibeKanbanHealth.ok) {
-    throw new PharoNexusRuntimeError(
+    throw new DevNexusPharoRuntimeError(
       `Vibe Kanban did not become healthy at ${vibeKanbanHealth.url}: ${
         vibeKanbanHealth.error ?? "unhealthy response"
       }`,
@@ -606,10 +606,10 @@ export async function startPharoNexus(
       });
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
-      throw new PharoNexusRuntimeError(
+      throw new DevNexusPharoRuntimeError(
         [
           "Failed to sign into Vibe Kanban with managed self-hosted local auth.",
-          "If the backend env file changed while Vibe was running, restart PharoNexus so the backend reloads it.",
+          "If the backend env file changed while Vibe was running, restart DevNexus-Pharo so the backend reloads it.",
           detail,
         ].join(" "),
       );
@@ -629,31 +629,31 @@ export async function startPharoNexus(
     options.force,
     options.progress,
   );
-  const pharoNexusMcp = await ensurePharoNexusMcpStarted(
+  const devNexusPharoMcp = await ensureDevNexusPharoMcpStarted(
     homePath,
     config,
     options.force,
     options.progress,
   );
   options.progress?.(
-    `Waiting for PharoNexus MCP health at http://${pharoNexusMcp.host}:${pharoNexusMcp.port}${defaultPharoNexusMcpHealthPath}...`,
+    `Waiting for DevNexus-Pharo MCP health at http://${devNexusPharoMcp.host}:${devNexusPharoMcp.port}${defaultDevNexusPharoMcpHealthPath}...`,
   );
-  const pharoNexusMcpHealth = await waitForHttpPort({
-    host: pharoNexusMcp.host,
-    port: pharoNexusMcp.port,
-    path: defaultPharoNexusMcpHealthPath,
+  const devNexusPharoMcpHealth = await waitForHttpPort({
+    host: devNexusPharoMcp.host,
+    port: devNexusPharoMcp.port,
+    path: defaultDevNexusPharoMcpHealthPath,
     totalTimeoutMs: options.mcpHealthTimeoutMs ?? 30_000,
   });
 
-  if (!pharoNexusMcpHealth.ok) {
-    throw new PharoNexusRuntimeError(
-      `PharoNexus MCP did not become healthy at ${pharoNexusMcpHealth.url}: ${
-        pharoNexusMcpHealth.error ?? "unhealthy response"
+  if (!devNexusPharoMcpHealth.ok) {
+    throw new DevNexusPharoRuntimeError(
+      `DevNexus-Pharo MCP did not become healthy at ${devNexusPharoMcpHealth.url}: ${
+        devNexusPharoMcpHealth.error ?? "unhealthy response"
       }`,
     );
   }
-  options.progress?.("PharoNexus MCP is healthy.");
-  options.progress?.("Ensuring PharoNexus control project and Vibe links...");
+  options.progress?.("DevNexus-Pharo MCP is healthy.");
+  options.progress?.("Ensuring DevNexus-Pharo control project and Vibe links...");
   const controlProject = await ensureControlProjectLinked(homePath, config);
   const browserUrl = vibeKanbanProjectUrl(
     config.ports.vibeKanban,
@@ -682,7 +682,7 @@ export async function startPharoNexus(
   }
   const mcpConfig =
     shouldInstallMcpConfig
-      ? await installPharoNexusAndPlexusMcpForExecutor({
+      ? await installDevNexusPharoAndPlexusMcpForExecutor({
           homePath,
           config,
           executor,
@@ -693,7 +693,7 @@ export async function startPharoNexus(
           port: config.ports.vibeKanban,
         })
       : undefined;
-  options.progress?.("PharoNexus start complete.");
+  options.progress?.("DevNexus-Pharo start complete.");
 
   return {
     homePath,
@@ -702,7 +702,7 @@ export async function startPharoNexus(
       ...(vibeKanbanBackend.state
         ? { vibeKanbanBackend: vibeKanbanBackend.state }
         : {}),
-      pharoNexusMcp,
+      devNexusPharoMcp,
       plexusGateway,
       vibeKanban,
     },
@@ -710,7 +710,7 @@ export async function startPharoNexus(
       ...(vibeKanbanBackend.health
         ? { vibeKanbanBackend: vibeKanbanBackend.health }
         : {}),
-      pharoNexusMcp: pharoNexusMcpHealth,
+      devNexusPharoMcp: devNexusPharoMcpHealth,
       vibeKanban: vibeKanbanHealth,
     },
     auth: {
@@ -721,9 +721,9 @@ export async function startPharoNexus(
   };
 }
 
-export async function getPharoNexusStatus(
-  options: PharoNexusStatusOptions,
-): Promise<PharoNexusStatusResult> {
+export async function getDevNexusPharoStatus(
+  options: DevNexusPharoStatusOptions,
+): Promise<DevNexusPharoStatusResult> {
   const homePath = resolveNexusHome(options.homePath);
   const config = loadConfig(homePath, options.config);
   const vibeKanbanBackend = await getVibeKanbanBackendStatus({
@@ -737,7 +737,7 @@ export async function getPharoNexusStatus(
     checkHealth: options.checkHealth,
     healthTimeoutMs: options.healthTimeoutMs,
   });
-  const pharoNexusMcp = await getPharoNexusMcpStatus({
+  const devNexusPharoMcp = await getDevNexusPharoMcpStatus({
     homePath,
     checkHealth: options.checkHealth,
     healthTimeoutMs: options.healthTimeoutMs,
@@ -752,28 +752,28 @@ export async function getPharoNexusStatus(
     homePath,
     running:
       vibeKanbanBackend.running &&
-      pharoNexusMcp.running &&
+      devNexusPharoMcp.running &&
       plexusGateway.running &&
       vibeKanban.running,
     stale:
       vibeKanbanBackend.stale ||
-      pharoNexusMcp.stale ||
+      devNexusPharoMcp.stale ||
       plexusGateway.stale ||
       vibeKanban.stale,
     services: {
       vibeKanbanBackend,
-      pharoNexusMcp,
+      devNexusPharoMcp,
       plexusGateway,
       vibeKanban,
     },
   };
 }
 
-export async function stopPharoNexus(
-  options: PharoNexusStopOptions,
-): Promise<PharoNexusStopResult> {
+export async function stopDevNexusPharo(
+  options: DevNexusPharoStopOptions,
+): Promise<DevNexusPharoStopResult> {
   const homePath = resolveNexusHome(options.homePath);
-  options.progress?.(`Using PharoNexus home: ${homePath}`);
+  options.progress?.(`Using DevNexus-Pharo home: ${homePath}`);
   const config = loadConfig(homePath, options.config);
   options.progress?.("Stopping Vibe Kanban app...");
   const vibeKanban = await stopVibeKanban({
@@ -783,14 +783,14 @@ export async function stopPharoNexus(
     pollIntervalMs: options.pollIntervalMs,
   });
   options.progress?.("Vibe Kanban app stopped.");
-  options.progress?.("Stopping PharoNexus MCP...");
-  const pharoNexusMcp = await stopPharoNexusMcp({
+  options.progress?.("Stopping DevNexus-Pharo MCP...");
+  const devNexusPharoMcp = await stopDevNexusPharoMcp({
     homePath,
     force: options.force,
     timeoutMs: options.timeoutMs,
     pollIntervalMs: options.pollIntervalMs,
   });
-  options.progress?.("PharoNexus MCP stopped.");
+  options.progress?.("DevNexus-Pharo MCP stopped.");
   options.progress?.("Stopping PLexus gateway...");
   const plexusGateway = await stopPlexusGateway({
     homePath,
@@ -801,7 +801,7 @@ export async function stopPharoNexus(
   options.progress?.("PLexus gateway stopped.");
   const backendConfig = config.integrations.vibeKanban.backend;
   const vibeKanbanBackend =
-    backendConfig.stopOnPharoNexusStop
+    backendConfig.stopOnDevNexusPharoStop
       ? await (async () => {
           options.progress?.("Stopping Vibe Kanban backend...");
           const result = await stopVibeKanbanBackend({
@@ -820,13 +820,13 @@ export async function stopPharoNexus(
             checkHealth: false,
           });
         })();
-  options.progress?.("PharoNexus stop complete.");
+  options.progress?.("DevNexus-Pharo stop complete.");
 
   return {
     homePath,
     services: {
       vibeKanban,
-      pharoNexusMcp,
+      devNexusPharoMcp,
       plexusGateway,
       vibeKanbanBackend,
     },

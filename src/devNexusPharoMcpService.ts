@@ -2,14 +2,14 @@ import fs from "node:fs";
 import path from "node:path";
 import {
   loadHomeConfig,
-  pharoNexusCliEntrypointPath,
+  devNexusPharoCliEntrypointPath,
   nexusLogsDirectoryName,
   resolveNexusHome,
   type NexusHomeConfig,
 } from "./config.js";
 import {
-  defaultPharoNexusMcpHealthPath,
-  defaultPharoNexusMcpHost,
+  defaultDevNexusPharoMcpHealthPath,
+  defaultDevNexusPharoMcpHost,
 } from "./mcpServer.js";
 import {
   checkHttpPort,
@@ -22,14 +22,14 @@ import {
   type StopProcessByPidResult,
 } from "dev-nexus";
 
-export const pharoNexusMcpServiceName = "pharo-nexus-mcp";
-export const pharoNexusMcpStateFileName = "pharo-nexus-mcp.json";
+export const devNexusPharoMcpServiceName = "dev-nexus-pharo-mcp";
+export const devNexusPharoMcpStateFileName = "dev-nexus-pharo-mcp.json";
 
-export type PharoNexusMcpRuntimeStatus = "running" | "stopped" | "stale";
+export type DevNexusPharoMcpRuntimeStatus = "running" | "stopped" | "stale";
 
-export interface PharoNexusMcpServiceState {
-  service: typeof pharoNexusMcpServiceName;
-  status: PharoNexusMcpRuntimeStatus;
+export interface DevNexusPharoMcpServiceState {
+  service: typeof devNexusPharoMcpServiceName;
+  status: DevNexusPharoMcpRuntimeStatus;
   pid?: number;
   host: string;
   port: number;
@@ -40,7 +40,7 @@ export interface PharoNexusMcpServiceState {
   logPaths?: ProcessLogPaths;
 }
 
-export interface PharoNexusMcpStartOptions {
+export interface DevNexusPharoMcpStartOptions {
   homePath: string;
   config?: NexusHomeConfig;
   force?: boolean;
@@ -49,41 +49,41 @@ export interface PharoNexusMcpStartOptions {
   extraEnv?: NodeJS.ProcessEnv;
 }
 
-export interface PharoNexusMcpStopOptions {
+export interface DevNexusPharoMcpStopOptions {
   homePath: string;
   force?: boolean;
   timeoutMs?: number;
   pollIntervalMs?: number;
 }
 
-export interface PharoNexusMcpStatusOptions {
+export interface DevNexusPharoMcpStatusOptions {
   homePath: string;
   checkHealth?: boolean;
   healthPath?: string;
   healthTimeoutMs?: number;
 }
 
-export interface PharoNexusMcpStatusResult {
-  state?: PharoNexusMcpServiceState;
+export interface DevNexusPharoMcpStatusResult {
+  state?: DevNexusPharoMcpServiceState;
   running: boolean;
   stale: boolean;
   health?: HttpPortHealthCheckResult;
 }
 
-export interface PharoNexusMcpStopResult {
-  state?: PharoNexusMcpServiceState;
+export interface DevNexusPharoMcpStopResult {
+  state?: DevNexusPharoMcpServiceState;
   stop?: StopProcessByPidResult;
 }
 
-export interface PharoNexusMcpServiceCommand {
+export interface DevNexusPharoMcpServiceCommand {
   command: string;
   args: string[];
 }
 
-export class PharoNexusMcpServiceError extends Error {
+export class DevNexusPharoMcpServiceError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = "PharoNexusMcpServiceError";
+    this.name = "DevNexus-PharoMcpServiceError";
   }
 }
 
@@ -95,15 +95,15 @@ function servicesStateDirectoryPath(homePath: string): string {
   return path.join(resolveNexusHome(homePath), "state", "services");
 }
 
-export function pharoNexusMcpStatePath(homePath: string): string {
-  return path.join(servicesStateDirectoryPath(homePath), pharoNexusMcpStateFileName);
+export function devNexusPharoMcpStatePath(homePath: string): string {
+  return path.join(servicesStateDirectoryPath(homePath), devNexusPharoMcpStateFileName);
 }
 
-export function pharoNexusMcpLogDirectoryPath(homePath: string): string {
+export function devNexusPharoMcpLogDirectoryPath(homePath: string): string {
   return path.join(
     resolveNexusHome(homePath),
     nexusLogsDirectoryName,
-    pharoNexusMcpServiceName,
+    devNexusPharoMcpServiceName,
   );
 }
 
@@ -121,8 +121,8 @@ function normalizedCommandName(command: string): string {
     .replace(/\.(cmd|exe|ps1)$/u, "");
 }
 
-function isPharoNexusEntrypoint(command: string, args: string[]): boolean {
-  if (normalizedCommandName(command) === "pharo-nexus") {
+function isDevNexusPharoEntrypoint(command: string, args: string[]): boolean {
+  if (normalizedCommandName(command) === "dev-nexus-pharo") {
     return true;
   }
 
@@ -132,17 +132,17 @@ function isPharoNexusEntrypoint(command: string, args: string[]): boolean {
   });
 }
 
-function hasPharoNexusMcpModeArg(args: string[]): boolean {
+function hasDevNexusPharoMcpModeArg(args: string[]): boolean {
   return args.some((arg) => arg === "mcp" || arg === "mcp-stdio");
 }
 
-export function buildPharoNexusMcpServiceArgs(
+export function buildDevNexusPharoMcpServiceArgs(
   command: string,
   args: string[],
 ): string[] {
   if (
-    !isPharoNexusEntrypoint(command, args) ||
-    hasPharoNexusMcpModeArg(args)
+    !isDevNexusPharoEntrypoint(command, args) ||
+    hasDevNexusPharoMcpModeArg(args)
   ) {
     return [...args];
   }
@@ -150,35 +150,35 @@ export function buildPharoNexusMcpServiceArgs(
   return [...args, "mcp"];
 }
 
-export function resolvePharoNexusMcpServiceCommand(
+export function resolveDevNexusPharoMcpServiceCommand(
   command: string,
   args: string[],
-): PharoNexusMcpServiceCommand {
-  if (normalizedCommandName(command) === "pharo-nexus") {
+): DevNexusPharoMcpServiceCommand {
+  if (normalizedCommandName(command) === "dev-nexus-pharo") {
     return {
       command: process.execPath,
       args: [
-        pharoNexusCliEntrypointPath(),
-        ...buildPharoNexusMcpServiceArgs(command, args),
+        devNexusPharoCliEntrypointPath(),
+        ...buildDevNexusPharoMcpServiceArgs(command, args),
       ],
     };
   }
 
   return {
     command,
-    args: buildPharoNexusMcpServiceArgs(command, args),
+    args: buildDevNexusPharoMcpServiceArgs(command, args),
   };
 }
 
-function validateState(value: unknown): PharoNexusMcpServiceState {
+function validateState(value: unknown): DevNexusPharoMcpServiceState {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new PharoNexusMcpServiceError("PharoNexus MCP state must be an object");
+    throw new DevNexusPharoMcpServiceError("DevNexus-Pharo MCP state must be an object");
   }
 
   const record = value as Record<string, unknown>;
-  if (record.service !== pharoNexusMcpServiceName) {
-    throw new PharoNexusMcpServiceError(
-      `PharoNexus MCP state service must be ${pharoNexusMcpServiceName}`,
+  if (record.service !== devNexusPharoMcpServiceName) {
+    throw new DevNexusPharoMcpServiceError(
+      `DevNexus-Pharo MCP state service must be ${devNexusPharoMcpServiceName}`,
     );
   }
 
@@ -187,14 +187,14 @@ function validateState(value: unknown): PharoNexusMcpServiceState {
     record.status !== "stopped" &&
     record.status !== "stale"
   ) {
-    throw new PharoNexusMcpServiceError(
-      "PharoNexus MCP state status must be running, stopped, or stale",
+    throw new DevNexusPharoMcpServiceError(
+      "DevNexus-Pharo MCP state status must be running, stopped, or stale",
     );
   }
 
   if (typeof record.host !== "string" || record.host.trim().length === 0) {
-    throw new PharoNexusMcpServiceError(
-      "PharoNexus MCP state host must be a non-empty string",
+    throw new DevNexusPharoMcpServiceError(
+      "DevNexus-Pharo MCP state host must be a non-empty string",
     );
   }
 
@@ -204,14 +204,14 @@ function validateState(value: unknown): PharoNexusMcpServiceState {
     record.port < 1 ||
     record.port > 65_535
   ) {
-    throw new PharoNexusMcpServiceError(
-      "PharoNexus MCP state port must be an integer between 1 and 65535",
+    throw new DevNexusPharoMcpServiceError(
+      "DevNexus-Pharo MCP state port must be an integer between 1 and 65535",
     );
   }
 
   if (typeof record.command !== "string" || record.command.length === 0) {
-    throw new PharoNexusMcpServiceError(
-      "PharoNexus MCP state command must be a non-empty string",
+    throw new DevNexusPharoMcpServiceError(
+      "DevNexus-Pharo MCP state command must be a non-empty string",
     );
   }
 
@@ -219,14 +219,14 @@ function validateState(value: unknown): PharoNexusMcpServiceState {
     !Array.isArray(record.args) ||
     record.args.some((arg) => typeof arg !== "string")
   ) {
-    throw new PharoNexusMcpServiceError(
-      "PharoNexus MCP state args must be an array of strings",
+    throw new DevNexusPharoMcpServiceError(
+      "DevNexus-Pharo MCP state args must be an array of strings",
     );
   }
 
   if (typeof record.updatedAt !== "string" || record.updatedAt.length === 0) {
-    throw new PharoNexusMcpServiceError(
-      "PharoNexus MCP state updatedAt must be a non-empty string",
+    throw new DevNexusPharoMcpServiceError(
+      "DevNexus-Pharo MCP state updatedAt must be a non-empty string",
     );
   }
 
@@ -235,18 +235,18 @@ function validateState(value: unknown): PharoNexusMcpServiceState {
     pid !== undefined &&
     (typeof pid !== "number" || !Number.isInteger(pid) || pid <= 0)
   ) {
-    throw new PharoNexusMcpServiceError(
-      "PharoNexus MCP state pid must be a positive integer",
+    throw new DevNexusPharoMcpServiceError(
+      "DevNexus-Pharo MCP state pid must be a positive integer",
     );
   }
 
-  return record as unknown as PharoNexusMcpServiceState;
+  return record as unknown as DevNexusPharoMcpServiceState;
 }
 
-export function loadPharoNexusMcpState(
+export function loadDevNexusPharoMcpState(
   homePath: string,
-): PharoNexusMcpServiceState | undefined {
-  const filePath = pharoNexusMcpStatePath(homePath);
+): DevNexusPharoMcpServiceState | undefined {
+  const filePath = devNexusPharoMcpStatePath(homePath);
   if (!fs.existsSync(filePath)) {
     return undefined;
   }
@@ -256,11 +256,11 @@ export function loadPharoNexusMcpState(
   );
 }
 
-export function savePharoNexusMcpState(
+export function saveDevNexusPharoMcpState(
   homePath: string,
-  state: PharoNexusMcpServiceState,
+  state: DevNexusPharoMcpServiceState,
 ): string {
-  const filePath = pharoNexusMcpStatePath(homePath);
+  const filePath = devNexusPharoMcpStatePath(homePath);
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(
     filePath,
@@ -271,8 +271,8 @@ export function savePharoNexusMcpState(
 }
 
 function stateWithRuntimeStatus(
-  state: PharoNexusMcpServiceState,
-): PharoNexusMcpServiceState {
+  state: DevNexusPharoMcpServiceState,
+): DevNexusPharoMcpServiceState {
   if (state.status === "stopped" || !state.pid) {
     return state;
   }
@@ -283,20 +283,20 @@ function stateWithRuntimeStatus(
   };
 }
 
-export async function startPharoNexusMcp(
-  options: PharoNexusMcpStartOptions,
-): Promise<PharoNexusMcpServiceState> {
+export async function startDevNexusPharoMcp(
+  options: DevNexusPharoMcpStartOptions,
+): Promise<DevNexusPharoMcpServiceState> {
   const homePath = resolveNexusHome(options.homePath);
   const config = loadConfig(homePath, options.config);
-  const existingState = loadPharoNexusMcpState(homePath);
+  const existingState = loadDevNexusPharoMcpState(homePath);
   const existingRuntimeState = existingState
     ? stateWithRuntimeStatus(existingState)
     : undefined;
 
   if (existingRuntimeState?.status === "running" && existingRuntimeState.pid) {
     if (!options.force) {
-      throw new PharoNexusMcpServiceError(
-        `PharoNexus MCP is already running with pid ${existingRuntimeState.pid}`,
+      throw new DevNexusPharoMcpServiceError(
+        `DevNexus-Pharo MCP is already running with pid ${existingRuntimeState.pid}`,
       );
     }
 
@@ -306,32 +306,32 @@ export async function startPharoNexusMcp(
     });
   }
 
-  const serviceCommand = resolvePharoNexusMcpServiceCommand(
+  const serviceCommand = resolveDevNexusPharoMcpServiceCommand(
     config.tools.nexus.command,
     config.tools.nexus.args,
   );
   const host = config.mcp.host;
-  const port = config.ports.pharoNexusMcp;
+  const port = config.ports.devNexusPharoMcp;
   const handle = startManagedProcess({
-    name: pharoNexusMcpServiceName,
+    name: devNexusPharoMcpServiceName,
     command: serviceCommand.command,
     args: serviceCommand.args,
-    logDirectory: pharoNexusMcpLogDirectoryPath(homePath),
+    logDirectory: devNexusPharoMcpLogDirectoryPath(homePath),
     appendLogs: options.appendLogs ?? true,
     release: options.release ?? true,
     detached: defaultDetachedForPersistentService(),
     env: {
-      PHARO_NEXUS_HOME: homePath,
-      PHARO_NEXUS_MCP_HOST: host,
-      PHARO_NEXUS_MCP_PORT: String(port),
+      DEV_NEXUS_PHARO_HOME: homePath,
+      DEV_NEXUS_PHARO_MCP_HOST: host,
+      DEV_NEXUS_PHARO_MCP_PORT: String(port),
       HOST: host,
       PORT: String(port),
       ...options.extraEnv,
     },
   });
 
-  const state: PharoNexusMcpServiceState = {
-    service: pharoNexusMcpServiceName,
+  const state: DevNexusPharoMcpServiceState = {
+    service: devNexusPharoMcpServiceName,
     status: "running",
     pid: handle.pid,
     host,
@@ -342,15 +342,15 @@ export async function startPharoNexusMcp(
     updatedAt: now(),
     logPaths: handle.logPaths,
   };
-  savePharoNexusMcpState(homePath, state);
+  saveDevNexusPharoMcpState(homePath, state);
 
   return state;
 }
 
-export async function getPharoNexusMcpStatus(
-  options: PharoNexusMcpStatusOptions,
-): Promise<PharoNexusMcpStatusResult> {
-  const state = loadPharoNexusMcpState(options.homePath);
+export async function getDevNexusPharoMcpStatus(
+  options: DevNexusPharoMcpStatusOptions,
+): Promise<DevNexusPharoMcpStatusResult> {
+  const state = loadDevNexusPharoMcpState(options.homePath);
   if (!state) {
     return {
       running: false,
@@ -360,7 +360,7 @@ export async function getPharoNexusMcpStatus(
 
   const runtimeState = stateWithRuntimeStatus(state);
   if (runtimeState.status !== state.status) {
-    savePharoNexusMcpState(options.homePath, {
+    saveDevNexusPharoMcpState(options.homePath, {
       ...runtimeState,
       updatedAt: now(),
     });
@@ -371,7 +371,7 @@ export async function getPharoNexusMcpStatus(
       ? await checkHttpPort({
           host: runtimeState.host,
           port: runtimeState.port,
-          path: options.healthPath ?? defaultPharoNexusMcpHealthPath,
+          path: options.healthPath ?? defaultDevNexusPharoMcpHealthPath,
           timeoutMs: options.healthTimeoutMs ?? 1_000,
         })
       : undefined;
@@ -384,29 +384,29 @@ export async function getPharoNexusMcpStatus(
   };
 }
 
-export async function stopPharoNexusMcp(
-  options: PharoNexusMcpStopOptions,
-): Promise<PharoNexusMcpStopResult> {
+export async function stopDevNexusPharoMcp(
+  options: DevNexusPharoMcpStopOptions,
+): Promise<DevNexusPharoMcpStopResult> {
   const homePath = resolveNexusHome(options.homePath);
-  const state = loadPharoNexusMcpState(homePath);
+  const state = loadDevNexusPharoMcpState(homePath);
   if (!state || !state.pid) {
     return { state };
   }
 
   const runtimeState = stateWithRuntimeStatus(state);
   if (runtimeState.status !== "running") {
-    const stoppedState: PharoNexusMcpServiceState = {
+    const stoppedState: DevNexusPharoMcpServiceState = {
       ...runtimeState,
       status: "stopped",
       updatedAt: now(),
     };
-    savePharoNexusMcpState(homePath, stoppedState);
+    saveDevNexusPharoMcpState(homePath, stoppedState);
     return { state: stoppedState };
   }
 
   if (!runtimeState.pid) {
-    throw new PharoNexusMcpServiceError(
-      "PharoNexus MCP state is running but has no pid",
+    throw new DevNexusPharoMcpServiceError(
+      "DevNexus-Pharo MCP state is running but has no pid",
     );
   }
 
@@ -415,7 +415,7 @@ export async function stopPharoNexusMcp(
     timeoutMs: options.timeoutMs ?? 5_000,
     pollIntervalMs: options.pollIntervalMs ?? 100,
   });
-  const stoppedState: PharoNexusMcpServiceState = {
+  const stoppedState: DevNexusPharoMcpServiceState = {
     ...runtimeState,
     status: stop.stopped ? "stopped" : "running",
     updatedAt: now(),
@@ -424,7 +424,7 @@ export async function stopPharoNexusMcp(
     delete stoppedState.pid;
   }
 
-  savePharoNexusMcpState(homePath, stoppedState);
+  saveDevNexusPharoMcpState(homePath, stoppedState);
 
   return {
     state: stoppedState,
@@ -432,8 +432,8 @@ export async function stopPharoNexusMcp(
   };
 }
 
-export function defaultPharoNexusMcpConfig(): { host: string } {
+export function defaultDevNexusPharoMcpConfig(): { host: string } {
   return {
-    host: defaultPharoNexusMcpHost,
+    host: defaultDevNexusPharoMcpHost,
   };
 }

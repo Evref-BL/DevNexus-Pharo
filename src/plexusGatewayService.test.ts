@@ -60,7 +60,7 @@ function initHomeWithGateway(
   args: string[],
   configure?: (config: NexusHomeConfig) => void,
 ): string {
-  const homePath = makeTempDir("pharo-nexus-home-");
+  const homePath = makeTempDir("dev-nexus-pharo-home-");
   initNexusHome({ homePath });
   const config = loadHomeConfig(homePath);
   config.tools.plexus = {
@@ -130,7 +130,7 @@ describe("PLexus gateway service", () => {
   it.runIf(process.platform === "win32")(
     "resolves the npm command shim to the real PLexus gateway node entrypoint for services",
     () => {
-      const shimDirectory = makeTempDir("pharo-nexus-plexus-shim-");
+      const shimDirectory = makeTempDir("dev-nexus-pharo-plexus-shim-");
       const entrypoint = path.join(
         shimDirectory,
         "node_modules",

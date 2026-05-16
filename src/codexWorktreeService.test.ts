@@ -14,9 +14,9 @@ import {
   type GitRunner,
 } from "./nexusProjectService.js";
 import {
-  createPharoNexusProject,
-  importPharoNexusProject,
-} from "./pharoNexusProjectService.js";
+  createDevNexusPharoProject,
+  importDevNexusPharoProject,
+} from "./devNexusPharoProjectService.js";
 import {
   archiveCodexWorktree,
   CodexWorktreeServiceError,
@@ -108,10 +108,10 @@ function fakeWorktreeGitRunner(
 
 describe("Codex worktree service", () => {
   it("prepares a Codex worktree under the managed project worktrees root", () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
     initNexusHome({ homePath });
-    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "Ready");
-    createPharoNexusProject({
+    const projectRoot = path.join(makeTempDir("dev-nexus-pharo-projects-"), "Ready");
+    createDevNexusPharoProject({
       homePath,
       name: "Ready",
       root: projectRoot,
@@ -196,12 +196,12 @@ describe("Codex worktree service", () => {
   });
 
   it("uses an imported source checkout as the Git worktree source", () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
     initNexusHome({ homePath });
-    const sourceRoot = path.join(makeTempDir("pharo-nexus-source-"), "Imported");
+    const sourceRoot = path.join(makeTempDir("dev-nexus-pharo-source-"), "Imported");
     fs.mkdirSync(sourceRoot, { recursive: true });
     const projectRoot = path.join(homePath, "projects", "Imported");
-    importPharoNexusProject({
+    importDevNexusPharoProject({
       homePath,
       root: sourceRoot,
       name: "Imported",
@@ -256,11 +256,11 @@ describe("Codex worktree service", () => {
   });
 
   it("prepares an explicitly selected component worktree with projected Pharo MCP config", () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
     initNexusHome({ homePath });
-    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "Components");
+    const projectRoot = path.join(makeTempDir("dev-nexus-pharo-projects-"), "Components");
     const addonRoot = path.join(projectRoot, "components", "addon");
-    createPharoNexusProject({
+    createDevNexusPharoProject({
       homePath,
       name: "Components",
       root: projectRoot,
@@ -339,9 +339,9 @@ describe("Codex worktree service", () => {
   });
 
   it("leaves Pharo MCP projection out of generic DevNexus worktrees", () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
     initNexusHome({ homePath });
-    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "Generic");
+    const projectRoot = path.join(makeTempDir("dev-nexus-pharo-projects-"), "Generic");
     createNexusProject({
       homePath,
       name: "Generic",
@@ -366,10 +366,10 @@ describe("Codex worktree service", () => {
   });
 
   it("rejects unsafe branch names before running Git", () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
     initNexusHome({ homePath });
-    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "Unsafe");
-    createPharoNexusProject({
+    const projectRoot = path.join(makeTempDir("dev-nexus-pharo-projects-"), "Unsafe");
+    createDevNexusPharoProject({
       homePath,
       name: "Unsafe",
       root: projectRoot,
@@ -390,10 +390,10 @@ describe("Codex worktree service", () => {
   });
 
   it("archives worktree metadata without removing the worktree by default", () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
     initNexusHome({ homePath });
-    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "Archived");
-    createPharoNexusProject({
+    const projectRoot = path.join(makeTempDir("dev-nexus-pharo-projects-"), "Archived");
+    createDevNexusPharoProject({
       homePath,
       name: "Archived",
       root: projectRoot,
@@ -439,10 +439,10 @@ describe("Codex worktree service", () => {
   });
 
   it("can remove the Git worktree while archiving metadata", () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
     initNexusHome({ homePath });
-    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "Removed");
-    createPharoNexusProject({
+    const projectRoot = path.join(makeTempDir("dev-nexus-pharo-projects-"), "Removed");
+    createDevNexusPharoProject({
       homePath,
       name: "Removed",
       root: projectRoot,
@@ -480,10 +480,10 @@ describe("Codex worktree service", () => {
   });
 
   it("lists and reports recorded Codex worktree status", () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
     initNexusHome({ homePath });
-    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "Listed");
-    createPharoNexusProject({
+    const projectRoot = path.join(makeTempDir("dev-nexus-pharo-projects-"), "Listed");
+    createDevNexusPharoProject({
       homePath,
       name: "Listed",
       root: projectRoot,
@@ -560,10 +560,10 @@ describe("Codex worktree service", () => {
   });
 
   it("records execution metadata against a Codex worktree", () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
     initNexusHome({ homePath });
-    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "Executed");
-    createPharoNexusProject({
+    const projectRoot = path.join(makeTempDir("dev-nexus-pharo-projects-"), "Executed");
+    createDevNexusPharoProject({
       homePath,
       name: "Executed",
       root: projectRoot,

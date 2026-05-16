@@ -1,12 +1,12 @@
 {
-  "name": "@evref-bl/pharo-nexus",
+  "name": "@evref-bl/dev-nexus-pharo",
   "version": "0.1.0-alpha.0",
   "private": false,
   "description": "Pharo specialization layer for DevNexus, PLexus, and Pharo project workspaces.",
   "license": "Apache-2.0",
   "type": "module",
   "bin": {
-    "pharo-nexus": "dist/cli.js"
+    "dev-nexus-pharo": "dist/cli.js"
   },
   "main": "./dist/index.js",
   "exports": {

@@ -8,7 +8,7 @@ import {
   type GitCommandResult,
   type GitRunner,
 } from "./nexusProjectService.js";
-import { createPharoNexusProject } from "./pharoNexusProjectService.js";
+import { createDevNexusPharoProject } from "./devNexusPharoProjectService.js";
 import { prepareCodexWorktree } from "./codexWorktreeService.js";
 
 const tempDirs: string[] = [];
@@ -54,10 +54,10 @@ function fakeGitRunner(args: readonly string[], cwd?: string): GitCommandResult 
 
 describe("Codex worktree guide", () => {
   it("builds read-only direct Codex workflow guidance for an existing worktree", () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
     initNexusHome({ homePath });
-    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "Guide");
-    createPharoNexusProject({
+    const projectRoot = path.join(makeTempDir("dev-nexus-pharo-projects-"), "Guide");
+    createDevNexusPharoProject({
       homePath,
       name: "Guide",
       root: projectRoot,

@@ -8,15 +8,15 @@ import {
   initNexusHome,
   loadHomeConfig,
   loadProjectConfig,
-  pharoNexusControlProjectId,
+  devNexusPharoControlProjectId,
   devNexusProjectConfigFileName,
   saveProjectConfig,
 } from "./config.js";
 import {
   defaultPlexusImageExecutionPolicy,
-  pharoNexusProjectExtensionConfigKey,
+  devNexusPharoProjectExtensionConfigKey,
   plexusProjectConfigFileName,
-} from "./pharoNexusExtension.js";
+} from "./devNexusPharoExtension.js";
 import {
   createNexusProject,
   configureNexusProjectTracker,
@@ -29,14 +29,14 @@ import {
   type GitRunner,
 } from "./nexusProjectService.js";
 import {
-  createPharoNexusProject,
-  importPharoNexusProject,
-  syncPharoNexusProjectTracker,
-} from "./pharoNexusProjectService.js";
+  createDevNexusPharoProject,
+  importDevNexusPharoProject,
+  syncDevNexusPharoProjectTracker,
+} from "./devNexusPharoProjectService.js";
 import {
-  pharoNexusPluginId,
-  pharoNexusPluginName,
-} from "./pharoNexusPlugin.js";
+  devNexusPharoPluginId,
+  devNexusPharoPluginName,
+} from "./devNexusPharoPlugin.js";
 
 const tempDirs: string[] = [];
 
@@ -53,18 +53,18 @@ function defaultAgentsContent(): string {
   );
 }
 
-function pharoNexusPluginConfigExpectation() {
+function devNexusPharoPluginConfigExpectation() {
   return expect.objectContaining({
-    id: pharoNexusPluginId,
-    name: pharoNexusPluginName,
+    id: devNexusPharoPluginId,
+    name: devNexusPharoPluginName,
   });
 }
 
-function expectPharoNexusPluginConfig(config: {
+function expectDevNexusPharoPluginConfig(config: {
   plugins?: Array<{ id: string; name?: string }>;
 }): void {
-  expect(config.plugins).toContainEqual(pharoNexusPluginConfigExpectation());
-  expect(config.plugins?.filter((plugin) => plugin.id === pharoNexusPluginId))
+  expect(config.plugins).toContainEqual(devNexusPharoPluginConfigExpectation());
+  expect(config.plugins?.filter((plugin) => plugin.id === devNexusPharoPluginId))
     .toHaveLength(1);
 }
 
@@ -122,14 +122,14 @@ function fakeGitRunner(
   };
 }
 
-describe("PharoNexus project service", () => {
+describe("DevNexus-Pharo project service", () => {
   it("creates a new git-initialized project under the configured projects root", () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
     const projectsRoot = path.join(homePath, "custom-projects");
     initNexusHome({ homePath, projectsRoot });
     const gitCalls: string[][] = [];
 
-    const result = createPharoNexusProject({
+    const result = createDevNexusPharoProject({
       homePath,
       name: "MyProject",
       gitInit: true,
@@ -203,9 +203,9 @@ describe("PharoNexus project service", () => {
         projectId: null,
       },
       extensions: {
-        [pharoNexusProjectExtensionConfigKey]: {},
+        [devNexusPharoProjectExtensionConfigKey]: {},
       },
-      plugins: [pharoNexusPluginConfigExpectation()],
+      plugins: [devNexusPharoPluginConfigExpectation()],
     });
     expect(
       JSON.parse(fs.readFileSync(result.plexusProjectConfigPath, "utf8")),
@@ -230,7 +230,7 @@ describe("PharoNexus project service", () => {
           result.projectRoot,
           ".dev-nexus",
           "skills",
-          "pharo-nexus-workflow",
+          "dev-nexus-pharo-workflow",
           "SKILL.md",
         ),
       ),
@@ -238,7 +238,7 @@ describe("PharoNexus project service", () => {
     expect(fs.readFileSync(result.agentsPath, "utf8")).toBe(defaultAgentsContent());
     expect(result.codexConfigPath).toBe(codexConfigPath(result.projectRoot));
     const codexConfig = fs.readFileSync(result.codexConfigPath, "utf8");
-    expect(codexConfig).toContain("[mcp_servers.pharo_nexus]");
+    expect(codexConfig).toContain("[mcp_servers.dev_nexus_pharo]");
     expect(codexConfig).toContain("[mcp_servers.plexus]");
     expect(codexConfig).toContain("[mcp_servers.vibe_kanban]");
     expect(codexConfig).toContain("[mcp_servers.pharo]");
@@ -248,10 +248,10 @@ describe("PharoNexus project service", () => {
       "utf8",
     );
     expect(suggestedFirstPrompt).toContain(
-      "This is a Codex and PharoNexus project for MyProject.",
+      "This is a Codex and DevNexus-Pharo project for MyProject.",
     );
     expect(suggestedFirstPrompt).toContain(".dev-nexus");
-    expect(suggestedFirstPrompt).toContain("PharoNexus skills: pharo-nexus-workflow");
+    expect(suggestedFirstPrompt).toContain("DevNexus-Pharo skills: dev-nexus-pharo-workflow");
     expect(suggestedFirstPrompt).toContain("Kanban project id: (not known yet)");
     expect(suggestedFirstPrompt).toContain("Record durable local context in NOTES.md");
     expect(suggestedFirstPrompt).toContain(
@@ -266,8 +266,8 @@ describe("PharoNexus project service", () => {
     ]);
   });
 
-  it("creates a generic DevNexus project without PharoNexus extension files", () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
+  it("creates a generic DevNexus project without DevNexus-Pharo extension files", () => {
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
     const projectsRoot = path.join(homePath, "custom-projects");
     initNexusHome({ homePath, projectsRoot });
     const gitCalls: string[][] = [];
@@ -315,7 +315,7 @@ describe("PharoNexus project service", () => {
           result.projectRoot,
           ".dev-nexus",
           "skills",
-          "pharo-nexus-workflow",
+          "dev-nexus-pharo-workflow",
           "SKILL.md",
         ),
       ),
@@ -329,12 +329,12 @@ describe("PharoNexus project service", () => {
   });
 
   it("creates a managed project root and clones a remote source under it", () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
     initNexusHome({ homePath });
-    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "RemoteProject");
+    const projectRoot = path.join(makeTempDir("dev-nexus-pharo-projects-"), "RemoteProject");
     const gitCalls: string[][] = [];
 
-    const result = createPharoNexusProject({
+    const result = createDevNexusPharoProject({
       homePath,
       name: "RemoteProject",
       root: projectRoot,
@@ -368,11 +368,11 @@ describe("PharoNexus project service", () => {
   });
 
   it("stores a Vibe Kanban project id during project creation", () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
     initNexusHome({ homePath });
-    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "LinkedAtCreate");
+    const projectRoot = path.join(makeTempDir("dev-nexus-pharo-projects-"), "LinkedAtCreate");
 
-    const result = createPharoNexusProject({
+    const result = createDevNexusPharoProject({
       homePath,
       name: "LinkedAtCreate",
       root: projectRoot,
@@ -404,10 +404,10 @@ describe("PharoNexus project service", () => {
   });
 
   it("lists registered projects with repo and resolved path details", () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
     initNexusHome({ homePath });
-    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "Listed");
-    createPharoNexusProject({
+    const projectRoot = path.join(makeTempDir("dev-nexus-pharo-projects-"), "Listed");
+    createDevNexusPharoProject({
       homePath,
       name: "Listed",
       root: projectRoot,
@@ -463,10 +463,10 @@ describe("PharoNexus project service", () => {
   });
 
   it("reports project status by id or project path", () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
     initNexusHome({ homePath });
-    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "Status");
-    createPharoNexusProject({
+    const projectRoot = path.join(makeTempDir("dev-nexus-pharo-projects-"), "Status");
+    createDevNexusPharoProject({
       homePath,
       name: "Status",
       root: projectRoot,
@@ -503,10 +503,10 @@ describe("PharoNexus project service", () => {
   });
 
   it("resolves a registered project id before path fallback", () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
     initNexusHome({ homePath });
-    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "Launcher");
-    createPharoNexusProject({
+    const projectRoot = path.join(makeTempDir("dev-nexus-pharo-projects-"), "Launcher");
+    createDevNexusPharoProject({
       homePath,
       name: "Pharo Launcher MCP",
       root: projectRoot,
@@ -527,7 +527,7 @@ describe("PharoNexus project service", () => {
   });
 
   it("reports unmatched id/path clearly before path initialization failure details", () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
     initNexusHome({ homePath });
 
     expect(() =>
@@ -545,11 +545,11 @@ describe("PharoNexus project service", () => {
     );
   });
 
-  it("links an existing PharoNexus project to a Vibe Kanban project id", () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
+  it("links an existing DevNexus-Pharo project to a Vibe Kanban project id", () => {
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
     initNexusHome({ homePath });
-    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "Linkable");
-    createPharoNexusProject({
+    const projectRoot = path.join(makeTempDir("dev-nexus-pharo-projects-"), "Linkable");
+    createDevNexusPharoProject({
       homePath,
       name: "Linkable",
       root: projectRoot,
@@ -583,8 +583,8 @@ describe("PharoNexus project service", () => {
   });
 
   it("links an initialized project by path even when it is not registered yet", () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
-    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "Unregistered");
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
+    const projectRoot = path.join(makeTempDir("dev-nexus-pharo-projects-"), "Unregistered");
     initNexusHome({ homePath });
     fs.mkdirSync(projectRoot, { recursive: true });
     fs.writeFileSync(
@@ -606,7 +606,7 @@ describe("PharoNexus project service", () => {
             projectId: null,
           },
           extensions: {
-            [pharoNexusProjectExtensionConfigKey]: {},
+            [devNexusPharoProjectExtensionConfigKey]: {},
           },
         },
         null,
@@ -642,10 +642,10 @@ describe("PharoNexus project service", () => {
   });
 
   it("configures GitHub work tracking without changing PLexus Kanban metadata", () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
     initNexusHome({ homePath });
-    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "GitHubTracked");
-    createPharoNexusProject({
+    const projectRoot = path.join(makeTempDir("dev-nexus-pharo-projects-"), "GitHubTracked");
+    createDevNexusPharoProject({
       homePath,
       name: "GitHubTracked",
       root: projectRoot,
@@ -687,10 +687,10 @@ describe("PharoNexus project service", () => {
   });
 
   it("configures GitLab work tracking without changing PLexus Kanban metadata", () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
     initNexusHome({ homePath });
-    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "GitLabTracked");
-    createPharoNexusProject({
+    const projectRoot = path.join(makeTempDir("dev-nexus-pharo-projects-"), "GitLabTracked");
+    createDevNexusPharoProject({
       homePath,
       name: "GitLabTracked",
       root: projectRoot,
@@ -725,10 +725,10 @@ describe("PharoNexus project service", () => {
   });
 
   it("configures Jira work tracking without changing PLexus Kanban metadata", () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
     initNexusHome({ homePath });
-    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "JiraTracked");
-    createPharoNexusProject({
+    const projectRoot = path.join(makeTempDir("dev-nexus-pharo-projects-"), "JiraTracked");
+    createDevNexusPharoProject({
       homePath,
       name: "JiraTracked",
       root: projectRoot,
@@ -763,8 +763,8 @@ describe("PharoNexus project service", () => {
   });
 
   it("configures local work tracking for an initialized path and registers it", () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
-    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "LocalTracked");
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
+    const projectRoot = path.join(makeTempDir("dev-nexus-pharo-projects-"), "LocalTracked");
     initNexusHome({ homePath });
     fs.mkdirSync(projectRoot, { recursive: true });
     saveProjectConfig(projectRoot, {
@@ -805,10 +805,10 @@ describe("PharoNexus project service", () => {
   });
 
   it("syncs a project to Vibe Kanban and stores the repo and board ids", async () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
     initNexusHome({ homePath, vibeKanbanPort: 3200 });
-    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "Synced");
-    createPharoNexusProject({
+    const projectRoot = path.join(makeTempDir("dev-nexus-pharo-projects-"), "Synced");
+    createDevNexusPharoProject({
       homePath,
       name: "Synced",
       root: projectRoot,
@@ -902,7 +902,7 @@ describe("PharoNexus project service", () => {
       },
     );
 
-    const result = await syncPharoNexusProjectTracker({
+    const result = await syncDevNexusPharoProjectTracker({
       homePath,
       project: "synced",
       fetch: fetchMock,
@@ -954,12 +954,12 @@ describe("PharoNexus project service", () => {
   });
 
   it("syncs imported projects by registering the source checkout and provisioning workspace setup", async () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
-    const sourceRoot = path.join(makeTempDir("pharo-nexus-source-"), "ImportedSynced");
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
+    const sourceRoot = path.join(makeTempDir("dev-nexus-pharo-source-"), "ImportedSynced");
     fs.mkdirSync(sourceRoot, { recursive: true });
     initNexusHome({ homePath, vibeKanbanPort: 3200 });
     const projectRoot = path.join(homePath, "projects", "ImportedSynced");
-    importPharoNexusProject({
+    importDevNexusPharoProject({
       homePath,
       root: sourceRoot,
       name: "ImportedSynced",
@@ -1056,7 +1056,7 @@ describe("PharoNexus project service", () => {
       },
     );
 
-    const result = await syncPharoNexusProjectTracker({
+    const result = await syncDevNexusPharoProjectTracker({
       homePath,
       project: "imported-synced",
       fetch: fetchMock,
@@ -1077,14 +1077,14 @@ describe("PharoNexus project service", () => {
   });
 
   it("imports an existing git repository and writes missing project files", () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
-    const sourceRoot = path.join(makeTempDir("pharo-nexus-source-"), "Imported");
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
+    const sourceRoot = path.join(makeTempDir("dev-nexus-pharo-source-"), "Imported");
     fs.mkdirSync(sourceRoot, { recursive: true });
     initNexusHome({ homePath });
     const projectRoot = path.join(homePath, "projects", "Imported");
     const gitCalls: string[][] = [];
 
-    const result = importPharoNexusProject({
+    const result = importDevNexusPharoProject({
       homePath,
       root: sourceRoot,
       name: "Imported",
@@ -1118,8 +1118,8 @@ describe("PharoNexus project service", () => {
         defaultBranch: "main",
       },
     });
-    expectPharoNexusPluginConfig(result.projectConfig);
-    expectPharoNexusPluginConfig(loadProjectConfig(projectRoot));
+    expectDevNexusPharoPluginConfig(result.projectConfig);
+    expectDevNexusPharoPluginConfig(loadProjectConfig(projectRoot));
     expect(fs.existsSync(path.join(projectRoot, devNexusProjectConfigFileName))).toBe(true);
     expect(fs.existsSync(path.join(projectRoot, plexusProjectConfigFileName))).toBe(true);
     expect(fs.existsSync(path.join(projectRoot, "worktrees"))).toBe(true);
@@ -1129,7 +1129,7 @@ describe("PharoNexus project service", () => {
       defaultAgentsContent(),
     );
     expect(fs.readFileSync(codexConfigPath(projectRoot), "utf8")).toContain(
-      "[mcp_servers.pharo_nexus]",
+      "[mcp_servers.dev_nexus_pharo]",
     );
     expect(fs.readFileSync(codexConfigPath(projectRoot), "utf8")).toContain(
       "[mcp_servers.pharo]",
@@ -1144,8 +1144,8 @@ describe("PharoNexus project service", () => {
   });
 
   it("imports a generic DevNexus project without touching the source checkout", () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
-    const sourceRoot = path.join(makeTempDir("pharo-nexus-source-"), "ImportedGeneric");
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
+    const sourceRoot = path.join(makeTempDir("dev-nexus-pharo-source-"), "ImportedGeneric");
     fs.mkdirSync(path.join(sourceRoot, ".codex"), { recursive: true });
     fs.writeFileSync(path.join(sourceRoot, "AGENTS.md"), "# Source owned\n", "utf8");
     fs.writeFileSync(
@@ -1195,7 +1195,7 @@ describe("PharoNexus project service", () => {
     ).toBe(true);
     expect(
       fs.existsSync(
-        path.join(projectRoot, ".dev-nexus", "skills", "pharo-nexus-workflow", "SKILL.md"),
+        path.join(projectRoot, ".dev-nexus", "skills", "dev-nexus-pharo-workflow", "SKILL.md"),
       ),
     ).toBe(false);
     expect(fs.existsSync(path.join(sourceRoot, devNexusProjectConfigFileName))).toBe(false);
@@ -1211,8 +1211,8 @@ describe("PharoNexus project service", () => {
   });
 
   it("imports a repository without touching source-owned agent and Codex files", () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
-    const sourceRoot = path.join(makeTempDir("pharo-nexus-source-"), "ImportedOwnedFiles");
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
+    const sourceRoot = path.join(makeTempDir("dev-nexus-pharo-source-"), "ImportedOwnedFiles");
     fs.mkdirSync(path.join(sourceRoot, ".codex"), { recursive: true });
     initNexusHome({ homePath });
     const projectRoot = path.join(homePath, "projects", "ImportedOwnedFiles");
@@ -1230,7 +1230,7 @@ describe("PharoNexus project service", () => {
       "utf8",
     );
 
-    const result = importPharoNexusProject({
+    const result = importDevNexusPharoProject({
       homePath,
       root: sourceRoot,
       name: "ImportedOwnedFiles",
@@ -1242,9 +1242,9 @@ describe("PharoNexus project service", () => {
     const sourceCodexConfig = fs.readFileSync(configPath, "utf8");
     expect(sourceCodexConfig).toContain('model = "gpt-5.3-codex"');
     expect(sourceCodexConfig).toContain("[mcp_servers.keep]");
-    expect(sourceCodexConfig).not.toContain("[mcp_servers.pharo_nexus]");
+    expect(sourceCodexConfig).not.toContain("[mcp_servers.dev_nexus_pharo]");
     const managedCodexConfig = fs.readFileSync(codexConfigPath(projectRoot), "utf8");
-    expect(managedCodexConfig).toContain("[mcp_servers.pharo_nexus]");
+    expect(managedCodexConfig).toContain("[mcp_servers.dev_nexus_pharo]");
     expect(managedCodexConfig).toContain("[mcp_servers.plexus]");
     expect(managedCodexConfig).toContain("[mcp_servers.vibe_kanban]");
     expect(managedCodexConfig).toContain("[mcp_servers.pharo]");
@@ -1257,9 +1257,9 @@ describe("PharoNexus project service", () => {
     expect(suggestedFirstPrompt).toContain("Record durable local context in NOTES.md");
   });
 
-  it("imports an existing project config and marks it PharoNexus-managed", () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
-    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "Existing");
+  it("imports an existing project config and marks it DevNexus-Pharo-managed", () => {
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
+    const projectRoot = path.join(makeTempDir("dev-nexus-pharo-projects-"), "Existing");
     fs.mkdirSync(projectRoot, { recursive: true });
     initNexusHome({ homePath });
     const existingConfig = {
@@ -1289,7 +1289,7 @@ describe("PharoNexus project service", () => {
       "utf8",
     );
 
-    const result = importPharoNexusProject({
+    const result = importDevNexusPharoProject({
       homePath,
       root: projectRoot,
       name: "Ignored Name",
@@ -1311,9 +1311,9 @@ describe("PharoNexus project service", () => {
         },
       ],
       extensions: {
-        [pharoNexusProjectExtensionConfigKey]: {},
+        [devNexusPharoProjectExtensionConfigKey]: {},
       },
-      plugins: [pharoNexusPluginConfigExpectation()],
+      plugins: [devNexusPharoPluginConfigExpectation()],
     });
     expect(loadProjectConfig(projectRoot)).toEqual(result.projectConfig);
     expect(fs.readFileSync(result.suggestedFirstPromptPath, "utf8")).toBe(
@@ -1329,9 +1329,9 @@ describe("PharoNexus project service", () => {
     ]);
   });
 
-  it("imports an existing project config without duplicating the PharoNexus plugin", () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
-    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "ExistingPlugins");
+  it("imports an existing project config without duplicating the DevNexus-Pharo plugin", () => {
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
+    const projectRoot = path.join(makeTempDir("dev-nexus-pharo-projects-"), "ExistingPlugins");
     fs.mkdirSync(projectRoot, { recursive: true });
     initNexusHome({ homePath });
     const existingPlugin = {
@@ -1359,8 +1359,8 @@ describe("PharoNexus project service", () => {
       plugins: [
         existingPlugin,
         {
-          id: pharoNexusPluginId,
-          name: "Existing PharoNexus",
+          id: devNexusPharoPluginId,
+          name: "Existing DevNexus-Pharo",
           version: "0.0.0",
           enabled: true,
           capabilities: [],
@@ -1373,20 +1373,20 @@ describe("PharoNexus project service", () => {
       "utf8",
     );
 
-    const result = importPharoNexusProject({
+    const result = importDevNexusPharoProject({
       homePath,
       root: projectRoot,
       gitRunner: fakeGitRunner([], { branch: "main" }),
     });
 
     expect(result.projectConfig.plugins).toContainEqual(existingPlugin);
-    expectPharoNexusPluginConfig(result.projectConfig);
+    expectDevNexusPharoPluginConfig(result.projectConfig);
     expect(loadProjectConfig(projectRoot).plugins).toEqual(result.projectConfig.plugins);
   });
 
   it("reports registered projects even when project files are missing", () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
-    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "Missing");
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
+    const projectRoot = path.join(makeTempDir("dev-nexus-pharo-projects-"), "Missing");
     initNexusHome({ homePath });
     const config = loadHomeConfig(homePath);
     config.projects.push({
@@ -1421,10 +1421,10 @@ describe("PharoNexus project service", () => {
   });
 
   it("rejects duplicate project ids before running git", () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
     initNexusHome({ homePath });
     const gitCalls: string[][] = [];
-    createPharoNexusProject({
+    createDevNexusPharoProject({
       homePath,
       name: "Duplicate",
       gitRunner: fakeGitRunner(gitCalls),
@@ -1432,10 +1432,10 @@ describe("PharoNexus project service", () => {
     gitCalls.length = 0;
 
     expect(() =>
-      createPharoNexusProject({
+      createDevNexusPharoProject({
         homePath,
         name: "Duplicate",
-        root: path.join(makeTempDir("pharo-nexus-projects-"), "Duplicate2"),
+        root: path.join(makeTempDir("dev-nexus-pharo-projects-"), "Duplicate2"),
         gitRunner: fakeGitRunner(gitCalls),
       }),
     ).toThrow(NexusProjectError);
@@ -1443,22 +1443,22 @@ describe("PharoNexus project service", () => {
   });
 
   it("rejects reserved control project collisions before running git", () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
     initNexusHome({ homePath });
     const homeConfig = loadHomeConfig(homePath);
     const gitCalls: string[][] = [];
 
     expect(() =>
-      createPharoNexusProject({
+      createDevNexusPharoProject({
         homePath,
-        name: "Pharo Nexus Control",
+        name: "Dev Nexus Pharo Control",
         gitRunner: fakeGitRunner(gitCalls),
       }),
     ).toThrow(/reserved control project id/);
     expect(gitCalls).toEqual([]);
 
     expect(() =>
-      createPharoNexusProject({
+      createDevNexusPharoProject({
         homePath,
         name: "Normal Project",
         root: homeConfig.controlProject.root,
@@ -1469,12 +1469,12 @@ describe("PharoNexus project service", () => {
   });
 
   it("rejects imported reserved control project ids before running git", () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
     initNexusHome({ homePath });
-    const sourceRoot = makeTempDir("pharo-nexus-source-");
+    const sourceRoot = makeTempDir("dev-nexus-pharo-source-");
     saveProjectConfig(sourceRoot, {
       version: 1,
-      id: pharoNexusControlProjectId,
+      id: devNexusPharoControlProjectId,
       name: "Reserved Control",
       home: null,
       repo: {
@@ -1491,7 +1491,7 @@ describe("PharoNexus project service", () => {
     const gitCalls: string[][] = [];
 
     expect(() =>
-      importPharoNexusProject({
+      importDevNexusPharoProject({
         homePath,
         root: sourceRoot,
         gitRunner: fakeGitRunner(gitCalls),
@@ -1501,15 +1501,15 @@ describe("PharoNexus project service", () => {
   });
 
   it("refuses to create a project in a non-empty directory", () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
     initNexusHome({ homePath });
-    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "Busy");
+    const projectRoot = path.join(makeTempDir("dev-nexus-pharo-projects-"), "Busy");
     fs.mkdirSync(projectRoot, { recursive: true });
     fs.writeFileSync(path.join(projectRoot, "README.md"), "# Busy\n", "utf8");
     const gitCalls: string[][] = [];
 
     expect(() =>
-      createPharoNexusProject({
+      createDevNexusPharoProject({
         homePath,
         name: "Busy",
         root: projectRoot,
@@ -1520,11 +1520,11 @@ describe("PharoNexus project service", () => {
   });
 
   it("rejects mutually exclusive source options", () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
     initNexusHome({ homePath });
 
     expect(() =>
-      createPharoNexusProject({
+      createDevNexusPharoProject({
         homePath,
         name: "Invalid",
         from: "https://github.com/example/invalid.git",

@@ -42,17 +42,17 @@ import {
   type LinkNexusProjectTrackerResult,
 } from "./nexusProjectService.js";
 import {
-  pharoNexusExtension,
-  pharoNexusProjectExtensionEntry,
-  pharoNexusProjectFilesFromExtensionResult,
-  projectUsesPharoNexusExtension,
+  devNexusPharoExtension,
+  devNexusPharoProjectExtensionEntry,
+  devNexusPharoProjectFilesFromExtensionResult,
+  projectUsesDevNexusPharoExtension,
   type PlexusProjectConfig,
-} from "./pharoNexusExtension.js";
-import { pharoNexusDevNexusPluginConfig } from "./pharoNexusPlugin.js";
+} from "./devNexusPharoExtension.js";
+import { devNexusPharoDevNexusPluginConfig } from "./devNexusPharoPlugin.js";
 
-registerNexusProjectExtension(pharoNexusExtension);
+registerNexusProjectExtension(devNexusPharoExtension);
 
-export interface CreatePharoNexusProjectOptions {
+export interface CreateDevNexusPharoProjectOptions {
   homePath: string;
   name: string;
   root?: string;
@@ -62,7 +62,7 @@ export interface CreatePharoNexusProjectOptions {
   gitRunner?: GitRunner;
 }
 
-export interface ImportPharoNexusProjectOptions {
+export interface ImportDevNexusPharoProjectOptions {
   homePath: string;
   root: string;
   projectRoot?: string;
@@ -71,7 +71,7 @@ export interface ImportPharoNexusProjectOptions {
   gitRunner?: GitRunner;
 }
 
-export interface CreatePharoNexusProjectResult {
+export interface CreateDevNexusPharoProjectResult {
   homePath: string;
   projectRoot: string;
   projectConfigPath: string;
@@ -91,7 +91,7 @@ export interface CreatePharoNexusProjectResult {
   };
 }
 
-export interface ImportPharoNexusProjectResult {
+export interface ImportDevNexusPharoProjectResult {
   homePath: string;
   projectRoot: string;
   projectConfigPath: string;
@@ -111,7 +111,7 @@ export interface ImportPharoNexusProjectResult {
   };
 }
 
-export interface SyncPharoNexusProjectTrackerOptions {
+export interface SyncDevNexusPharoProjectTrackerOptions {
   homePath: string;
   project: string;
   host?: string;
@@ -119,7 +119,7 @@ export interface SyncPharoNexusProjectTrackerOptions {
   fetch?: typeof fetch;
 }
 
-export interface SyncPharoNexusProjectTrackerResult
+export interface SyncDevNexusPharoProjectTrackerResult
   extends LinkNexusProjectTrackerResult {
   plexusProjectConfigPath: string;
   plexusProjectConfig: PlexusProjectConfig;
@@ -152,13 +152,13 @@ function assertNormalProjectDoesNotUseControlProject(
   }
 }
 
-function withPharoNexusDevNexusPlugin(
+function withDevNexusPharoDevNexusPlugin(
   projectConfig: NexusProjectConfig,
 ): NexusProjectConfig {
-  const pluginConfig = pharoNexusDevNexusPluginConfig();
+  const pluginConfig = devNexusPharoDevNexusPluginConfig();
   const plugins = projectConfig.plugins ?? [];
   const nextPlugins = [];
-  let addedPharoNexusPlugin = false;
+  let addedDevNexusPharoPlugin = false;
 
   for (const plugin of plugins) {
     if (plugin.id !== pluginConfig.id) {
@@ -166,13 +166,13 @@ function withPharoNexusDevNexusPlugin(
       continue;
     }
 
-    if (!addedPharoNexusPlugin) {
+    if (!addedDevNexusPharoPlugin) {
       nextPlugins.push(pluginConfig);
-      addedPharoNexusPlugin = true;
+      addedDevNexusPharoPlugin = true;
     }
   }
 
-  if (!addedPharoNexusPlugin) {
+  if (!addedDevNexusPharoPlugin) {
     nextPlugins.push(pluginConfig);
   }
 
@@ -182,19 +182,19 @@ function withPharoNexusDevNexusPlugin(
   };
 }
 
-function saveProjectConfigWithPharoNexusPlugin(
+function saveProjectConfigWithDevNexusPharoPlugin(
   projectRoot: string,
   projectConfig: NexusProjectConfig,
 ): NexusProjectConfig {
-  const updatedProjectConfig = withPharoNexusDevNexusPlugin(projectConfig);
+  const updatedProjectConfig = withDevNexusPharoDevNexusPlugin(projectConfig);
   saveProjectConfig(projectRoot, updatedProjectConfig);
 
   return updatedProjectConfig;
 }
 
-export function createPharoNexusProject(
-  options: CreatePharoNexusProjectOptions,
-): CreatePharoNexusProjectResult {
+export function createDevNexusPharoProject(
+  options: CreateDevNexusPharoProjectOptions,
+): CreateDevNexusPharoProjectResult {
   const homePath = resolveNexusHome(options.homePath);
   const homeConfig = loadHomeConfig(homePath);
   const projectId = slugify(options.name);
@@ -219,13 +219,13 @@ export function createPharoNexusProject(
       ? { vibeKanbanProjectId: options.vibeKanbanProjectId }
       : {}),
     ...(options.gitRunner ? { gitRunner: options.gitRunner } : {}),
-    extensions: pharoNexusProjectExtensionEntry(),
-    scaffoldExtensions: [pharoNexusExtension],
+    extensions: devNexusPharoProjectExtensionEntry(),
+    scaffoldExtensions: [devNexusPharoExtension],
   });
-  const pharoFiles = pharoNexusProjectFilesFromExtensionResult(
-    result.scaffold.extensionResults[pharoNexusExtension.id],
+  const pharoFiles = devNexusPharoProjectFilesFromExtensionResult(
+    result.scaffold.extensionResults[devNexusPharoExtension.id],
   );
-  const projectConfig = saveProjectConfigWithPharoNexusPlugin(
+  const projectConfig = saveProjectConfigWithDevNexusPharoPlugin(
     result.projectRoot,
     result.projectConfig,
   );
@@ -252,9 +252,9 @@ export function createPharoNexusProject(
   };
 }
 
-export function importPharoNexusProject(
-  options: ImportPharoNexusProjectOptions,
-): ImportPharoNexusProjectResult {
+export function importDevNexusPharoProject(
+  options: ImportDevNexusPharoProjectOptions,
+): ImportDevNexusPharoProjectResult {
   const homePath = resolveNexusHome(options.homePath);
   const homeConfig = loadHomeConfig(homePath);
   const sourceRoot = path.resolve(options.root);
@@ -289,13 +289,13 @@ export function importPharoNexusProject(
       ? { vibeKanbanProjectId: options.vibeKanbanProjectId }
       : {}),
     ...(options.gitRunner ? { gitRunner: options.gitRunner } : {}),
-    extensions: pharoNexusProjectExtensionEntry(),
-    scaffoldExtensions: [pharoNexusExtension],
+    extensions: devNexusPharoProjectExtensionEntry(),
+    scaffoldExtensions: [devNexusPharoExtension],
   });
-  const pharoFiles = pharoNexusProjectFilesFromExtensionResult(
-    result.scaffold.extensionResults[pharoNexusExtension.id],
+  const pharoFiles = devNexusPharoProjectFilesFromExtensionResult(
+    result.scaffold.extensionResults[devNexusPharoExtension.id],
   );
-  const projectConfig = saveProjectConfigWithPharoNexusPlugin(
+  const projectConfig = saveProjectConfigWithDevNexusPharoPlugin(
     result.projectRoot,
     result.projectConfig,
   );
@@ -322,9 +322,9 @@ export function importPharoNexusProject(
   };
 }
 
-export async function syncPharoNexusProjectTracker(
-  options: SyncPharoNexusProjectTrackerOptions,
-): Promise<SyncPharoNexusProjectTrackerResult> {
+export async function syncDevNexusPharoProjectTracker(
+  options: SyncDevNexusPharoProjectTrackerOptions,
+): Promise<SyncDevNexusPharoProjectTrackerResult> {
   assertNonEmptyString(options.project, "project");
 
   const homePath = resolveNexusHome(options.homePath);
@@ -334,9 +334,9 @@ export async function syncPharoNexusProjectTracker(
     project: options.project,
   }).project;
   const initialProjectConfig = loadProjectConfig(status.projectRoot);
-  if (!projectUsesPharoNexusExtension(initialProjectConfig)) {
+  if (!projectUsesDevNexusPharoExtension(initialProjectConfig)) {
     throw new NexusProjectError(
-      "project sync-tracker requires a PharoNexus-managed project",
+      "project sync-tracker requires a DevNexus-Pharo-managed project",
     );
   }
   const sourceRoot = resolveProjectSourceRoot(
@@ -386,7 +386,7 @@ export async function syncPharoNexusProjectTracker(
   });
   if (!linked.plexusProjectConfigPath || !linked.plexusProjectConfig) {
     throw new NexusProjectError(
-      "project sync-tracker requires a PharoNexus-managed project",
+      "project sync-tracker requires a DevNexus-Pharo-managed project",
     );
   }
   const plexusProjectConfig = linked.plexusProjectConfig as PlexusProjectConfig;

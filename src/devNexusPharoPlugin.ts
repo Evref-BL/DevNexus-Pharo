@@ -1,22 +1,22 @@
 import type { NexusProjectPluginConfig } from "dev-nexus";
 
-export const pharoNexusPluginId = "pharo-nexus";
-export const pharoNexusPluginName = "PharoNexus";
-export const pharoNexusPluginVersion = "0.1.0";
+export const devNexusPharoPluginId = "dev-nexus-pharo";
+export const devNexusPharoPluginName = "DevNexus-Pharo";
+export const devNexusPharoPluginVersion = "0.1.0";
 
-export function pharoNexusDevNexusPluginConfig(): NexusProjectPluginConfig {
+export function devNexusPharoDevNexusPluginConfig(): NexusProjectPluginConfig {
   return {
-    id: pharoNexusPluginId,
-    name: pharoNexusPluginName,
-    version: pharoNexusPluginVersion,
+    id: devNexusPharoPluginId,
+    name: devNexusPharoPluginName,
+    version: devNexusPharoPluginVersion,
     enabled: true,
     capabilities: [
       {
         kind: "projected_skill",
-        id: "skill-pharo-nexus-workflow",
-        skillId: "pharo-nexus-workflow",
+        id: "skill-dev-nexus-pharo-workflow",
+        skillId: "dev-nexus-pharo-workflow",
         description:
-          "Project PharoNexus workflow guidance into Pharo-capable Codex workers.",
+          "Project DevNexus-Pharo workflow guidance into Pharo-capable Codex workers.",
         targetAgents: ["codex"],
       },
       {
@@ -153,7 +153,7 @@ export function pharoNexusDevNexusPluginConfig(): NexusProjectPluginConfig {
         id: "context-pharo-runtime-boundary",
         title: "Pharo Runtime Boundary",
         body: [
-          "PharoNexus composes with DevNexus and does not choose or supervise implementation work.",
+          "DevNexus-Pharo composes with DevNexus and does not choose or supervise implementation work.",
           "It contributes setup, skills, MCP projection, and scoped PLexus context only; the coordinator still chooses and supervises implementation work.",
           "For Pharo or MCP-Pharo code work, use the direct pharo MCP tools.",
           "If that surface is missing or unreachable, report the infrastructure blocker instead of editing Smalltalk source files from disk as a substitute.",

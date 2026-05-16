@@ -1,12 +1,12 @@
-# Agent Guide For PharoNexus Workflows
+# Agent Guide For DevNexus-Pharo Workflows
 
-This repository can be used inside a PharoNexus-managed environment.
-Agents should use the PharoNexus workflow tools instead of hand-editing runtime
+This repository can be used inside a DevNexus-Pharo-managed environment.
+Agents should use the DevNexus-Pharo workflow tools instead of hand-editing runtime
 state or assuming a single repository layout.
 
 ## Tool Roles
 
-- Use `pharo_nexus` to organize and orchestrate projects, homes, workspaces,
+- Use `dev_nexus_pharo` to organize and orchestrate projects, homes, workspaces,
   MCP configuration, and project/board linkage.
 - Use `vibe_kanban` to plan and track feature work through project boards,
   issues, workspaces, and sessions.
@@ -24,24 +24,24 @@ state or assuming a single repository layout.
 Keep the dependency direction:
 
 ```text
-PharoNexus -> PLexus -> pharo-launcher-mcp -> PharoLauncher
+DevNexus-Pharo -> PLexus -> pharo-launcher-mcp -> PharoLauncher
 ```
 
-Pharo execution is a runtime capability behind PLexus. PharoNexus should not
+Pharo execution is a runtime capability behind PLexus. DevNexus-Pharo should not
 depend on implementation details inside Pharo images.
 
 ## Working With Projects
 
-- The PharoNexus control project is reserved for managing the environment:
+- The DevNexus-Pharo control project is reserved for managing the environment:
   creating/importing/linking projects, checking status, and orchestrating
   services. Do not use it as the normal feature board for a source repository.
 - A real project is where product work happens. Its Kanban board represents one
   source repository or application, and its issues represent feature, bugfix,
   planning, or maintenance work.
-- `MetaPharoNexus` is the real project for developing PharoNexus itself. It is
+- `MetaDevNexus-Pharo` is the real project for developing DevNexus-Pharo itself. It is
   distinct from the reserved control project, even though both are related to
-  PharoNexus.
-- A PharoNexus project root is the managed project context. It may contain
+  DevNexus-Pharo.
+- A DevNexus-Pharo project root is the managed project context. It may contain
   Codex configuration, agent instructions, worktrees, and project metadata.
 - The source Git checkout may be separate from that root, or may live in a
   subdirectory such as `git`; do not assume the project root is the source repo.
@@ -50,7 +50,7 @@ depend on implementation details inside Pharo images.
   copying skill text into prompts or source files.
 - Do not create a new Kanban project for every task.
 - Prefer MCP tools for project creation, import, list, status, workspace, and
-  image operations. Manual edits to PharoNexus/PLexus config files are for
+  image operations. Manual edits to DevNexus-Pharo/PLexus config files are for
   implementation or repair work only.
 - Prepared Codex worktrees should inherit `.codex/config.toml`; verify direct
   `pharo` MCP availability before changing Pharo code.
@@ -72,9 +72,9 @@ depend on implementation details inside Pharo images.
 ## Board Choice
 
 - Use the control board for instructions like "create/import/register/sync a
-  project" or "start/check/fix the PharoNexus environment".
-- Use a real project board, such as `MetaPharoNexus`, `PLexus`, or `pharo-launcher-mcp`,
+  project" or "start/check/fix the DevNexus-Pharo environment".
+- Use a real project board, such as `MetaDevNexus-Pharo`, `PLexus`, or `pharo-launcher-mcp`,
   for source changes, design notes, tests, and implementation work in that
   project.
-- If a task mentions "PharoNexus" but asks for source-code changes, treat it as
-  `MetaPharoNexus`, not the control project.
+- If a task mentions "DevNexus-Pharo" but asks for source-code changes, treat it as
+  `MetaDevNexus-Pharo`, not the control project.

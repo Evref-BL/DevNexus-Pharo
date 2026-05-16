@@ -33,7 +33,7 @@ afterEach(() => {
 });
 
 function initHomeWithDockerBackend(): string {
-  const homePath = makeTempDir("pharo-nexus-home-");
+  const homePath = makeTempDir("dev-nexus-pharo-home-");
   initNexusHome({ homePath });
   const config = loadHomeConfig(homePath);
   const remoteRoot = path.join(homePath, "vibe-kanban", "crates", "remote");
@@ -46,7 +46,7 @@ function initHomeWithDockerBackend(): string {
 }
 
 function initHomeWithDindBackend(): string {
-  const homePath = makeTempDir("pharo-nexus-home-");
+  const homePath = makeTempDir("dev-nexus-pharo-home-");
   initNexusHome({ homePath });
   const config = loadHomeConfig(homePath);
   const sourceRoot = path.join(homePath, "vibe-kanban");
@@ -63,9 +63,9 @@ function initHomeWithDindBackend(): string {
     autoBootstrap: true,
     dockerCommand: "docker",
     dindImage: "docker:29-dind",
-    containerName: "pharo-nexus-vibe-dind",
-    dataVolume: "pharo-nexus-vibe-dind-data",
-    projectName: "pharo-nexus-vibe",
+    containerName: "dev-nexus-pharo-vibe-dind",
+    dataVolume: "dev-nexus-pharo-vibe-dind-data",
+    projectName: "dev-nexus-pharo-vibe",
     composeFile: path.join(remoteRoot, "docker-compose.yml"),
     envFile: path.join(remoteRoot, ".env.remote"),
     workingDirectory: remoteRoot,
@@ -73,8 +73,8 @@ function initHomeWithDindBackend(): string {
     containerWorkingDirectory: "/workspace/vibe-kanban/crates/remote",
     containerComposeFile: "/workspace/vibe-kanban/crates/remote/docker-compose.yml",
     containerEnvFile: "/workspace/vibe-kanban/crates/remote/.env.remote",
-    startOnPharoNexusStart: true,
-    stopOnPharoNexusStop: true,
+    startOnDevNexusPharoStart: true,
+    stopOnDevNexusPharoStop: true,
   };
   saveHomeConfig(homePath, config);
 
@@ -98,10 +98,10 @@ function commandResult(
 
 describe("Vibe Kanban Docker backend service", () => {
   it("bootstraps the official Vibe Kanban checkout and env file when missing", async () => {
-    vi.stubEnv("PHARO_NEXUS_GITHUB_OAUTH_CLIENT_ID", "github-client-id");
-    vi.stubEnv("PHARO_NEXUS_GITHUB_OAUTH_CLIENT_SECRET", "github-client-secret");
-    vi.stubEnv("PHARO_NEXUS_VIBE_LOCAL_AUTH_EMAIL", "dev@example.com");
-    const homePath = makeTempDir("pharo-nexus-home-");
+    vi.stubEnv("DEV_NEXUS_PHARO_GITHUB_OAUTH_CLIENT_ID", "github-client-id");
+    vi.stubEnv("DEV_NEXUS_PHARO_GITHUB_OAUTH_CLIENT_SECRET", "github-client-secret");
+    vi.stubEnv("DEV_NEXUS_PHARO_VIBE_LOCAL_AUTH_EMAIL", "dev@example.com");
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
     initNexusHome({ homePath });
     const remoteRoot = path.join(homePath, "vibe-kanban", "crates", "remote");
     const calls: Array<{
@@ -246,7 +246,7 @@ describe("Vibe Kanban Docker backend service", () => {
           "-f",
           path.join(homePath, "vibe-kanban", "crates", "remote", "docker-compose.yml"),
           "-p",
-          "pharo-nexus-vibe",
+          "dev-nexus-pharo-vibe",
           "up",
           "-d",
           "--build",
@@ -282,12 +282,12 @@ describe("Vibe Kanban Docker backend service", () => {
   });
 
   it("syncs GitHub OAuth defaults into an existing backend env file before starting", async () => {
-    vi.stubEnv("PHARO_NEXUS_GITHUB_OAUTH_CLIENT_ID", "existing-client-id");
+    vi.stubEnv("DEV_NEXUS_PHARO_GITHUB_OAUTH_CLIENT_ID", "existing-client-id");
     vi.stubEnv(
-      "PHARO_NEXUS_GITHUB_OAUTH_CLIENT_SECRET",
+      "DEV_NEXUS_PHARO_GITHUB_OAUTH_CLIENT_SECRET",
       "existing-client-secret",
     );
-    vi.stubEnv("PHARO_NEXUS_VIBE_LOCAL_AUTH_EMAIL", "existing@example.com");
+    vi.stubEnv("DEV_NEXUS_PHARO_VIBE_LOCAL_AUTH_EMAIL", "existing@example.com");
     const homePath = initHomeWithDockerBackend();
     const envFile = path.join(
       homePath,
@@ -377,7 +377,7 @@ describe("Vibe Kanban Docker backend service", () => {
     expect(calls.map((call) => [call.command, call.args])).toEqual([
       [
         "docker",
-        ["inspect", "--format", "{{.State.Running}}", "pharo-nexus-vibe-dind"],
+        ["inspect", "--format", "{{.State.Running}}", "dev-nexus-pharo-vibe-dind"],
       ],
       [
         "docker",
@@ -386,33 +386,33 @@ describe("Vibe Kanban Docker backend service", () => {
           "-d",
           "--privileged",
           "--name",
-          "pharo-nexus-vibe-dind",
+          "dev-nexus-pharo-vibe-dind",
           "-p",
           "127.0.0.1:3100:3100",
           "-v",
           `${path.join(homePath, "vibe-kanban")}:/workspace/vibe-kanban`,
           "-v",
-          "pharo-nexus-vibe-dind-data:/var/lib/docker",
+          "dev-nexus-pharo-vibe-dind-data:/var/lib/docker",
           "docker:29-dind",
         ]),
       ],
-      ["docker", ["exec", "pharo-nexus-vibe-dind", "docker", "info"]],
+      ["docker", ["exec", "dev-nexus-pharo-vibe-dind", "docker", "info"]],
       [
         "docker",
-        ["exec", "pharo-nexus-vibe-dind", "docker", "compose", "version"],
+        ["exec", "dev-nexus-pharo-vibe-dind", "docker", "compose", "version"],
       ],
       [
         "docker",
-        ["exec", "pharo-nexus-vibe-dind", "rm", "-f", "/tmp/pharo-nexus-ssh-agent.sock"],
+        ["exec", "dev-nexus-pharo-vibe-dind", "rm", "-f", "/tmp/dev-nexus-pharo-ssh-agent.sock"],
       ],
       [
         "docker",
         [
           "exec",
-          "pharo-nexus-vibe-dind",
+          "dev-nexus-pharo-vibe-dind",
           "ssh-agent",
           "-a",
-          "/tmp/pharo-nexus-ssh-agent.sock",
+          "/tmp/dev-nexus-pharo-ssh-agent.sock",
         ],
       ],
       [
@@ -421,7 +421,7 @@ describe("Vibe Kanban Docker backend service", () => {
           "exec",
           "-w",
           "/workspace/vibe-kanban/crates/remote",
-          "pharo-nexus-vibe-dind",
+          "dev-nexus-pharo-vibe-dind",
           "docker",
           "compose",
           "down",
@@ -432,11 +432,11 @@ describe("Vibe Kanban Docker backend service", () => {
         "docker",
         [
           "exec",
-          "pharo-nexus-vibe-dind",
+          "dev-nexus-pharo-vibe-dind",
           "docker",
           "volume",
           "rm",
-          "pharo-nexus-vibe_electric-data",
+          "dev-nexus-pharo-vibe_electric-data",
         ],
       ],
       [
@@ -448,8 +448,8 @@ describe("Vibe Kanban Docker backend service", () => {
           "-e",
           "REMOTE_SERVER_PORTS=0.0.0.0:3100:8081",
           "-e",
-          "SSH_AUTH_SOCK=/tmp/pharo-nexus-ssh-agent.sock",
-          "pharo-nexus-vibe-dind",
+          "SSH_AUTH_SOCK=/tmp/dev-nexus-pharo-ssh-agent.sock",
+          "dev-nexus-pharo-vibe-dind",
           "docker",
           "compose",
           "--env-file",
@@ -457,7 +457,7 @@ describe("Vibe Kanban Docker backend service", () => {
           "-f",
           "/workspace/vibe-kanban/crates/remote/docker-compose.yml",
           "-p",
-          "pharo-nexus-vibe",
+          "dev-nexus-pharo-vibe",
           "up",
           "-d",
           "--build",
@@ -484,20 +484,20 @@ describe("Vibe Kanban Docker backend service", () => {
     });
     expect(calls.at(-1)).toMatchObject({
       command: "docker",
-      args: ["stop", "pharo-nexus-vibe-dind"],
+      args: ["stop", "dev-nexus-pharo-vibe-dind"],
     });
   });
 
   it("reports external backend health without running Docker", async () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
     initNexusHome({ homePath });
     const config = loadHomeConfig(homePath);
     config.integrations.vibeKanban.backend = {
       mode: "external",
       sharedApiBase: "https://kanban.example.com",
       healthPath: "/v1/health",
-      startOnPharoNexusStart: false,
-      stopOnPharoNexusStop: false,
+      startOnDevNexusPharoStart: false,
+      stopOnDevNexusPharoStop: false,
     };
     saveHomeConfig(homePath, config as NexusHomeConfig);
     const fetchMock = vi.fn(async () => new Response("ok", { status: 200 }));

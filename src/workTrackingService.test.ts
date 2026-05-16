@@ -58,13 +58,13 @@ describe("work tracking service", () => {
       },
       workTracking: {
         provider: "local",
-        storePath: ".pharo-nexus/work-items.json",
+        storePath: ".dev-nexus-pharo/work-items.json",
       },
     });
 
     expect(resolveProjectWorkTrackingConfig(config)).toEqual({
       provider: "local",
-      storePath: ".pharo-nexus/work-items.json",
+      storePath: ".dev-nexus-pharo/work-items.json",
     });
   });
 
@@ -83,13 +83,13 @@ describe("work tracking service", () => {
     expect(
       legacyKanbanFromWorkTracking({
         provider: "local",
-        storePath: ".pharo-nexus/work-items.json",
+        storePath: ".dev-nexus-pharo/work-items.json",
       }),
     ).toBeUndefined();
   });
 
   it("creates a local work tracker provider from explicit project config", async () => {
-    const projectRoot = makeTempDir("pharo-nexus-project-");
+    const projectRoot = makeTempDir("dev-nexus-pharo-project-");
     const config = validateProjectConfig({
       version: 1,
       id: "local-tracked-project",
@@ -122,7 +122,7 @@ describe("work tracking service", () => {
   });
 
   it("creates a local work tracker provider from direct config", async () => {
-    const projectRoot = makeTempDir("pharo-nexus-project-");
+    const projectRoot = makeTempDir("dev-nexus-pharo-project-");
     const provider = createWorkTrackerProvider(
       {
         provider: "local",

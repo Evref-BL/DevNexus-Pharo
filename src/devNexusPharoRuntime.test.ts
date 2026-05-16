@@ -14,12 +14,12 @@ import {
   saveProjectConfig,
 } from "./config.js";
 import {
-  getPharoNexusStatus,
-  startPharoNexus,
-  stopPharoNexus,
+  getDevNexusPharoStatus,
+  startDevNexusPharo,
+  stopDevNexusPharo,
   vibeKanbanToolOpensBrowserOnStart,
-} from "./pharoNexusRuntime.js";
-import { stopPharoNexusMcp } from "./pharoNexusMcpService.js";
+} from "./devNexusPharoRuntime.js";
+import { stopDevNexusPharoMcp } from "./devNexusPharoMcpService.js";
 import { stopPlexusGateway } from "./plexusGatewayService.js";
 import { waitForHttpPort } from "dev-nexus";
 import { stopVibeKanban } from "./vibeKanbanService.js";
@@ -57,7 +57,7 @@ function freePort(): Promise<number> {
 
 async function freeServicePorts(): Promise<{
   vibeKanbanPort: number;
-  pharoNexusMcpPort: number;
+  devNexusPharoMcpPort: number;
   plexusMcpPort: number;
 }> {
   const ports = new Set<number>();
@@ -65,8 +65,8 @@ async function freeServicePorts(): Promise<{
     ports.add(await freePort());
   }
 
-  const [vibeKanbanPort, pharoNexusMcpPort, plexusMcpPort] = [...ports];
-  return { vibeKanbanPort, pharoNexusMcpPort, plexusMcpPort };
+  const [vibeKanbanPort, devNexusPharoMcpPort, plexusMcpPort] = [...ports];
+  return { vibeKanbanPort, devNexusPharoMcpPort, plexusMcpPort };
 }
 
 function fakeVibeKanbanServerScript(postFilePath: string): string {
@@ -116,7 +116,7 @@ function fakeVibeKanbanServerScript(postFilePath: string): string {
     "}",
     "if (request.method === 'GET' && url.pathname === '/remote/v1/fallback/projects') {",
     "response.setHeader('content-type', 'application/json');",
-    "response.end(JSON.stringify({ projects: [{ id: 'control-board', organization_id: 'org-1', name: 'PharoNexus' }] }));",
+    "response.end(JSON.stringify({ projects: [{ id: 'control-board', organization_id: 'org-1', name: 'DevNexus-Pharo' }] }));",
     "return;",
     "}",
     "if (request.method === 'POST' && url.pathname === '/remote/v1/projects') {",
@@ -185,7 +185,7 @@ function fakePlexusGatewayServerScript(): string {
   ].join("");
 }
 
-function fakePharoNexusMcpServerScript(): string {
+function fakeDevNexusPharoMcpServerScript(): string {
   return [
     "const http = require('http');",
     "http.createServer((request, response) => {",
@@ -202,22 +202,22 @@ function fakePharoNexusMcpServerScript(): string {
 
 function initHomeWithTopLevelTools(
   vibePort: number,
-  pharoNexusMcpPort: number,
+  devNexusPharoMcpPort: number,
   plexusMcpPort: number,
   postFilePath: string,
   plexusArgs = ["-e", "setInterval(() => {}, 1000);"],
 ): string {
-  const homePath = makeTempDir("pharo-nexus-home-");
+  const homePath = makeTempDir("dev-nexus-pharo-home-");
   initNexusHome({
     homePath,
     vibeKanbanPort: vibePort,
-    pharoNexusMcpPort,
+    devNexusPharoMcpPort,
     plexusMcpPort,
   });
   const config = loadHomeConfig(homePath);
   config.tools.nexus = {
     command: process.execPath,
-    args: ["-e", fakePharoNexusMcpServerScript()],
+    args: ["-e", fakeDevNexusPharoMcpServerScript()],
   };
   config.tools.plexus = {
     command: process.execPath,
@@ -231,8 +231,8 @@ function initHomeWithTopLevelTools(
     mode: "external",
     sharedApiBase: `http://127.0.0.1:${vibePort}/remote`,
     healthPath: "/v1/health",
-    startOnPharoNexusStart: false,
-    stopOnPharoNexusStop: false,
+    startOnDevNexusPharoStart: false,
+    stopOnDevNexusPharoStop: false,
   };
   saveHomeConfig(homePath, config);
   homePaths.push(homePath);
@@ -266,10 +266,10 @@ function enableManagedBackendLocalAuth(
     composeArgs: [],
     composeFile: path.join(remoteRoot, "docker-compose.yml"),
     envFile,
-    projectName: "pharo-nexus-vibe",
+    projectName: "dev-nexus-pharo-vibe",
     workingDirectory: remoteRoot,
-    startOnPharoNexusStart: false,
-    stopOnPharoNexusStop: false,
+    startOnDevNexusPharoStart: false,
+    stopOnDevNexusPharoStop: false,
   };
   saveHomeConfig(homePath, config);
 }
@@ -288,7 +288,7 @@ afterEach(async () => {
       timeoutMs: 2_000,
       pollIntervalMs: 50,
     });
-    await stopPharoNexusMcp({
+    await stopDevNexusPharoMcp({
       homePath,
       force: true,
       timeoutMs: 2_000,
@@ -301,7 +301,7 @@ afterEach(async () => {
   }
 });
 
-describe("PharoNexus runtime", () => {
+describe("DevNexus-Pharo runtime", () => {
   it("detects stock Vibe Kanban commands that open the browser themselves", () => {
     expect(
       vibeKanbanToolOpensBrowserOnStart({
@@ -329,19 +329,19 @@ describe("PharoNexus runtime", () => {
     ).toBe(false);
   });
 
-  it("starts services, links the control project, and installs PharoNexus plus PLexus MCP config", async () => {
-    const postFilePath = path.join(makeTempDir("pharo-nexus-post-"), "post.json");
-    const { vibeKanbanPort, pharoNexusMcpPort, plexusMcpPort } =
+  it("starts services, links the control project, and installs DevNexus-Pharo plus PLexus MCP config", async () => {
+    const postFilePath = path.join(makeTempDir("dev-nexus-pharo-post-"), "post.json");
+    const { vibeKanbanPort, devNexusPharoMcpPort, plexusMcpPort } =
       await freeServicePorts();
 
     const homePath = initHomeWithTopLevelTools(
       vibeKanbanPort,
-      pharoNexusMcpPort,
+      devNexusPharoMcpPort,
       plexusMcpPort,
       postFilePath,
     );
 
-    const result = await startPharoNexus({
+    const result = await startDevNexusPharo({
       homePath,
       executor: "codex",
       serverName: "plexus_local",
@@ -350,9 +350,9 @@ describe("PharoNexus runtime", () => {
     });
 
     expect(result.services.plexusGateway.pid).toBeGreaterThan(0);
-    expect(result.services.pharoNexusMcp.pid).toBeGreaterThan(0);
+    expect(result.services.devNexusPharoMcp.pid).toBeGreaterThan(0);
     expect(result.services.vibeKanban.pid).toBeGreaterThan(0);
-    expect(result.health.pharoNexusMcp).toMatchObject({
+    expect(result.health.devNexusPharoMcp).toMatchObject({
       ok: true,
       statusCode: 200,
     });
@@ -375,8 +375,8 @@ describe("PharoNexus runtime", () => {
     ).toBe("control-board");
     expect(result.mcpConfig).toMatchObject({
       executor: "CODEX",
-      pharoNexus: {
-        serverName: "pharo_nexus",
+      devNexusPharo: {
+        serverName: "dev_nexus_pharo",
       },
       plexus: {
         serverName: "plexus_local",
@@ -391,9 +391,9 @@ describe("PharoNexus runtime", () => {
           command: "node",
           args: ["existing.js"],
         },
-        pharo_nexus: {
+        dev_nexus_pharo: {
           type: "http",
-          url: `http://127.0.0.1:${pharoNexusMcpPort}/mcp`,
+          url: `http://127.0.0.1:${devNexusPharoMcpPort}/mcp`,
         },
         plexus_local: {
           type: "http",
@@ -404,13 +404,13 @@ describe("PharoNexus runtime", () => {
   });
 
   it("opens Vibe Kanban in the browser after it becomes healthy", async () => {
-    const postFilePath = path.join(makeTempDir("pharo-nexus-post-"), "post.json");
-    const { vibeKanbanPort, pharoNexusMcpPort, plexusMcpPort } =
+    const postFilePath = path.join(makeTempDir("dev-nexus-pharo-post-"), "post.json");
+    const { vibeKanbanPort, devNexusPharoMcpPort, plexusMcpPort } =
       await freeServicePorts();
 
     const homePath = initHomeWithTopLevelTools(
       vibeKanbanPort,
-      pharoNexusMcpPort,
+      devNexusPharoMcpPort,
       plexusMcpPort,
       postFilePath,
     );
@@ -421,7 +421,7 @@ describe("PharoNexus runtime", () => {
       args: [url],
     }));
 
-    const result = await startPharoNexus({
+    const result = await startDevNexusPharo({
       homePath,
       skipMcpConfig: true,
       browserOpener,
@@ -440,20 +440,20 @@ describe("PharoNexus runtime", () => {
   });
 
   it("signs into managed self-hosted Vibe Kanban before linking the control project", async () => {
-    const postFilePath = path.join(makeTempDir("pharo-nexus-post-"), "post.json");
-    const { vibeKanbanPort, pharoNexusMcpPort, plexusMcpPort } =
+    const postFilePath = path.join(makeTempDir("dev-nexus-pharo-post-"), "post.json");
+    const { vibeKanbanPort, devNexusPharoMcpPort, plexusMcpPort } =
       await freeServicePorts();
 
     const homePath = initHomeWithTopLevelTools(
       vibeKanbanPort,
-      pharoNexusMcpPort,
+      devNexusPharoMcpPort,
       plexusMcpPort,
       postFilePath,
     );
     enableManagedBackendLocalAuth(homePath, vibeKanbanPort);
     const progressMessages: string[] = [];
 
-    const result = await startPharoNexus({
+    const result = await startDevNexusPharo({
       homePath,
       skipMcpConfig: true,
       openBrowser: false,
@@ -476,14 +476,14 @@ describe("PharoNexus runtime", () => {
     );
   });
 
-  it("migrates the legacy control directory to PharoNexus and re-registers it", async () => {
-    const postFilePath = path.join(makeTempDir("pharo-nexus-post-"), "post.json");
-    const { vibeKanbanPort, pharoNexusMcpPort, plexusMcpPort } =
+  it("migrates the legacy control directory to DevNexus-Pharo and re-registers it", async () => {
+    const postFilePath = path.join(makeTempDir("dev-nexus-pharo-post-"), "post.json");
+    const { vibeKanbanPort, devNexusPharoMcpPort, plexusMcpPort } =
       await freeServicePorts();
 
     const homePath = initHomeWithTopLevelTools(
       vibeKanbanPort,
-      pharoNexusMcpPort,
+      devNexusPharoMcpPort,
       plexusMcpPort,
       postFilePath,
     );
@@ -502,7 +502,7 @@ describe("PharoNexus runtime", () => {
       },
     });
 
-    const result = await startPharoNexus({
+    const result = await startDevNexusPharo({
       homePath,
       skipMcpConfig: true,
       openBrowser: false,
@@ -518,13 +518,13 @@ describe("PharoNexus runtime", () => {
       vibeKanbanRepoId: "control-repo",
     });
     expect(loadHomeConfig(homePath).controlProject).toMatchObject({
-      name: "PharoNexus",
+      name: "DevNexus-Pharo",
       root: targetRoot,
       vibeKanbanProjectId: "control-board",
       vibeKanbanRepoId: "control-repo",
     });
     expect(loadProjectConfig(targetRoot)).toMatchObject({
-      name: "PharoNexus",
+      name: "DevNexus-Pharo",
       kanban: {
         projectId: "control-board",
       },
@@ -532,19 +532,19 @@ describe("PharoNexus runtime", () => {
   });
 
   it("reports top-level status and stops Vibe Kanban before PLexus gateway", async () => {
-    const postFilePath = path.join(makeTempDir("pharo-nexus-post-"), "post.json");
-    const { vibeKanbanPort, pharoNexusMcpPort, plexusMcpPort } =
+    const postFilePath = path.join(makeTempDir("dev-nexus-pharo-post-"), "post.json");
+    const { vibeKanbanPort, devNexusPharoMcpPort, plexusMcpPort } =
       await freeServicePorts();
 
     const homePath = initHomeWithTopLevelTools(
       vibeKanbanPort,
-      pharoNexusMcpPort,
+      devNexusPharoMcpPort,
       plexusMcpPort,
       postFilePath,
       ["-e", fakePlexusGatewayServerScript()],
     );
 
-    await startPharoNexus({
+    await startDevNexusPharo({
       homePath,
       skipMcpConfig: true,
       openBrowser: false,
@@ -555,7 +555,7 @@ describe("PharoNexus runtime", () => {
       totalTimeoutMs: 2_000,
     });
 
-    const runningStatus = await getPharoNexusStatus({
+    const runningStatus = await getDevNexusPharoStatus({
       homePath,
       checkHealth: true,
       healthTimeoutMs: 1_000,
@@ -565,7 +565,7 @@ describe("PharoNexus runtime", () => {
       running: true,
       stale: false,
       services: {
-        pharoNexusMcp: {
+        devNexusPharoMcp: {
           running: true,
           health: {
             ok: true,
@@ -590,7 +590,7 @@ describe("PharoNexus runtime", () => {
     });
 
     const progressMessages: string[] = [];
-    const stopped = await stopPharoNexus({
+    const stopped = await stopDevNexusPharo({
       homePath,
       force: true,
       timeoutMs: 2_000,
@@ -601,30 +601,30 @@ describe("PharoNexus runtime", () => {
     expect(stopped.services.vibeKanban.stop).toMatchObject({
       stopped: true,
     });
-    expect(stopped.services.pharoNexusMcp.stop).toMatchObject({
+    expect(stopped.services.devNexusPharoMcp.stop).toMatchObject({
       stopped: true,
     });
     expect(stopped.services.plexusGateway.stop).toMatchObject({
       stopped: true,
     });
     expect(progressMessages).toEqual([
-      `Using PharoNexus home: ${homePath}`,
+      `Using DevNexus-Pharo home: ${homePath}`,
       "Stopping Vibe Kanban app...",
       "Vibe Kanban app stopped.",
-      "Stopping PharoNexus MCP...",
-      "PharoNexus MCP stopped.",
+      "Stopping DevNexus-Pharo MCP...",
+      "DevNexus-Pharo MCP stopped.",
       "Stopping PLexus gateway...",
       "PLexus gateway stopped.",
       "Leaving Vibe Kanban backend running by configuration.",
-      "PharoNexus stop complete.",
+      "DevNexus-Pharo stop complete.",
     ]);
 
-    const stoppedStatus = await getPharoNexusStatus({ homePath });
+    const stoppedStatus = await getDevNexusPharoStatus({ homePath });
     expect(stoppedStatus).toMatchObject({
       running: false,
       stale: false,
       services: {
-        pharoNexusMcp: {
+        devNexusPharoMcp: {
           running: false,
           state: {
             status: "stopped",

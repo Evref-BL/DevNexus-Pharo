@@ -1,18 +1,18 @@
-# PharoNexus
+# DevNexus-Pharo
 
-PharoNexus is the Pharo plugin and user-environment layer for DevNexus. It
+DevNexus-Pharo is the Pharo plugin and user-environment layer for DevNexus. It
 starts the local service graph, keeps project metadata consistent, and gives
 agents MCP tools for creating and managing Pharo projects without replacing
 DevNexus as the generic project, work-item, worktree, and target infrastructure.
 
-PharoNexus owns:
+DevNexus-Pharo owns:
 
-- the user-level PharoNexus home
+- the user-level DevNexus-Pharo home
 - Vibe Kanban backend and local app startup
 - the PLexus gateway startup
-- Codex/Vibe MCP configuration for PharoNexus, PLexus, and the projected Pharo
+- Codex/Vibe MCP configuration for DevNexus-Pharo, PLexus, and the projected Pharo
   MCP facade
-- PharoNexus project creation, import, registry, work tracking, and local
+- DevNexus-Pharo project creation, import, registry, work tracking, and local
   Codex worktree metadata
 - the DevNexus plugin declaration that contributes Pharo skills, scoped PLexus
   setup obligations, Pharo MCP projection, worker briefing fragments, and
@@ -34,42 +34,42 @@ same commands with POSIX paths.
 ## Install From Source
 
 ```powershell
-cd C:\dev\code\git\PharoNexus
+cd C:\dev\code\git\DevNexus-Pharo
 npm install
 npm run build
 npm link
 ```
 
-`npm link` exposes `pharo-nexus` in new terminals. Without a global link, run
+`npm link` exposes `dev-nexus-pharo` in new terminals. Without a global link, run
 the built CLI directly:
 
 ```powershell
-node C:\dev\code\git\PharoNexus\dist\cli.js --help
+node C:\dev\code\git\DevNexus-Pharo\dist\cli.js --help
 ```
 
 ## Initialize A Home
 
 ```powershell
-pharo-nexus init
+dev-nexus-pharo init
 ```
 
-By default, PharoNexus uses `PHARO_NEXUS_HOME`, then `~\.pharo-nexus`. To use a
+By default, DevNexus-Pharo uses `DEV_NEXUS_PHARO_HOME`, then `~\.dev-nexus-pharo`. To use a
 specific home:
 
 ```powershell
-$env:PHARO_NEXUS_HOME = "C:\dev\code\.pharo-nexus"
-pharo-nexus init
+$env:DEV_NEXUS_PHARO_HOME = "C:\dev\code\.dev-nexus-pharo"
+dev-nexus-pharo init
 ```
 
 ```bash
-export PHARO_NEXUS_HOME=~/dev/pharo-nexus
-pharo-nexus init
+export DEV_NEXUS_PHARO_HOME=~/dev/dev-nexus-pharo
+dev-nexus-pharo init
 ```
 
 For guided setup:
 
 ```powershell
-pharo-nexus init --interactive
+dev-nexus-pharo init --interactive
 ```
 
 If `plexus-gateway` is not on `PATH`, edit the generated
@@ -78,13 +78,13 @@ If `plexus-gateway` is not on `PATH`, edit the generated
 ## Start And Stop
 
 ```powershell
-pharo-nexus start
+dev-nexus-pharo start
 ```
 
-This starts the configured Vibe backend, Vibe Kanban, the PharoNexus MCP
+This starts the configured Vibe backend, Vibe Kanban, the DevNexus-Pharo MCP
 service, and the PLexus gateway. It also creates and links the reserved
-`PharoNexus` control board, opens Vibe Kanban when healthy, and installs
-`pharo_nexus` and `plexus` MCP entries into the configured Vibe executor.
+`DevNexus-Pharo` control board, opens Vibe Kanban when healthy, and installs
+`dev_nexus_pharo` and `plexus` MCP entries into the configured Vibe executor.
 
 Open Vibe Kanban at:
 
@@ -95,8 +95,8 @@ http://127.0.0.1:3000
 Check status or stop the environment:
 
 ```powershell
-pharo-nexus status --check-health
-pharo-nexus stop
+dev-nexus-pharo status --check-health
+dev-nexus-pharo stop
 ```
 
 Useful startup options:
@@ -112,14 +112,14 @@ Useful startup options:
 
 ## Control Board Workflow
 
-The `PharoNexus` Kanban board is the control board. Use it for environment and
+The `DevNexus-Pharo` Kanban board is the control board. Use it for environment and
 project-management tasks, such as:
 
 ```text
 Create a new Pharo project named MyLibrary from https://github.com/me/MyLibrary.git
 ```
 
-Agents should satisfy that request with the PharoNexus MCP project factory, not
+Agents should satisfy that request with the DevNexus-Pharo MCP project factory, not
 by manually creating folders or hand-editing project metadata.
 
 After a project exists, use that project's own Kanban board for feature work.
@@ -130,30 +130,30 @@ Do not use the control board as the normal feature board for real projects.
 Create a new managed project:
 
 ```powershell
-pharo-nexus project create MyProject --git-init
+dev-nexus-pharo project create MyProject --git-init
 ```
 
 Create a project from a Git URL:
 
 ```powershell
-pharo-nexus project create MyProject --from https://github.com/example/MyProject.git
+dev-nexus-pharo project create MyProject --from https://github.com/example/MyProject.git
 ```
 
-Import an existing local source checkout without writing PharoNexus metadata
+Import an existing local source checkout without writing DevNexus-Pharo metadata
 into that checkout:
 
 ```powershell
-pharo-nexus project import C:\dev\code\git\ExistingProject --name ExistingProject
+dev-nexus-pharo project import C:\dev\code\git\ExistingProject --name ExistingProject
 ```
 
 Inspect or refresh generated DevNexus support skills for a managed project:
 
 ```powershell
-pharo-nexus project skills status MyProject
-pharo-nexus project skills refresh MyProject
+dev-nexus-pharo project skills status MyProject
+dev-nexus-pharo project skills refresh MyProject
 ```
 
-By default, PharoNexus creates the managed project root under
+By default, DevNexus-Pharo creates the managed project root under
 `paths.projectsRoot` from `dev-nexus.home.json`. Use `--root` on
 `project create` or `--project-root` on `project import` to choose a different
 managed root.
@@ -177,12 +177,12 @@ project points at the existing source checkout.
 Configure provider-neutral work tracking for a project:
 
 ```powershell
-pharo-nexus project configure-tracker MyProject --provider local --store-path .pharo-nexus\work-items.json
-pharo-nexus project configure-tracker MyProject --provider github --repository-owner example --repository-name MyProject
-pharo-nexus project configure-tracker MyProject --provider github --host github.enterprise.test --repository-owner example --repository-name MyProject
-pharo-nexus project configure-tracker MyProject --provider gitlab --repository-id example/MyProject
-pharo-nexus project configure-tracker MyProject --provider gitlab --host gitlab.enterprise.test --repository-id example/MyProject
-pharo-nexus project configure-tracker MyProject --provider jira --host example.atlassian.net --project-key FCD
+dev-nexus-pharo project configure-tracker MyProject --provider local --store-path .dev-nexus-pharo\work-items.json
+dev-nexus-pharo project configure-tracker MyProject --provider github --repository-owner example --repository-name MyProject
+dev-nexus-pharo project configure-tracker MyProject --provider github --host github.enterprise.test --repository-owner example --repository-name MyProject
+dev-nexus-pharo project configure-tracker MyProject --provider gitlab --repository-id example/MyProject
+dev-nexus-pharo project configure-tracker MyProject --provider gitlab --host gitlab.enterprise.test --repository-id example/MyProject
+dev-nexus-pharo project configure-tracker MyProject --provider jira --host example.atlassian.net --project-key FCD
 ```
 
 The GitHub provider uses the GitHub Issues REST API. It reads credentials in
@@ -197,7 +197,7 @@ exists.
 GitHub Projects v2 is optional. If the project config includes a
 `workTracking.board` with `kind: "github-project-v2"` and a project node id,
 new and status-updated GitHub issues are added to that project through
-GitHub's GraphQL API. To map PharoNexus statuses to a Projects v2 single-select
+GitHub's GraphQL API. To map DevNexus-Pharo statuses to a Projects v2 single-select
 Status field, configure the field node id and option ids:
 
 ```json
@@ -224,7 +224,7 @@ Status field, configure the field node id and option ids:
 ```
 
 GitHub requires those Project v2 project, field, and option node ids for GraphQL
-updates. If `statusOptions` does not include a status, PharoNexus still adds
+updates. If `statusOptions` does not include a status, DevNexus-Pharo still adds
 the issue to the project but skips the status-field update for that status.
 
 The GitLab provider uses the GitLab project Issues and Notes REST APIs under
@@ -247,7 +247,7 @@ Jira issue descriptions and comments are sent as Atlassian Document Format.
 Assignees are Jira account ids, and Jira milestones are intentionally not
 mapped yet.
 
-Jira workflow transitions are project-specific. To let PharoNexus move Jira
+Jira workflow transitions are project-specific. To let DevNexus-Pharo move Jira
 issues through the real Jira workflow when setting a neutral status, configure
 transition ids in `workTracking.board.statusOptions` with
 `kind: "jira-workflow"`:
@@ -269,7 +269,7 @@ transition ids in `workTracking.board.statusOptions` with
 }
 ```
 
-When no transition id is configured for a status, PharoNexus still records the
+When no transition id is configured for a status, DevNexus-Pharo still records the
 neutral status with a `status:<name>` Jira label and skips the workflow
 transition.
 
@@ -277,40 +277,40 @@ Existing local Vibe Kanban installations can still be used as a tracker
 provider for board/repo registration:
 
 ```powershell
-pharo-nexus project create MyProject --git-init --tracker-project-id <id>
-pharo-nexus project create MyProject --git-init --sync-tracker
-pharo-nexus project import C:\dev\code\git\ExistingProject --name ExistingProject --sync-tracker
-pharo-nexus project link-tracker my-project --tracker-project-id <id>
-pharo-nexus project sync-tracker my-project
+dev-nexus-pharo project create MyProject --git-init --tracker-project-id <id>
+dev-nexus-pharo project create MyProject --git-init --sync-tracker
+dev-nexus-pharo project import C:\dev\code\git\ExistingProject --name ExistingProject --sync-tracker
+dev-nexus-pharo project link-tracker my-project --tracker-project-id <id>
+dev-nexus-pharo project sync-tracker my-project
 ```
 
 List and inspect projects:
 
 ```powershell
-pharo-nexus project list
-pharo-nexus project status MyProject
-pharo-nexus project status C:\dev\code\pharo-nexus\MyProject
+dev-nexus-pharo project list
+dev-nexus-pharo project status MyProject
+dev-nexus-pharo project status C:\dev\code\dev-nexus-pharo\MyProject
 ```
 
 Use `--json` for machine-readable output.
 
 ## Codex Workspace Setup
 
-PharoNexus-managed Codex workspaces should connect to the supervised local MCP
-endpoints started by `pharo-nexus start`.
+DevNexus-Pharo-managed Codex workspaces should connect to the supervised local MCP
+endpoints started by `dev-nexus-pharo start`.
 
 ```powershell
-pharo-nexus start
-pharo-nexus codex init C:\dev\code\pharo-nexus\MyProject
-pharo-nexus codex doctor C:\dev\code\pharo-nexus\MyProject
+dev-nexus-pharo start
+dev-nexus-pharo codex init C:\dev\code\dev-nexus-pharo\MyProject
+dev-nexus-pharo codex doctor C:\dev\code\dev-nexus-pharo\MyProject
 ```
 
 Open a fresh Codex chat from that workspace after `codex doctor` passes. A
 running chat may keep the MCP tool list it loaded at startup.
 
 `codex init` preserves unrelated Codex settings and unrelated MCP servers. It
-replaces only the PharoNexus-managed `pharo_nexus`, `plexus`, `vibe_kanban`,
-and, for PharoNexus-managed projects, `pharo` entries. The `pharo` entry is a
+replaces only the DevNexus-Pharo-managed `dev_nexus_pharo`, `plexus`, `vibe_kanban`,
+and, for DevNexus-Pharo-managed projects, `pharo` entries. The `pharo` entry is a
 command facade for the PLexus gateway; `codex doctor` verifies that it is
 projected without spawning the command, opening images, or creating routes.
 
@@ -323,20 +323,20 @@ discovery instead of editing Pharo code through files.
 
 ## MCP Server
 
-`pharo-nexus start` supervises the HTTP MCP endpoint automatically. For direct
+`dev-nexus-pharo start` supervises the HTTP MCP endpoint automatically. For direct
 MCP server use:
 
 ```powershell
-pharo-nexus mcp
+dev-nexus-pharo mcp
 ```
 
 Compatibility mode for clients without URL MCP support:
 
 ```powershell
-pharo-nexus mcp-stdio
+dev-nexus-pharo mcp-stdio
 ```
 
-PharoNexus exposes these project-management tools:
+DevNexus-Pharo exposes these project-management tools:
 
 ```text
 project_create
@@ -378,22 +378,22 @@ For GitHub sign-in with the self-hosted Vibe backend, set GitHub OAuth
 credentials before startup:
 
 ```powershell
-$env:PHARO_NEXUS_GITHUB_OAUTH_CLIENT_ID = "<github-oauth-client-id>"
-$env:PHARO_NEXUS_GITHUB_OAUTH_CLIENT_SECRET = "<github-oauth-client-secret>"
+$env:DEV_NEXUS_PHARO_GITHUB_OAUTH_CLIENT_ID = "<github-oauth-client-id>"
+$env:DEV_NEXUS_PHARO_GITHUB_OAUTH_CLIENT_SECRET = "<github-oauth-client-secret>"
 ```
 
 ## Troubleshooting
 
-- Missing `pharo_nexus`, `plexus`, or `pharo` tools: run `pharo-nexus codex doctor
+- Missing `dev_nexus_pharo`, `plexus`, or `pharo` tools: run `dev-nexus-pharo codex doctor
   <workspace>`, then open a fresh Codex chat after the checks pass.
-- Service health failures: run `pharo-nexus status --check-health`, inspect
-  logs under `<home>\logs\`, then rerun `pharo-nexus start`.
+- Service health failures: run `dev-nexus-pharo status --check-health`, inspect
+  logs under `<home>\logs\`, then rerun `dev-nexus-pharo start`.
 - Port conflicts: update the ports in `dev-nexus.home.json` or stop the
-  conflicting process, then rerun `pharo-nexus codex init <workspace>`.
+  conflicting process, then rerun `dev-nexus-pharo codex init <workspace>`.
 - MCP handshake failures: make sure `.codex\config.toml` points at the
-  configured host and ports, and that `pharo-nexus start` is running.
+  configured host and ports, and that `dev-nexus-pharo start` is running.
 - Command fallback mode should use the current Node executable and an absolute
-  PharoNexus CLI entrypoint, not a bare `pharo-nexus` package-bin name.
+  DevNexus-Pharo CLI entrypoint, not a bare `dev-nexus-pharo` package-bin name.
 
 ## More Documentation
 

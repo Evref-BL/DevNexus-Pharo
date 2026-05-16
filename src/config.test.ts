@@ -14,8 +14,8 @@ import {
   initNexusHome,
   loadHomeConfig,
   loadProjectConfig,
-  pharoNexusControlProjectId,
-  pharoNexusControlProjectName,
+  devNexusPharoControlProjectId,
+  devNexusPharoControlProjectName,
   nexusGeneratedDirectoryName,
   devNexusHomeConfigPath,
   devNexusHomeConfigFileName,
@@ -32,9 +32,9 @@ import {
   validateProjectConfig,
 } from "./config.js";
 import {
-  pharoNexusProjectExtensionConfigKey,
+  devNexusPharoProjectExtensionConfigKey,
   projectPlexusConfigPath,
-} from "./pharoNexusExtension.js";
+} from "./devNexusPharoExtension.js";
 
 const tempDirs: string[] = [];
 
@@ -50,9 +50,9 @@ afterEach(() => {
   }
 });
 
-describe("PharoNexus home config", () => {
+describe("DevNexus-Pharo home config", () => {
   it("resolves home and config paths to absolute filesystem paths", () => {
-    const parentPath = makeTempDir("pharo-nexus-parent-");
+    const parentPath = makeTempDir("dev-nexus-pharo-parent-");
     const homePath = path.join(parentPath, "home");
     const relativeHomePath = path.relative(process.cwd(), homePath);
 
@@ -64,7 +64,7 @@ describe("PharoNexus home config", () => {
   });
 
   it("creates a default home config under the selected home", () => {
-    const homePath = path.join("C:", "dev", "pharo-nexus");
+    const homePath = path.join("C:", "dev", "dev-nexus-pharo");
     const resolvedHomePath = path.resolve(homePath);
     const remoteRoot = path.join(
       resolvedHomePath,
@@ -82,7 +82,7 @@ describe("PharoNexus home config", () => {
       },
       ports: {
         vibeKanban: 3000,
-        pharoNexusMcp: 7330,
+        devNexusPharoMcp: 7330,
         plexusMcp: 7331,
       },
       mcp: {
@@ -99,7 +99,7 @@ describe("PharoNexus home config", () => {
       integrations: {
         vibeKanban: {
           executor: "CODEX",
-          nexusMcpServerName: "pharo_nexus",
+          nexusMcpServerName: "dev_nexus_pharo",
           plexusMcpServerName: "plexus",
           installMcpOnStart: true,
           openBrowserOnStart: true,
@@ -113,17 +113,17 @@ describe("PharoNexus home config", () => {
             composeArgs: [],
             composeFile: path.join(remoteRoot, "docker-compose.yml"),
             envFile: path.join(remoteRoot, ".env.remote"),
-            projectName: "pharo-nexus-vibe",
+            projectName: "dev-nexus-pharo-vibe",
             workingDirectory: remoteRoot,
-            startOnPharoNexusStart: true,
-            stopOnPharoNexusStop: true,
+            startOnDevNexusPharoStart: true,
+            stopOnDevNexusPharoStop: true,
           },
         },
       },
       controlProject: {
-        id: pharoNexusControlProjectId,
-        name: pharoNexusControlProjectName,
-        root: path.resolve(homePath, "PharoNexus"),
+        id: devNexusPharoControlProjectId,
+        name: devNexusPharoControlProjectName,
+        root: path.resolve(homePath, "DevNexus-Pharo"),
         vibeKanbanProjectId: null,
         vibeKanbanRepoId: null,
       },
@@ -132,19 +132,19 @@ describe("PharoNexus home config", () => {
   });
 
   it("defines a reserved control project under the selected home", () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
 
-    expect(controlProjectRootPath(homePath)).toBe(path.join(homePath, "PharoNexus"));
+    expect(controlProjectRootPath(homePath)).toBe(path.join(homePath, "DevNexus-Pharo"));
     expect(controlProjectConfigPath(homePath)).toBe(
-      path.join(homePath, "PharoNexus", devNexusProjectConfigFileName),
+      path.join(homePath, "DevNexus-Pharo", devNexusProjectConfigFileName),
     );
     expect(controlProjectWorktreesRootPath(homePath)).toBe(
-      path.join(homePath, "PharoNexus", nexusProjectWorktreesDirectoryName),
+      path.join(homePath, "DevNexus-Pharo", nexusProjectWorktreesDirectoryName),
     );
     expect(createControlProjectConfig()).toEqual({
       version: 1,
-      id: pharoNexusControlProjectId,
-      name: pharoNexusControlProjectName,
+      id: devNexusPharoControlProjectId,
+      name: devNexusPharoControlProjectName,
       home: null,
       repo: {
         kind: "local",
@@ -154,7 +154,7 @@ describe("PharoNexus home config", () => {
       components: [
         {
           id: "primary",
-          name: pharoNexusControlProjectName,
+          name: devNexusPharoControlProjectName,
           kind: "local",
           role: "primary",
           remoteUrl: null,
@@ -172,15 +172,15 @@ describe("PharoNexus home config", () => {
   });
 
   it("loads home configs with default Nexus MCP HTTP settings", () => {
-    const config = createDefaultHomeConfig(makeTempDir("pharo-nexus-home-"));
+    const config = createDefaultHomeConfig(makeTempDir("dev-nexus-pharo-home-"));
     const legacyConfig = config as unknown as Record<string, unknown>;
-    delete (legacyConfig.ports as Record<string, unknown>).pharoNexusMcp;
+    delete (legacyConfig.ports as Record<string, unknown>).devNexusPharoMcp;
     delete legacyConfig.mcp;
     delete (legacyConfig.tools as Record<string, unknown>).nexus;
 
     expect(validateHomeConfig(legacyConfig)).toMatchObject({
       ports: {
-        pharoNexusMcp: 7330,
+        devNexusPharoMcp: 7330,
       },
       mcp: {
         host: "127.0.0.1",
@@ -192,7 +192,7 @@ describe("PharoNexus home config", () => {
   });
 
   it("accepts optional home-level agent defaults", () => {
-    const config = createDefaultHomeConfig(makeTempDir("pharo-nexus-home-"));
+    const config = createDefaultHomeConfig(makeTempDir("dev-nexus-pharo-home-"));
     config.agent = {
       executor: "CODEX",
       model: "gpt-5.3-codex",
@@ -202,13 +202,13 @@ describe("PharoNexus home config", () => {
     expect(validateHomeConfig(config).agent).toEqual(config.agent);
   });
 
-  it("validates and persists PharoNexus project config files", () => {
-    const projectPath = path.join(makeTempDir("pharo-nexus-project-parent-"), "project");
+  it("validates and persists DevNexus-Pharo project config files", () => {
+    const projectPath = path.join(makeTempDir("dev-nexus-pharo-project-parent-"), "project");
     const config = {
       version: 1 as const,
       id: "my-project",
       name: "My Project",
-      home: "C:\\dev\\code\\.pharo-nexus",
+      home: "C:\\dev\\code\\.dev-nexus-pharo",
       repo: {
         kind: "git" as const,
         remoteUrl: "https://github.com/example/my-project.git",
@@ -373,13 +373,13 @@ describe("PharoNexus home config", () => {
       },
       workTracking: {
         provider: "local",
-        storePath: ".pharo-nexus/work-items.json",
+        storePath: ".dev-nexus-pharo/work-items.json",
       },
     });
 
     expect(config.workTracking).toEqual({
       provider: "local",
-      storePath: ".pharo-nexus/work-items.json",
+      storePath: ".dev-nexus-pharo/work-items.json",
     });
   });
 
@@ -511,7 +511,7 @@ describe("PharoNexus home config", () => {
   });
 
   it("resolves project-local paths from the project directory", () => {
-    const projectPath = path.join(makeTempDir("pharo-nexus-project-parent-"), "project");
+    const projectPath = path.join(makeTempDir("dev-nexus-pharo-project-parent-"), "project");
     const config = validateProjectConfig({
       version: 1,
       id: "my-project",
@@ -528,7 +528,7 @@ describe("PharoNexus home config", () => {
         projectId: null,
       },
       extensions: {
-        [pharoNexusProjectExtensionConfigKey]: {
+        [devNexusPharoProjectExtensionConfigKey]: {
           plexusProjectConfig: path.join("config", "plexus.project.json"),
         },
       },
@@ -543,7 +543,7 @@ describe("PharoNexus home config", () => {
   });
 
   it("ensures the control project without overwriting an existing config", () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
     const projectPath = controlProjectRootPath(homePath);
     const existingConfig = {
       ...createControlProjectConfig(),
@@ -564,7 +564,7 @@ describe("PharoNexus home config", () => {
   });
 
   it("normalizes a configured control project root from the home directory", () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
     const config = createDefaultHomeConfig(homePath);
     config.controlProject = {
       id: "custom-control",
@@ -584,7 +584,7 @@ describe("PharoNexus home config", () => {
   });
 
   it("defaults integrations and the control project when loading older config files", () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
     const config = createDefaultHomeConfig(homePath);
     const legacyConfig = { ...config } as Partial<typeof config>;
     delete legacyConfig.integrations;
@@ -594,7 +594,7 @@ describe("PharoNexus home config", () => {
       integrations: {
         vibeKanban: {
           executor: "CODEX",
-          nexusMcpServerName: "pharo_nexus",
+          nexusMcpServerName: "dev_nexus_pharo",
           plexusMcpServerName: "plexus",
           installMcpOnStart: true,
           openBrowserOnStart: true,
@@ -608,8 +608,8 @@ describe("PharoNexus home config", () => {
         },
       },
       controlProject: {
-        id: pharoNexusControlProjectId,
-        name: pharoNexusControlProjectName,
+        id: devNexusPharoControlProjectId,
+        name: devNexusPharoControlProjectName,
         root: controlProjectRootPath(homePath),
         vibeKanbanProjectId: null,
         vibeKanbanRepoId: null,
@@ -618,7 +618,7 @@ describe("PharoNexus home config", () => {
   });
 
   it("resolves relative configured paths from the selected home", () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
 
     expect(
       createDefaultHomeConfig(homePath, {
@@ -634,7 +634,7 @@ describe("PharoNexus home config", () => {
   });
 
   it("validates Vibe Kanban Docker, DinD, and external backend config", () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
     const dockerConfig = createDefaultHomeConfig(homePath);
     dockerConfig.integrations.vibeKanban.backend = {
       mode: "docker",
@@ -648,8 +648,8 @@ describe("PharoNexus home config", () => {
       envFile: path.join("vibe", ".env.remote"),
       projectName: "custom-vibe",
       workingDirectory: "vibe",
-      startOnPharoNexusStart: false,
-      stopOnPharoNexusStop: false,
+      startOnDevNexusPharoStart: false,
+      stopOnDevNexusPharoStop: false,
     };
 
     expect(validateHomeConfig(dockerConfig, homePath).integrations.vibeKanban.backend).toEqual({
@@ -664,8 +664,8 @@ describe("PharoNexus home config", () => {
       envFile: path.join(homePath, "vibe", ".env.remote"),
       projectName: "custom-vibe",
       workingDirectory: path.join(homePath, "vibe"),
-      startOnPharoNexusStart: false,
-      stopOnPharoNexusStop: false,
+      startOnDevNexusPharoStart: false,
+      stopOnDevNexusPharoStop: false,
     });
 
     const dindConfig = createDefaultHomeConfig(homePath);
@@ -688,8 +688,8 @@ describe("PharoNexus home config", () => {
       containerWorkingDirectory: "/workspace/custom-vibe/crates/remote",
       containerComposeFile: "/workspace/custom-vibe/crates/remote/docker-compose.yml",
       containerEnvFile: "/workspace/custom-vibe/crates/remote/.env.remote",
-      startOnPharoNexusStart: false,
-      stopOnPharoNexusStop: false,
+      startOnDevNexusPharoStart: false,
+      stopOnDevNexusPharoStop: false,
     };
 
     expect(validateHomeConfig(dindConfig, homePath).integrations.vibeKanban.backend).toEqual({
@@ -711,8 +711,8 @@ describe("PharoNexus home config", () => {
       containerWorkingDirectory: "/workspace/custom-vibe/crates/remote",
       containerComposeFile: "/workspace/custom-vibe/crates/remote/docker-compose.yml",
       containerEnvFile: "/workspace/custom-vibe/crates/remote/.env.remote",
-      startOnPharoNexusStart: false,
-      stopOnPharoNexusStop: false,
+      startOnDevNexusPharoStart: false,
+      stopOnDevNexusPharoStop: false,
     });
 
     const externalConfig = createDefaultHomeConfig(homePath);
@@ -720,21 +720,21 @@ describe("PharoNexus home config", () => {
       mode: "external",
       sharedApiBase: "https://kanban.example.com",
       healthPath: "/v1/health",
-      startOnPharoNexusStart: false,
-      stopOnPharoNexusStop: false,
+      startOnDevNexusPharoStart: false,
+      stopOnDevNexusPharoStop: false,
     };
 
     expect(validateHomeConfig(externalConfig, homePath).integrations.vibeKanban.backend).toEqual({
       mode: "external",
       sharedApiBase: "https://kanban.example.com",
       healthPath: "/v1/health",
-      startOnPharoNexusStart: false,
-      stopOnPharoNexusStop: false,
+      startOnDevNexusPharoStart: false,
+      stopOnDevNexusPharoStop: false,
     });
   });
 
   it("preserves absolute configured paths", () => {
-    const parentPath = makeTempDir("pharo-nexus-parent-");
+    const parentPath = makeTempDir("dev-nexus-pharo-parent-");
     const projectsRoot = path.join(parentPath, "external-projects");
     const workspacesRoot = path.join(parentPath, "external-workspaces");
     const plexusStateRoot = path.join(parentPath, "external-state", "plexus");
@@ -754,28 +754,28 @@ describe("PharoNexus home config", () => {
 
   it("validates port boundaries and requires them to be distinct", () => {
     const validBoundaryConfig = createDefaultHomeConfig(
-      makeTempDir("pharo-nexus-home-"),
+      makeTempDir("dev-nexus-pharo-home-"),
       {
         vibeKanbanPort: 1,
-        pharoNexusMcpPort: 7330,
+        devNexusPharoMcpPort: 7330,
         plexusMcpPort: 65_535,
       },
     );
 
     expect(validateHomeConfig(validBoundaryConfig).ports).toEqual({
       vibeKanban: 1,
-      pharoNexusMcp: 7330,
+      devNexusPharoMcp: 7330,
       plexusMcp: 65_535,
     });
 
-    const config = createDefaultHomeConfig(makeTempDir("pharo-nexus-home-"));
+    const config = createDefaultHomeConfig(makeTempDir("dev-nexus-pharo-home-"));
     config.ports.vibeKanban = 7330;
 
     expect(() => validateHomeConfig(config)).toThrow(NexusConfigError);
 
     for (const invalidPort of [0, -1, 65_536, 3.14, "3000"]) {
       const invalidConfig = createDefaultHomeConfig(
-        makeTempDir("pharo-nexus-home-"),
+        makeTempDir("dev-nexus-pharo-home-"),
       ) as unknown as Record<string, unknown>;
       const ports = invalidConfig.ports as Record<string, unknown>;
       ports.vibeKanban = invalidPort;
@@ -787,7 +787,7 @@ describe("PharoNexus home config", () => {
   });
 
   it("rejects duplicate project ids", () => {
-    const config = createDefaultHomeConfig(makeTempDir("pharo-nexus-home-"));
+    const config = createDefaultHomeConfig(makeTempDir("dev-nexus-pharo-home-"));
     config.projects = [
       {
         id: "project-1",
@@ -805,10 +805,10 @@ describe("PharoNexus home config", () => {
   });
 
   it("rejects normal projects that collide with the reserved control project", () => {
-    const config = createDefaultHomeConfig(makeTempDir("pharo-nexus-home-"));
+    const config = createDefaultHomeConfig(makeTempDir("dev-nexus-pharo-home-"));
     config.projects = [
       {
-        id: pharoNexusControlProjectId,
+        id: devNexusPharoControlProjectId,
         name: "Colliding Project",
         projectRoot: path.join(config.paths.projectsRoot, "CollidingProject"),
       },
@@ -818,7 +818,7 @@ describe("PharoNexus home config", () => {
       /reserved for the control project/,
     );
 
-    const rootCollision = createDefaultHomeConfig(makeTempDir("pharo-nexus-home-"));
+    const rootCollision = createDefaultHomeConfig(makeTempDir("dev-nexus-pharo-home-"));
     rootCollision.projects = [
       {
         id: "normal-project",
@@ -833,7 +833,7 @@ describe("PharoNexus home config", () => {
   });
 
   it("initializes a home directory, writes config, and creates runtime directories", () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
 
     const result = initNexusHome({
       homePath,
@@ -866,7 +866,7 @@ describe("PharoNexus home config", () => {
   });
 
   it("preserves an existing control project during init unless forced", () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
     const existingControlConfig = {
       ...createControlProjectConfig(),
       kanban: {
@@ -888,7 +888,7 @@ describe("PharoNexus home config", () => {
   });
 
   it("generates normalized home config JSON and creates parent directories", () => {
-    const homePath = path.join(makeTempDir("pharo-nexus-parent-"), "nested", "home");
+    const homePath = path.join(makeTempDir("dev-nexus-pharo-parent-"), "nested", "home");
     const config = createDefaultHomeConfig(homePath, {
       projectsRoot: "projects-custom",
       workspacesRoot: "workspaces-custom",
@@ -908,7 +908,7 @@ describe("PharoNexus home config", () => {
   });
 
   it("refuses to overwrite an existing home config unless forced", () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
     initNexusHome({ homePath });
 
     expect(() => initNexusHome({ homePath })).toThrow(
@@ -927,7 +927,7 @@ describe("PharoNexus home config", () => {
   });
 
   it("loads home config files that include a UTF-8 BOM", () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
     const config = createDefaultHomeConfig(homePath);
     fs.mkdirSync(homePath, { recursive: true });
     fs.writeFileSync(
@@ -940,10 +940,10 @@ describe("PharoNexus home config", () => {
   });
 
   it("reports an actionable error when loading an uninitialized home", () => {
-    const homePath = path.join(makeTempDir("pharo-nexus-parent-"), "missing");
+    const homePath = path.join(makeTempDir("dev-nexus-pharo-parent-"), "missing");
 
     expect(() => loadHomeConfig(homePath)).toThrow(
-      /Run "pharo-nexus init" first/,
+      /Run "dev-nexus-pharo init" first/,
     );
   });
 });

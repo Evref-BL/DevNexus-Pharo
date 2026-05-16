@@ -81,7 +81,7 @@ function writeProject(
 
 describe("work item service", () => {
   it("resolves registered projects and delegates work item operations", async () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
     const projectRoot = path.join(homePath, "projects", "Tracked");
     fs.mkdirSync(projectRoot, { recursive: true });
     writeHome(homePath, projectRoot);
@@ -152,7 +152,7 @@ describe("work item service", () => {
   });
 
   it("supports unregistered projectRoot fallback and exposes resolved context", async () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
     const projectRoot = path.join(homePath, "unregistered");
     fs.mkdirSync(projectRoot, { recursive: true });
     writeHome(homePath);
@@ -224,7 +224,7 @@ describe("work item service", () => {
   });
 
   it("wraps unsupported provider diagnostics with project context", () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
     const projectRoot = path.join(homePath, "projects", "Legacy");
     fs.mkdirSync(projectRoot, { recursive: true });
     writeHome(homePath, projectRoot);

@@ -20,8 +20,8 @@ import {
 } from "dev-nexus";
 
 export const plexusGatewayServiceName = "plexus-gateway";
-export const pharoNexusStateDirectoryName = "state";
-export const pharoNexusServicesStateDirectoryName = "services";
+export const devNexusPharoStateDirectoryName = "state";
+export const devNexusPharoServicesStateDirectoryName = "services";
 export const plexusGatewayStateFileName = "plexus-gateway.json";
 
 export type PlexusGatewayRuntimeStatus = "running" | "stopped" | "stale";
@@ -88,8 +88,8 @@ export interface PlexusGatewayServiceCommand {
 export function plexusGatewayStateDirectoryPath(homePath: string): string {
   return path.join(
     resolveNexusHome(homePath),
-    pharoNexusStateDirectoryName,
-    pharoNexusServicesStateDirectoryName,
+    devNexusPharoStateDirectoryName,
+    devNexusPharoServicesStateDirectoryName,
   );
 }
 
@@ -359,7 +359,7 @@ export async function startPlexusGateway(
     release: options.release ?? true,
     detached: defaultDetachedForPersistentService(),
     env: {
-      PHARO_NEXUS_HOME: homePath,
+      DEV_NEXUS_PHARO_HOME: homePath,
       PLEXUS_HOST: config.mcp.host,
       PLEXUS_STATE_ROOT: config.paths.plexusStateRoot,
       PLEXUS_MCP_PORT: String(config.ports.plexusMcp),

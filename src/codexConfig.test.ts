@@ -10,7 +10,7 @@ import {
   saveProjectConfig,
   saveHomeConfig,
 } from "./config.js";
-import { pharoNexusProjectExtensionConfigKey } from "./pharoNexusExtension.js";
+import { devNexusPharoProjectExtensionConfigKey } from "./devNexusPharoExtension.js";
 import {
   buildCodexMcpServers,
   codexConfigPath,
@@ -135,7 +135,7 @@ describe("Codex config", () => {
       args: ["-y", "vibe-kanban@0.1.43", "--mcp"],
     },
   ])("builds Codex MCP commands for $platform-shaped environments", (expected) => {
-    const homePath = makeTempDir("pharo-nexus-home-");
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
     const config = createDefaultHomeConfig(homePath);
 
     expect(
@@ -147,12 +147,12 @@ describe("Codex config", () => {
     });
   });
 
-  it("auto-approves PharoNexus-managed MCP tools by default", () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
+  it("auto-approves DevNexus-Pharo-managed MCP tools by default", () => {
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
     const config = createDefaultHomeConfig(homePath);
 
     expect(buildCodexMcpServers(homePath, config)).toMatchObject({
-      pharo_nexus: {
+      dev_nexus_pharo: {
         defaultToolsApprovalMode: "approve",
       },
       plexus: {
@@ -173,14 +173,14 @@ describe("Codex config", () => {
         'command = "node"',
         'args = ["keep.js"]',
         "",
-        "[mcp_servers.pharo_nexus]",
-        'command = "old-pharo-nexus"',
+        "[mcp_servers.dev_nexus_pharo]",
+        'command = "old-dev-nexus-pharo"',
         "",
-        "[mcp_servers.pharo_nexus.env]",
-        'PHARO_NEXUS_HOME = "old"',
+        "[mcp_servers.dev_nexus_pharo.env]",
+        'DEV_NEXUS_PHARO_HOME = "old"',
       ].join("\n"),
       {
-        pharo_nexus: {
+        dev_nexus_pharo: {
           type: "http",
           enabled: true,
           required: true,
@@ -192,11 +192,11 @@ describe("Codex config", () => {
     expect(merged).toContain('model = "gpt-5.3-codex"');
     expect(merged).toContain("[mcp_servers.keep]");
     expect(merged).toContain('args = ["keep.js"]');
-    expect(merged).toContain("[mcp_servers.pharo_nexus]");
+    expect(merged).toContain("[mcp_servers.dev_nexus_pharo]");
     expect(merged).toContain('type = "http"');
     expect(merged).toContain('url = "http://127.0.0.1:7330/mcp"');
-    expect(merged).not.toContain("old-pharo-nexus");
-    expect(merged).not.toContain("PHARO_NEXUS_HOME");
+    expect(merged).not.toContain("old-dev-nexus-pharo");
+    expect(merged).not.toContain("DEV_NEXUS_PHARO_HOME");
   });
 
   it("preserves user-managed Vibe MCP entries while replacing the managed one", () => {
@@ -225,10 +225,10 @@ describe("Codex config", () => {
     expect(merged).not.toContain('command = "old-vibe"');
   });
 
-  it("writes PharoNexus, PLexus, and Vibe Kanban MCP entries to a workspace", () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
+  it("writes DevNexus-Pharo, PLexus, and Vibe Kanban MCP entries to a workspace", () => {
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
     initNexusHome({ homePath });
-    const workspacePath = makeTempDir("pharo-nexus-workspace-");
+    const workspacePath = makeTempDir("dev-nexus-pharo-workspace-");
     const configPath = codexConfigPath(workspacePath);
     fs.mkdirSync(path.dirname(configPath), { recursive: true });
     fs.writeFileSync(
@@ -243,7 +243,7 @@ describe("Codex config", () => {
     expect(result.updated).toBe(true);
     expect(content).toContain('model = "gpt-5.3-codex"');
     expect(content).toContain("[mcp_servers.keep]");
-    expect(content).toContain("[mcp_servers.pharo_nexus]");
+    expect(content).toContain("[mcp_servers.dev_nexus_pharo]");
     expect(content).toContain('type = "http"');
     expect(content).toContain('url = "http://127.0.0.1:7330/mcp"');
     expect(content).toContain("[mcp_servers.plexus]");
@@ -253,10 +253,10 @@ describe("Codex config", () => {
     expect(content).toContain('"--mcp"');
   });
 
-  it("writes a scoped Pharo MCP facade for PharoNexus project workspaces", () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
+  it("writes a scoped Pharo MCP facade for DevNexus-Pharo project workspaces", () => {
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
     initNexusHome({ homePath });
-    const projectRoot = makeTempDir("pharo-nexus-project-");
+    const projectRoot = makeTempDir("dev-nexus-pharo-project-");
     saveProjectConfig(projectRoot, {
       version: 1,
       id: "pharo-project",
@@ -273,7 +273,7 @@ describe("Codex config", () => {
         projectId: "vk-pharo-project",
       },
       extensions: {
-        [pharoNexusProjectExtensionConfigKey]: {},
+        [devNexusPharoProjectExtensionConfigKey]: {},
       },
     });
 
@@ -303,9 +303,9 @@ describe("Codex config", () => {
   });
 
   it("reports missing Codex config as an actionable doctor failure", async () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
     initNexusHome({ homePath });
-    const workspacePath = makeTempDir("pharo-nexus-workspace-");
+    const workspacePath = makeTempDir("dev-nexus-pharo-workspace-");
 
     await expect(doctorCodexWorkspace({ homePath, workspacePath })).resolves.toMatchObject({
       ok: false,
@@ -328,14 +328,14 @@ describe("Codex config", () => {
       "plexus_project_open",
       "plexus_project_status",
     ]);
-    const homePath = makeTempDir("pharo-nexus-home-");
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
     const config = createDefaultHomeConfig(homePath, {
-      pharoNexusMcpPort: pharo.port,
+      devNexusPharoMcpPort: pharo.port,
       plexusMcpPort: plexus.port,
     });
     initNexusHome({ homePath });
     saveHomeConfig(homePath, config);
-    const workspacePath = makeTempDir("pharo-nexus-workspace-");
+    const workspacePath = makeTempDir("dev-nexus-pharo-workspace-");
     initCodexWorkspace({ homePath, workspacePath, config: loadHomeConfig(homePath) });
 
     const result = await doctorCodexWorkspace({ homePath, workspacePath });
@@ -343,9 +343,9 @@ describe("Codex config", () => {
     expect(result.ok).toBe(true);
     expect(result.checks).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ name: "pharo_nexus:health", status: "ok" }),
-        expect.objectContaining({ name: "pharo_nexus:initialize", status: "ok" }),
-        expect.objectContaining({ name: "pharo_nexus:tools", status: "ok" }),
+        expect.objectContaining({ name: "dev_nexus_pharo:health", status: "ok" }),
+        expect.objectContaining({ name: "dev_nexus_pharo:initialize", status: "ok" }),
+        expect.objectContaining({ name: "dev_nexus_pharo:tools", status: "ok" }),
         expect.objectContaining({ name: "plexus:health", status: "ok" }),
         expect.objectContaining({ name: "plexus:initialize", status: "ok" }),
         expect.objectContaining({ name: "plexus:tools", status: "ok" }),
@@ -364,14 +364,14 @@ describe("Codex config", () => {
       "plexus_project_open",
       "plexus_project_status",
     ]);
-    const homePath = makeTempDir("pharo-nexus-home-");
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
     const config = createDefaultHomeConfig(homePath, {
-      pharoNexusMcpPort: pharo.port,
+      devNexusPharoMcpPort: pharo.port,
       plexusMcpPort: plexus.port,
     });
     initNexusHome({ homePath });
     saveHomeConfig(homePath, config);
-    const workspacePath = makeTempDir("pharo-nexus-project-");
+    const workspacePath = makeTempDir("dev-nexus-pharo-project-");
     saveProjectConfig(workspacePath, {
       version: 1,
       id: "doctor-pharo",
@@ -388,7 +388,7 @@ describe("Codex config", () => {
         projectId: "vk-doctor-pharo",
       },
       extensions: {
-        [pharoNexusProjectExtensionConfigKey]: {},
+        [devNexusPharoProjectExtensionConfigKey]: {},
       },
     });
     initCodexWorkspace({ homePath, workspacePath, config: loadHomeConfig(homePath) });

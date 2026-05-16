@@ -47,7 +47,7 @@ export function buildCodexWorktreeGuide(
   const worktreePath = record?.worktreePath ?? "<worktree-path-from-prepare-output>";
   const commentFlag = options.commentWorkItem ? ["--comment-work-item"] : [];
   const prepareCommand = [
-    "pharo-nexus",
+    "dev-nexus-pharo",
     "codex",
     "worktree",
     "prepare",
@@ -61,7 +61,7 @@ export function buildCodexWorktreeGuide(
   ];
   const publicationDecision = options.publicationDecision ?? "review_handoff";
   const recordCommand = [
-    "pharo-nexus",
+    "dev-nexus-pharo",
     "codex",
     "worktree",
     "record",
@@ -79,7 +79,7 @@ export function buildCodexWorktreeGuide(
     "--json",
   ];
   const archiveCommand = [
-    "pharo-nexus",
+    "dev-nexus-pharo",
     "codex",
     "worktree",
     "archive",
@@ -102,7 +102,7 @@ export function buildCodexWorktreeGuide(
         title: "Prepare worktree",
         command: shellCommand(prepareCommand),
         detail:
-          "Create a PharoNexus-managed Git worktree and home-level metadata record. Use --comment-work-item only when a linked work item should receive an explicit handoff comment.",
+          "Create a DevNexus-Pharo-managed Git worktree and home-level metadata record. Use --comment-work-item only when a linked work item should receive an explicit handoff comment.",
       },
       {
         title: "Run Codex directly",

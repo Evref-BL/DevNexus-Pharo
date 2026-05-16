@@ -28,11 +28,11 @@ import {
   refreshProjectSkills,
 } from "./nexusProjectSkillService.js";
 import {
-  createPharoNexusProject,
-  importPharoNexusProject,
-  syncPharoNexusProjectTracker,
-  type SyncPharoNexusProjectTrackerResult,
-} from "./pharoNexusProjectService.js";
+  createDevNexusPharoProject,
+  importDevNexusPharoProject,
+  syncDevNexusPharoProjectTracker,
+  type SyncDevNexusPharoProjectTrackerResult,
+} from "./devNexusPharoProjectService.js";
 import {
   callDevNexusMcpTool,
   listDevNexusMcpTools,
@@ -48,12 +48,12 @@ interface JsonRpcRequest {
   params?: unknown;
 }
 
-export const defaultPharoNexusMcpHost = "127.0.0.1";
-export const defaultPharoNexusMcpEndpointPath = "/mcp";
-export const defaultPharoNexusMcpHealthPath = "/health";
-export const pharoNexusMcpProtocolVersion = "2024-11-05";
+export const defaultDevNexusPharoMcpHost = "127.0.0.1";
+export const defaultDevNexusPharoMcpEndpointPath = "/mcp";
+export const defaultDevNexusPharoMcpHealthPath = "/health";
+export const devNexusPharoMcpProtocolVersion = "2024-11-05";
 
-export interface PharoNexusMcpHttpServerOptions {
+export interface DevNexusPharoMcpHttpServerOptions {
   host?: string;
   port: number;
   endpointPath?: string;
@@ -62,7 +62,7 @@ export interface PharoNexusMcpHttpServerOptions {
   requestBodyLimitBytes?: number;
 }
 
-export interface PharoNexusMcpHttpServer {
+export interface DevNexusPharoMcpHttpServer {
   server: http.Server;
   host: string;
   port: number;
@@ -79,7 +79,7 @@ interface McpTool {
   inputSchema: Record<string, unknown>;
 }
 
-export interface PharoNexusMcpToolContext {
+export interface DevNexusPharoMcpToolContext {
   gitRunner?: GitRunner;
   fetch?: typeof fetch;
   now?: DevNexusMcpToolContext["now"];
@@ -105,7 +105,7 @@ function isDelegatedDevNexusTool(name: string): boolean {
 const tools: McpTool[] = [
   {
     name: "project_create",
-    description: "Create a PharoNexus project from scratch or by cloning a Git repository.",
+    description: "Create a DevNexus-Pharo project from scratch or by cloning a Git repository.",
     inputSchema: {
       type: "object",
       properties: {
@@ -127,7 +127,7 @@ const tools: McpTool[] = [
   },
   {
     name: "project_import",
-    description: "Import an existing local Git repository as a PharoNexus project without writing PharoNexus metadata into the source checkout.",
+    description: "Import an existing local Git repository as a DevNexus-Pharo project without writing DevNexus-Pharo metadata into the source checkout.",
     inputSchema: {
       type: "object",
       properties: {
@@ -147,7 +147,7 @@ const tools: McpTool[] = [
   },
   {
     name: "project_link_tracker",
-    description: "Link a PharoNexus project to an existing tracker project id.",
+    description: "Link a DevNexus-Pharo project to an existing tracker project id.",
     inputSchema: {
       type: "object",
       properties: {
@@ -161,7 +161,7 @@ const tools: McpTool[] = [
   },
   {
     name: "project_configure_tracker",
-    description: "Configure a PharoNexus project's provider-neutral work tracker.",
+    description: "Configure a DevNexus-Pharo project's provider-neutral work tracker.",
     inputSchema: {
       type: "object",
       properties: {
@@ -182,7 +182,7 @@ const tools: McpTool[] = [
   },
   {
     name: "project_sync_tracker",
-    description: "Register a PharoNexus project with its configured tracker provider.",
+    description: "Register a DevNexus-Pharo project with its configured tracker provider.",
     inputSchema: {
       type: "object",
       properties: {
@@ -197,7 +197,7 @@ const tools: McpTool[] = [
   },
   {
     name: "project_list",
-    description: "List registered PharoNexus projects.",
+    description: "List registered DevNexus-Pharo projects.",
     inputSchema: {
       type: "object",
       properties: {
@@ -208,7 +208,7 @@ const tools: McpTool[] = [
   },
   {
     name: "project_status",
-    description: "Show one PharoNexus project by registered id or filesystem path.",
+    description: "Show one DevNexus-Pharo project by registered id or filesystem path.",
     inputSchema: {
       type: "object",
       properties: {
@@ -221,7 +221,7 @@ const tools: McpTool[] = [
   },
   {
     name: "project_skill_status",
-    description: "Inspect installed DevNexus support skills for a PharoNexus project.",
+    description: "Inspect installed DevNexus support skills for a DevNexus-Pharo project.",
     inputSchema: {
       type: "object",
       properties: {
@@ -234,7 +234,7 @@ const tools: McpTool[] = [
   },
   {
     name: "project_skill_refresh",
-    description: "Refresh selected DevNexus support skills for a PharoNexus project.",
+    description: "Refresh selected DevNexus support skills for a DevNexus-Pharo project.",
     inputSchema: {
       type: "object",
       properties: {
@@ -596,7 +596,7 @@ function toolResult(value: unknown, isError = false): {
   };
 }
 
-export function listPharoNexusMcpTools(): McpTool[] {
+export function listDevNexusPharoMcpTools(): McpTool[] {
   const delegatedTools = listDevNexusMcpTools().filter((tool) =>
     isDelegatedDevNexusTool(tool.name),
   );
@@ -616,15 +616,15 @@ function shouldSyncTracker(args: Record<string, unknown>): boolean {
 
 async function syncProjectForMcp(
   args: Record<string, unknown>,
-  context: PharoNexusMcpToolContext,
+  context: DevNexusPharoMcpToolContext,
   homePath: string,
   projectRoot: string,
-): Promise<SyncPharoNexusProjectTrackerResult | undefined> {
+): Promise<SyncDevNexusPharoProjectTrackerResult | undefined> {
   if (!shouldSyncTracker(args)) {
     return undefined;
   }
 
-  return syncPharoNexusProjectTracker({
+  return syncDevNexusPharoProjectTracker({
     homePath,
     project: projectRoot,
     host: optionalString(args, "vibeHost", "arguments"),
@@ -633,10 +633,10 @@ async function syncProjectForMcp(
   });
 }
 
-export async function callPharoNexusMcpTool(
+export async function callDevNexusPharoMcpTool(
   name: string,
   argsValue: unknown,
-  context: PharoNexusMcpToolContext = {},
+  context: DevNexusPharoMcpToolContext = {},
 ): Promise<{
   content: Array<{ type: "text"; text: string }>;
   isError?: boolean;
@@ -674,7 +674,7 @@ export async function callPharoNexusMcpTool(
           });
         }
 
-        const created = createPharoNexusProject({
+        const created = createDevNexusPharoProject({
           homePath,
           name: requiredString(args, "name", "arguments"),
           root: optionalString(args, "root", "arguments"),
@@ -687,7 +687,7 @@ export async function callPharoNexusMcpTool(
           ),
           gitRunner: context.gitRunner,
         });
-        let trackerSync: SyncPharoNexusProjectTrackerResult | undefined;
+        let trackerSync: SyncDevNexusPharoProjectTrackerResult | undefined;
         try {
           trackerSync = await syncProjectForMcp(
             args,
@@ -737,7 +737,7 @@ export async function callPharoNexusMcpTool(
           });
         }
 
-        const imported = importPharoNexusProject({
+        const imported = importDevNexusPharoProject({
           homePath,
           root: requiredString(args, "root", "arguments"),
           projectRoot: optionalString(args, "projectRoot", "arguments"),
@@ -749,7 +749,7 @@ export async function callPharoNexusMcpTool(
           ),
           gitRunner: context.gitRunner,
         });
-        let trackerSync: SyncPharoNexusProjectTrackerResult | undefined;
+        let trackerSync: SyncDevNexusPharoProjectTrackerResult | undefined;
         try {
           trackerSync = await syncProjectForMcp(
             args,
@@ -816,7 +816,7 @@ export async function callPharoNexusMcpTool(
       case "project_sync_tracker":
         return toolResult({
           ok: true,
-          ...(await syncPharoNexusProjectTracker({
+          ...(await syncDevNexusPharoProjectTracker({
             homePath: homePathFromArgs(args),
             project: requiredString(args, "project", "arguments"),
             host: optionalString(args, "vibeHost", "arguments"),
@@ -1019,7 +1019,7 @@ export async function callPharoNexusMcpTool(
         return toolResult(
           {
             ok: false,
-            error: `Unknown PharoNexus MCP tool: ${name}`,
+            error: `Unknown DevNexus-Pharo MCP tool: ${name}`,
           },
           true,
         );
@@ -1071,7 +1071,7 @@ function writeJsonResponse(
   response.writeHead(statusCode, {
     "content-type": "application/json",
     "content-length": Buffer.byteLength(body, "utf8"),
-    "mcp-protocol-version": pharoNexusMcpProtocolVersion,
+    "mcp-protocol-version": devNexusPharoMcpProtocolVersion,
   });
   response.end(body);
 }
@@ -1081,7 +1081,7 @@ function writeEmptyResponse(
   statusCode: number,
 ): void {
   response.writeHead(statusCode, {
-    "mcp-protocol-version": pharoNexusMcpProtocolVersion,
+    "mcp-protocol-version": devNexusPharoMcpProtocolVersion,
   });
   response.end();
 }
@@ -1194,7 +1194,7 @@ async function handleJsonRpcMessage(message: JsonRpcRequest): Promise<unknown | 
           tools: {},
         },
         serverInfo: {
-          name: "pharo-nexus",
+          name: "dev-nexus-pharo",
           version: "0.1.0",
         },
       });
@@ -1202,13 +1202,13 @@ async function handleJsonRpcMessage(message: JsonRpcRequest): Promise<unknown | 
       return undefined;
     case "tools/list":
       return jsonRpcResult(message.id, {
-        tools: listPharoNexusMcpTools(),
+        tools: listDevNexusPharoMcpTools(),
       });
     case "tools/call": {
       const params = parseToolCallParams(message.params);
       return jsonRpcResult(
         message.id,
-        await callPharoNexusMcpTool(params.name, params.arguments),
+        await callDevNexusPharoMcpTool(params.name, params.arguments),
       );
     }
     default:
@@ -1236,7 +1236,7 @@ async function handleJsonRpcHttpPayload(
   return handleJsonRpcMessage(payload as JsonRpcRequest);
 }
 
-function pharoNexusMcpServerUrl(
+function devNexusPharoMcpServerUrl(
   host: string,
   port: number,
   pathName: string,
@@ -1247,15 +1247,15 @@ function pharoNexusMcpServerUrl(
   return `http://${formattedHost}:${port}${pathName}`;
 }
 
-export function startPharoNexusMcpHttpServer(
-  options: PharoNexusMcpHttpServerOptions,
-): Promise<PharoNexusMcpHttpServer> {
-  const host = options.host ?? defaultPharoNexusMcpHost;
+export function startDevNexusPharoMcpHttpServer(
+  options: DevNexusPharoMcpHttpServerOptions,
+): Promise<DevNexusPharoMcpHttpServer> {
+  const host = options.host ?? defaultDevNexusPharoMcpHost;
   const endpointPath = normalizePath(
-    options.endpointPath ?? defaultPharoNexusMcpEndpointPath,
+    options.endpointPath ?? defaultDevNexusPharoMcpEndpointPath,
   );
   const healthPath = normalizePath(
-    options.healthPath ?? defaultPharoNexusMcpHealthPath,
+    options.healthPath ?? defaultDevNexusPharoMcpHealthPath,
   );
   const requestBodyLimitBytes = options.requestBodyLimitBytes ?? 1024 * 1024;
 
@@ -1264,14 +1264,14 @@ export function startPharoNexusMcpHttpServer(
     options.port < 1 ||
     options.port > 65_535
   ) {
-    throw new Error("PharoNexus MCP HTTP port must be an integer between 1 and 65535");
+    throw new Error("DevNexus-Pharo MCP HTTP port must be an integer between 1 and 65535");
   }
 
   const server = http.createServer((request, response) => {
     void (async () => {
       const requestUrl = new URL(
         request.url ?? "/",
-        pharoNexusMcpServerUrl(host, options.port, "/"),
+        devNexusPharoMcpServerUrl(host, options.port, "/"),
       );
       if (
         !isAllowedHostHeader(request.headers.host, host) ||
@@ -1287,7 +1287,7 @@ export function startPharoNexusMcpHttpServer(
       if (request.method === "GET" && requestUrl.pathname === healthPath) {
         writeJsonResponse(response, 200, {
           ok: true,
-          service: "pharo-nexus-mcp",
+          service: "dev-nexus-pharo-mcp",
         });
         return;
       }
@@ -1371,8 +1371,8 @@ export function startPharoNexusMcpHttpServer(
         port: options.port,
         endpointPath,
         healthPath,
-        url: pharoNexusMcpServerUrl(host, options.port, endpointPath),
-        healthUrl: pharoNexusMcpServerUrl(host, options.port, healthPath),
+        url: devNexusPharoMcpServerUrl(host, options.port, endpointPath),
+        healthUrl: devNexusPharoMcpServerUrl(host, options.port, healthPath),
         close: () =>
           new Promise<void>((closeResolve, closeReject) => {
             server.close((error) => {
@@ -1477,16 +1477,16 @@ class StdioJsonRpcTransport {
   }
 }
 
-export async function runPharoNexusMcpStdioServer(): Promise<void> {
+export async function runDevNexusPharoMcpStdioServer(): Promise<void> {
   const transport = new StdioJsonRpcTransport(handleJsonRpcMessage);
   await transport.start();
 }
 
-export async function runPharoNexusMcpServer(
-  options: PharoNexusMcpHttpServerOptions,
+export async function runDevNexusPharoMcpServer(
+  options: DevNexusPharoMcpHttpServerOptions,
 ): Promise<void> {
-  const running = await startPharoNexusMcpHttpServer(options);
-  process.stderr.write(`PharoNexus MCP HTTP server listening at ${running.url}\n`);
+  const running = await startDevNexusPharoMcpHttpServer(options);
+  process.stderr.write(`DevNexus-Pharo MCP HTTP server listening at ${running.url}\n`);
   await new Promise<void>((resolve) => {
     running.server.once("close", resolve);
   });

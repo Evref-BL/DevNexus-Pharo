@@ -24,7 +24,7 @@ export interface PlexusProjectConfig {
   imageExecution: PlexusImageExecutionPolicy;
 }
 
-export interface PharoNexusProjectFiles {
+export interface DevNexusPharoProjectFiles {
   agentsPath: string;
   suggestedFirstPromptPath: string;
   plexusProjectConfigPath: string;
@@ -32,7 +32,7 @@ export interface PharoNexusProjectFiles {
 }
 
 export const plexusProjectConfigFileName = "plexus.project.json";
-export const pharoNexusProjectExtensionConfigKey = "pharo-nexus";
+export const devNexusPharoProjectExtensionConfigKey = "dev-nexus-pharo";
 
 export type PlexusImageExecutionMode = "disabled" | "docker";
 export type PlexusImageExecutionDockerNetwork = "none" | "bridge";
@@ -63,28 +63,28 @@ export const defaultPlexusImageExecutionPolicy: PlexusImageExecutionPolicy = {
   },
 };
 
-export interface PharoNexusProjectExtensionConfig {
+export interface DevNexusPharoProjectExtensionConfig {
   plexusProjectConfig?: string;
   imageExecution?: PlexusImageExecutionPolicy;
 }
 
-export function pharoNexusProjectExtensionEntry(
-  config: PharoNexusProjectExtensionConfig = {},
-): Record<typeof pharoNexusProjectExtensionConfigKey, Record<string, unknown>> {
+export function devNexusPharoProjectExtensionEntry(
+  config: DevNexusPharoProjectExtensionConfig = {},
+): Record<typeof devNexusPharoProjectExtensionConfigKey, Record<string, unknown>> {
   return {
-    [pharoNexusProjectExtensionConfigKey]: { ...config },
+    [devNexusPharoProjectExtensionConfigKey]: { ...config },
   };
 }
 
-export function projectUsesPharoNexusExtension(
+export function projectUsesDevNexusPharoExtension(
   projectConfig: Pick<NexusProjectConfig, "extensions"> | undefined,
 ): boolean {
   return Boolean(
-    projectConfig?.extensions?.[pharoNexusProjectExtensionConfigKey],
+    projectConfig?.extensions?.[devNexusPharoProjectExtensionConfigKey],
   );
 }
 
-export interface InstallPharoNexusProjectFilesOptions {
+export interface InstallDevNexusPharoProjectFilesOptions {
   projectRoot: string;
   projectConfig: NexusProjectConfig;
   vibeKanbanProjectId?: string | null;
@@ -104,7 +104,7 @@ function skillMarkdown(name: string, description: string, body: string): string 
   ].join("\n");
 }
 
-function pharoNexusSkill(
+function devNexusPharoSkill(
   id: string,
   name: string,
   description: string,
@@ -119,7 +119,7 @@ function pharoNexusSkill(
       license: "Apache-2.0",
       source: {
         type: "curated",
-        uri: "pharo-nexus:specialization",
+        uri: "dev-nexus-pharo:specialization",
       },
       supportedAgents: ["codex"],
       materialization: "copy",
@@ -131,15 +131,15 @@ function pharoNexusSkill(
   };
 }
 
-export const pharoNexusSkillPack: readonly NexusSkillDefinition[] = [
-  pharoNexusSkill(
-    "pharo-nexus-workflow",
-    "pharo-nexus-workflow",
-    "Workflow guidance for PharoNexus-managed projects, boards, worktrees, and publication decisions.",
+export const devNexusPharoSkillPack: readonly NexusSkillDefinition[] = [
+  devNexusPharoSkill(
+    "dev-nexus-pharo-workflow",
+    "dev-nexus-pharo-workflow",
+    "Workflow guidance for DevNexus-Pharo-managed projects, boards, worktrees, and publication decisions.",
     `
-# PharoNexus Workflow
+# DevNexus-Pharo Workflow
 
-Use this skill when working inside a PharoNexus-managed project.
+Use this skill when working inside a DevNexus-Pharo-managed project.
 
 1. Identify whether the request belongs to the control project or an owning source project.
 2. Read local AGENTS.md, NOTES.md, and the project config before changing files.
@@ -149,7 +149,7 @@ Use this skill when working inside a PharoNexus-managed project.
 6. Verify focused behavior before broader checks, then record commits and publication state.
 `,
   ),
-  pharoNexusSkill(
+  devNexusPharoSkill(
     "plexus-diagnostics",
     "plexus-diagnostics",
     "Diagnostic workflow for PLexus gateway status, route health, and safe project-boundary probes.",
@@ -164,7 +164,7 @@ Use this skill when checking PLexus gateway status or route behavior.
 4. Route findings to the owning project board with reproduction details and expected behavior.
 `,
   ),
-  pharoNexusSkill(
+  devNexusPharoSkill(
     "pharo-launcher-lifecycle",
     "pharo-launcher-lifecycle",
     "Safety guidance for Pharo Launcher image creation, launch, inspection, and cleanup operations.",
@@ -179,7 +179,7 @@ Use this skill when a task touches image creation, launch, or cleanup.
 4. Stop and report a blocker if cleanup or ownership is unclear.
 `,
   ),
-  pharoNexusSkill(
+  devNexusPharoSkill(
     "mcp-pharo-execution",
     "mcp-pharo-execution",
     "Execution guidance for in-image MCP calls, JSON-RPC reachability, and routed Pharo tool checks.",
@@ -226,10 +226,10 @@ function resolveFromProject(projectRootPath: string, value: string): string {
   return path.resolve(projectRootPath, value);
 }
 
-export function pharoNexusProjectExtensionConfig(
+export function devNexusPharoProjectExtensionConfig(
   projectConfig: Pick<NexusProjectConfig, "extensions">,
-): PharoNexusProjectExtensionConfig {
-  const value = projectConfig.extensions?.[pharoNexusProjectExtensionConfigKey];
+): DevNexusPharoProjectExtensionConfig {
+  const value = projectConfig.extensions?.[devNexusPharoProjectExtensionConfigKey];
   if (value === undefined) {
     return {};
   }
@@ -240,7 +240,7 @@ export function pharoNexusProjectExtensionConfig(
     typeof plexusProjectConfig !== "string"
   ) {
     throw new Error(
-      `extensions.${pharoNexusProjectExtensionConfigKey}.plexusProjectConfig must be a string`,
+      `extensions.${devNexusPharoProjectExtensionConfigKey}.plexusProjectConfig must be a string`,
     );
   }
   const imageExecution =
@@ -248,7 +248,7 @@ export function pharoNexusProjectExtensionConfig(
       ? undefined
       : resolvePlexusImageExecutionPolicy(
           value.imageExecution,
-          `extensions.${pharoNexusProjectExtensionConfigKey}.imageExecution`,
+          `extensions.${devNexusPharoProjectExtensionConfigKey}.imageExecution`,
         );
 
   return {
@@ -265,7 +265,7 @@ export function projectPlexusImageExecutionPolicy(
   }
 
   return (
-    pharoNexusProjectExtensionConfig(config).imageExecution ??
+    devNexusPharoProjectExtensionConfig(config).imageExecution ??
     clonePlexusImageExecutionPolicy(defaultPlexusImageExecutionPolicy)
   );
 }
@@ -326,7 +326,7 @@ export function projectPlexusConfigPath(
   config?: Pick<NexusProjectConfig, "extensions">,
 ): string {
   const extensionConfig = config
-    ? pharoNexusProjectExtensionConfig(config)
+    ? devNexusPharoProjectExtensionConfig(config)
     : {};
   return resolveFromProject(
     projectRootPath,
@@ -376,26 +376,26 @@ function buildSuggestedFirstPrompt(
   const genericSkills = defaultCoreSkillPack
     .map((skill) => skill.manifest.id)
     .join(", ");
-  const specializationSkills = pharoNexusSkillPack
+  const specializationSkills = devNexusPharoSkillPack
     .map((skill) => skill.manifest.id)
     .join(", ");
 
   return [
-    `This is a Codex and PharoNexus project for ${projectConfig.name}.`,
+    `This is a Codex and DevNexus-Pharo project for ${projectConfig.name}.`,
     "",
     "Use the local AGENTS.md as the workflow contract. Then make this local project yours:",
     "",
-    `- Inspect the PharoNexus project root at ${projectRoot}.`,
+    `- Inspect the DevNexus-Pharo project root at ${projectRoot}.`,
     `- Inspect the source checkout at ${sourceRoot}.`,
-    "- Check the matching Vibe Kanban board and current issues with the available PharoNexus and Vibe Kanban MCP tools.",
+    "- Check the matching Vibe Kanban board and current issues with the available DevNexus-Pharo and Vibe Kanban MCP tools.",
     "- Record durable local context in NOTES.md, including the Kanban board id and any source/workflow details future agents should know.",
-    "- Edit AGENTS.md only when this project needs workflow guidance beyond the default PharoNexus contract.",
-    `- Use installed support skills under ${path.join(projectRoot, ".dev-nexus", "skills")} when relevant; generic skills: ${genericSkills}; PharoNexus skills: ${specializationSkills}.`,
+    "- Edit AGENTS.md only when this project needs workflow guidance beyond the default DevNexus-Pharo contract.",
+    `- Use installed support skills under ${path.join(projectRoot, ".dev-nexus", "skills")} when relevant; generic skills: ${genericSkills}; DevNexus-Pharo skills: ${specializationSkills}.`,
     "- When changes are complete and verified, commit them in the relevant source repository unless the user explicitly asks not to. Push only when requested or when project instructions say to publish.",
     "",
     "Known at prompt generation time:",
     "",
-    `- PharoNexus project id: ${projectConfig.id}`,
+    `- DevNexus-Pharo project id: ${projectConfig.id}`,
     `- Kanban project id: ${formatPromptValue(kanbanProjectId)}`,
     `- Source remote: ${formatPromptValue(projectConfig.repo.remoteUrl)}`,
     `- Default branch: ${formatPromptValue(projectConfig.repo.defaultBranch)}`,
@@ -480,9 +480,9 @@ export function updatePlexusProjectKanban(
   return updated;
 }
 
-export function installPharoNexusProjectFiles(
-  options: InstallPharoNexusProjectFilesOptions,
-): PharoNexusProjectFiles {
+export function installDevNexusPharoProjectFiles(
+  options: InstallDevNexusPharoProjectFilesOptions,
+): DevNexusPharoProjectFiles {
   const plexusConfigPath = projectPlexusConfigPath(
     options.projectRoot,
     options.projectConfig,
@@ -539,26 +539,26 @@ export function installPharoNexusProjectFiles(
   };
 }
 
-export const pharoNexusExtension: NexusExtension<
+export const devNexusPharoExtension: NexusExtension<
   NexusProjectConfig,
-  PharoNexusProjectFiles,
+  DevNexusPharoProjectFiles,
   NexusProjectStatusExtensionContribution | undefined,
   NexusProjectTrackerLinkExtensionContribution | undefined
 > = {
-  id: "pharo-nexus",
-  name: "PharoNexus",
+  id: "dev-nexus-pharo",
+  name: "DevNexus-Pharo",
   installProjectFiles: ({ projectRoot, projectConfig }) =>
-    installPharoNexusProjectFiles({
+    installDevNexusPharoProjectFiles({
       projectRoot,
       projectConfig,
       vibeKanbanProjectId: projectConfig.kanban.projectId,
     }),
   projectSkills: ({ projectConfig }) =>
-    projectUsesPharoNexusExtension(projectConfig)
-      ? [...pharoNexusSkillPack]
+    projectUsesDevNexusPharoExtension(projectConfig)
+      ? [...devNexusPharoSkillPack]
       : undefined,
   projectStatus: ({ projectRoot, projectConfig }) => {
-    if (!projectUsesPharoNexusExtension(projectConfig)) {
+    if (!projectUsesDevNexusPharoExtension(projectConfig)) {
       return undefined;
     }
 
@@ -569,7 +569,7 @@ export const pharoNexusExtension: NexusExtension<
     };
   },
   linkProjectTracker: ({ projectRoot, projectConfig, trackerProjectId }) => {
-    if (!projectUsesPharoNexusExtension(projectConfig)) {
+    if (!projectUsesDevNexusPharoExtension(projectConfig)) {
       return undefined;
     }
 
@@ -661,12 +661,12 @@ function nullableString(value: unknown, pathName: string): string | null | undef
   throw new Error(`${pathName} must be a non-empty string or null`);
 }
 
-export function pharoNexusProjectFilesFromExtensionResult(
+export function devNexusPharoProjectFilesFromExtensionResult(
   value: unknown,
-): PharoNexusProjectFiles {
+): DevNexusPharoProjectFiles {
   if (!value || typeof value !== "object") {
-    throw new Error("PharoNexus extension did not produce project files");
+    throw new Error("DevNexus-Pharo extension did not produce project files");
   }
 
-  return value as PharoNexusProjectFiles;
+  return value as DevNexusPharoProjectFiles;
 }

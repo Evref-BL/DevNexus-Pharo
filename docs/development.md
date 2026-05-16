@@ -1,6 +1,6 @@
-# PharoNexus Development
+# DevNexus-Pharo Development
 
-This document is for contributors working on PharoNexus itself. The root
+This document is for contributors working on DevNexus-Pharo itself. The root
 README is intentionally user-facing.
 
 ## Local Commands
@@ -15,7 +15,7 @@ npm run check
 The CLI entrypoint during development is:
 
 ```powershell
-node C:\dev\code\git\PharoNexus\dist\cli.js --help
+node C:\dev\code\git\DevNexus-Pharo\dist\cli.js --help
 ```
 
 The package is TypeScript ESM targeting Node.js 24 or newer.
@@ -32,60 +32,60 @@ The package is TypeScript ESM targeting Node.js 24 or newer.
 Current top-level commands:
 
 ```powershell
-pharo-nexus --help
-pharo-nexus init
-pharo-nexus start
-pharo-nexus status --check-health
-pharo-nexus stop
-pharo-nexus mcp
-pharo-nexus mcp-stdio
+dev-nexus-pharo --help
+dev-nexus-pharo init
+dev-nexus-pharo start
+dev-nexus-pharo status --check-health
+dev-nexus-pharo stop
+dev-nexus-pharo mcp
+dev-nexus-pharo mcp-stdio
 ```
 
 Project commands:
 
 ```powershell
-pharo-nexus project create MyProject --git-init
-pharo-nexus project create MyProject --from https://github.com/example/MyProject.git
-pharo-nexus project import C:\dev\code\git\ExistingProject --name ExistingProject
-pharo-nexus project link-tracker my-project --tracker-project-id <id>
-pharo-nexus project sync-tracker my-project
-pharo-nexus project list
-pharo-nexus project status MyProject
-pharo-nexus project skills status MyProject
-pharo-nexus project skills refresh MyProject
+dev-nexus-pharo project create MyProject --git-init
+dev-nexus-pharo project create MyProject --from https://github.com/example/MyProject.git
+dev-nexus-pharo project import C:\dev\code\git\ExistingProject --name ExistingProject
+dev-nexus-pharo project link-tracker my-project --tracker-project-id <id>
+dev-nexus-pharo project sync-tracker my-project
+dev-nexus-pharo project list
+dev-nexus-pharo project status MyProject
+dev-nexus-pharo project skills status MyProject
+dev-nexus-pharo project skills refresh MyProject
 ```
 
 Codex workspace commands:
 
 ```powershell
-pharo-nexus codex init C:\dev\code\pharo-nexus\ExistingProject
-pharo-nexus codex doctor C:\dev\code\pharo-nexus\ExistingProject
+dev-nexus-pharo codex init C:\dev\code\dev-nexus-pharo\ExistingProject
+dev-nexus-pharo codex doctor C:\dev\code\dev-nexus-pharo\ExistingProject
 ```
 
 Service subcommands:
 
 ```powershell
-pharo-nexus plexus-gateway start C:\dev\pharo-nexus
-pharo-nexus plexus-gateway status C:\dev\pharo-nexus --check-health
-pharo-nexus plexus-gateway stop C:\dev\pharo-nexus
-pharo-nexus vibe-kanban start C:\dev\pharo-nexus
-pharo-nexus vibe-kanban status C:\dev\pharo-nexus --check-health
-pharo-nexus vibe-kanban stop C:\dev\pharo-nexus
-pharo-nexus vibe-backend start C:\dev\pharo-nexus
-pharo-nexus vibe-backend status C:\dev\pharo-nexus --check-health
-pharo-nexus vibe-backend stop C:\dev\pharo-nexus
-pharo-nexus vibe-kanban mcp-config install C:\dev\pharo-nexus --executor CODEX
+dev-nexus-pharo plexus-gateway start C:\dev\dev-nexus-pharo
+dev-nexus-pharo plexus-gateway status C:\dev\dev-nexus-pharo --check-health
+dev-nexus-pharo plexus-gateway stop C:\dev\dev-nexus-pharo
+dev-nexus-pharo vibe-kanban start C:\dev\dev-nexus-pharo
+dev-nexus-pharo vibe-kanban status C:\dev\dev-nexus-pharo --check-health
+dev-nexus-pharo vibe-kanban stop C:\dev\dev-nexus-pharo
+dev-nexus-pharo vibe-backend start C:\dev\dev-nexus-pharo
+dev-nexus-pharo vibe-backend status C:\dev\dev-nexus-pharo --check-health
+dev-nexus-pharo vibe-backend stop C:\dev\dev-nexus-pharo
+dev-nexus-pharo vibe-kanban mcp-config install C:\dev\dev-nexus-pharo --executor CODEX
 ```
 
 ## Generated Home Shape
 
-`pharo-nexus init` creates `dev-nexus.home.json` and the initial runtime
+`dev-nexus-pharo init` creates `dev-nexus.home.json` and the initial runtime
 directories:
 
 ```text
 <home>\
   dev-nexus.home.json
-  PharoNexus\
+  DevNexus-Pharo\
     dev-nexus.project.json
     plexus.project.json
     worktrees\
@@ -96,7 +96,7 @@ directories:
   generated\
 ```
 
-The `PharoNexus` directory is the reserved control project. It is not a normal
+The `DevNexus-Pharo` directory is the reserved control project. It is not a normal
 Pharo application project.
 
 ## Project Config Shape
@@ -120,7 +120,7 @@ Each managed project has a `dev-nexus.project.json` file:
     "projectId": null
   },
   "extensions": {
-    "pharo-nexus": {
+    "dev-nexus-pharo": {
       "plexusProjectConfig": "plexus.project.json"
     }
   }
@@ -129,10 +129,10 @@ Each managed project has a `dev-nexus.project.json` file:
 
 Generic relative paths such as `worktreesRoot` resolve from the directory
 containing `dev-nexus.project.json`. Pharo/PLexus-specific paths such as
-`extensions.pharo-nexus.plexusProjectConfig` are interpreted by the PharoNexus
+`extensions.dev-nexus-pharo.plexusProjectConfig` are interpreted by the DevNexus-Pharo
 extension, not by the generic project config loader.
 
-`plexus.project.json` also contains the PharoNexus-authored `imageExecution`
+`plexus.project.json` also contains the DevNexus-Pharo-authored `imageExecution`
 policy consumed by future PLexus image work. Its default mode is `disabled`;
 Docker mode requires an explicit runner image and keeps
 `requireDisposableImage`, `requireCleanupPlan`, `autoRemove`, and
@@ -140,11 +140,11 @@ Docker mode requires an explicit runner image and keeps
 
 For imported or cloned source repositories, `repo.sourceRoot` points from the
 managed project root to the source checkout. The source checkout should not
-receive PharoNexus metadata unless it is already a managed PharoNexus project.
+receive DevNexus-Pharo metadata unless it is already a managed DevNexus-Pharo project.
 
 ## Start Orchestration
 
-`pharo-nexus start`:
+`dev-nexus-pharo start`:
 
 - loads `dev-nexus.home.json`
 - starts the Vibe shared backend when configured
@@ -152,33 +152,33 @@ receive PharoNexus metadata unless it is already a managed PharoNexus project.
 - injects `VK_SHARED_API_BASE`
 - waits for Vibe Kanban health
 - signs into local self-hosted Vibe auth when generated credentials are present
-- starts the PharoNexus HTTP MCP service
+- starts the DevNexus-Pharo HTTP MCP service
 - starts the configured PLexus gateway
 - ensures the reserved control project exists
 - registers the control project repo with Vibe Kanban when needed
-- ensures the `PharoNexus` Kanban board exists
+- ensures the `DevNexus-Pharo` Kanban board exists
 - opens the board in the browser unless disabled
-- installs PharoNexus and PLexus MCP entries into the configured executor
+- installs DevNexus-Pharo and PLexus MCP entries into the configured executor
 
 The command prints progress messages to stderr and keeps structured JSON output
 on stdout when `--json` is used.
 
 ## Codex Config Generation
 
-`pharo-nexus codex init <workspace>` updates
+`dev-nexus-pharo codex init <workspace>` updates
 `<workspace>\.codex\config.toml`. It preserves unrelated settings and replaces
 only the managed MCP server entries:
 
 ```text
-pharo_nexus
+dev_nexus_pharo
 plexus
 vibe_kanban
 pharo
 ```
 
-PharoNexus and PLexus entries use URL MCP connections to supervised local
+DevNexus-Pharo and PLexus entries use URL MCP connections to supervised local
 endpoints. `vibe_kanban` remains a pinned command entry for Vibe's own MCP
-mode. `pharo` is emitted only for PharoNexus-managed projects and prepared
+mode. `pharo` is emitted only for DevNexus-Pharo-managed projects and prepared
 worktrees; it is a PLexus gateway command facade scoped with project, workspace,
 target, and state-root environment variables.
 
@@ -189,7 +189,7 @@ so the check does not launch images or open PLexus routes.
 
 ## Agent Model Policy
 
-Agent executor, model, and reasoning defaults are PharoNexus policy. They
+Agent executor, model, and reasoning defaults are DevNexus-Pharo policy. They
 belong in `dev-nexus.home.json`, `dev-nexus.project.json`, and future
 issue/workspace-start inputs, not in PLexus or the PLexus gateway.
 
@@ -204,12 +204,12 @@ Resolution order:
 
 `integrations.vibeKanban.backend.mode` supports:
 
-- `docker`: PharoNexus runs Docker Compose directly.
-- `dind`: PharoNexus starts a privileged `docker:dind` container and runs
+- `docker`: DevNexus-Pharo runs Docker Compose directly.
+- `dind`: DevNexus-Pharo starts a privileged `docker:dind` container and runs
   Docker Compose inside it.
-- `external`: PharoNexus records and health-checks a backend it does not own.
+- `external`: DevNexus-Pharo records and health-checks a backend it does not own.
 
-In managed backend modes, PharoNexus clones the Vibe source checkout when
+In managed backend modes, DevNexus-Pharo clones the Vibe source checkout when
 `autoBootstrap` is true and the checkout is missing, then generates
 `.env.remote` with local secrets and bootstrap local-auth credentials when
 needed.
@@ -236,7 +236,7 @@ startup sets `DOCKER_BUILDKIT=1` and `COMPOSE_DOCKER_CLI_BUILD=1`.
 - starts `tools.plexus.command` with `tools.plexus.args`
 - writes logs under `<home>\logs\plexus-gateway`
 - writes service state under `<home>\state\services\plexus-gateway.json`
-- injects `PHARO_NEXUS_HOME`, `PLEXUS_HOST`, `PLEXUS_STATE_ROOT`,
+- injects `DEV_NEXUS_PHARO_HOME`, `PLEXUS_HOST`, `PLEXUS_STATE_ROOT`,
   `PLEXUS_MCP_PORT`, and `PORT`
 - stops the service by persisted pid
 - optionally checks HTTP health on the configured PLexus MCP port
@@ -254,7 +254,7 @@ files.
   `-p`
 - `dind` mode starts a privileged `docker:dind` container and runs Docker
   Compose inside it
-- `external` mode records and health-checks a backend that PharoNexus does not
+- `external` mode records and health-checks a backend that DevNexus-Pharo does not
   own
 - command output is captured in backend state and logs
 - service state is written under
@@ -269,7 +269,7 @@ files.
 - defaults new homes to `npx -y vibe-kanban@0.1.43`
 - writes logs under `<home>\logs\vibe-kanban`
 - writes service state under `<home>\state\services\vibe-kanban.json`
-- injects `PHARO_NEXUS_HOME`, `PORT`, `HOST`, `MCP_HOST`, `MCP_PORT`, and
+- injects `DEV_NEXUS_PHARO_HOME`, `PORT`, `HOST`, `MCP_HOST`, `MCP_PORT`, and
   `VK_SHARED_API_BASE`
 - stops the service by persisted pid
 - optionally checks HTTP health on the configured Vibe Kanban port
@@ -285,25 +285,25 @@ POST /api/mcp-config?executor=CODEX
 ```
 
 `src/vibeKanbanMcpConfig.ts` reads existing servers, preserves unrelated
-entries, adds or replaces the PharoNexus and PLexus entries, and posts the
+entries, adds or replaces the DevNexus-Pharo and PLexus entries, and posts the
 merged map back.
 
 Use `--dry-run` to preview the merged server map:
 
 ```powershell
-pharo-nexus vibe-kanban mcp-config install C:\dev\pharo-nexus --executor CODEX --dry-run
+dev-nexus-pharo vibe-kanban mcp-config install C:\dev\dev-nexus-pharo --executor CODEX --dry-run
 ```
 
 ## Vibe Kanban Project And Repo Adapter
 
-PharoNexus tracks two Vibe ids:
+DevNexus-Pharo tracks two Vibe ids:
 
 - `vibeKanbanRepoId`: Vibe's local repo registration id, used by workspaces.
 - `vibeKanbanProjectId`: the Kanban board id, written into
   `dev-nexus.project.json` and `plexus.project.json`.
 
-`pharo-nexus start` ensures both ids exist for the reserved control project.
-`pharo-nexus project sync-kanban` does the same for real projects.
+`dev-nexus-pharo start` ensures both ids exist for the reserved control project.
+`dev-nexus-pharo project sync-kanban` does the same for real projects.
 
 Repo registration uses Vibe Kanban's local repo API. Board creation uses Vibe
 Kanban's local login session and shared project API, matching Vibe's Create

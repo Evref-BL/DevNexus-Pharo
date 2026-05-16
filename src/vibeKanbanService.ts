@@ -294,7 +294,7 @@ export async function startVibeKanban(
     appendLogs: options.appendLogs ?? true,
     release: options.release ?? true,
     env: {
-      PHARO_NEXUS_HOME: homePath,
+      DEV_NEXUS_PHARO_HOME: homePath,
       PORT: String(config.ports.vibeKanban),
       HOST: "127.0.0.1",
       MCP_HOST: "127.0.0.1",

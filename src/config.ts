@@ -67,10 +67,10 @@ export type {
   ResolveNexusAgentConfigOptions,
 };
 
-export const pharoNexusControlProjectDirectoryName = "PharoNexus";
-export const pharoNexusLegacyControlProjectDirectoryName = "control";
-export const pharoNexusControlProjectId = "pharo-nexus-control";
-export const pharoNexusControlProjectName = "PharoNexus";
+export const devNexusPharoControlProjectDirectoryName = "DevNexus-Pharo";
+export const devNexusPharoLegacyControlProjectDirectoryName = "control";
+export const devNexusPharoControlProjectId = "dev-nexus-pharo-control";
+export const devNexusPharoControlProjectName = "DevNexus-Pharo";
 export const vibeKanbanPinnedVersion = "0.1.43";
 export const vibeKanbanPinnedPackage = `vibe-kanban@${vibeKanbanPinnedVersion}`;
 
@@ -101,8 +101,8 @@ export interface VibeKanbanDockerBackendConfig {
   envFile: string;
   projectName: string;
   workingDirectory: string;
-  startOnPharoNexusStart: boolean;
-  stopOnPharoNexusStop: boolean;
+  startOnDevNexusPharoStart: boolean;
+  stopOnDevNexusPharoStop: boolean;
 }
 
 export interface VibeKanbanDindBackendConfig {
@@ -124,16 +124,16 @@ export interface VibeKanbanDindBackendConfig {
   containerWorkingDirectory: string;
   containerComposeFile: string;
   containerEnvFile: string;
-  startOnPharoNexusStart: boolean;
-  stopOnPharoNexusStop: boolean;
+  startOnDevNexusPharoStart: boolean;
+  stopOnDevNexusPharoStop: boolean;
 }
 
 export interface VibeKanbanExternalBackendConfig {
   mode: "external";
   sharedApiBase: string;
   healthPath: string;
-  startOnPharoNexusStart: boolean;
-  stopOnPharoNexusStop: boolean;
+  startOnDevNexusPharoStart: boolean;
+  stopOnDevNexusPharoStop: boolean;
 }
 
 export type VibeKanbanBackendConfig =
@@ -147,7 +147,7 @@ export interface NexusHomeConfig extends Omit<NexusHomeConfigBase, "paths"> {
   };
   ports: {
     vibeKanban: number;
-    pharoNexusMcp: number;
+    devNexusPharoMcp: number;
     plexusMcp: number;
   };
   mcp: {
@@ -176,7 +176,7 @@ export interface CreateDefaultHomeConfigOptions {
   workspacesRoot?: string;
   plexusStateRoot?: string;
   vibeKanbanPort?: number;
-  pharoNexusMcpPort?: number;
+  devNexusPharoMcpPort?: number;
   plexusMcpPort?: number;
   mcpHost?: string;
 }
@@ -196,8 +196,8 @@ export interface InitNexusHomeResult {
 
 export function defaultNexusHomePath(): string {
   return defaultDevNexusHomePath({
-    envVarName: "PHARO_NEXUS_HOME",
-    directoryName: ".pharo-nexus",
+    envVarName: "DEV_NEXUS_PHARO_HOME",
+    directoryName: ".dev-nexus-pharo",
   });
 }
 
@@ -208,7 +208,7 @@ export function defaultVibeKanbanToolCommand(): NexusToolCommand {
   };
 }
 
-export function pharoNexusCliEntrypointPath(): string {
+export function devNexusPharoCliEntrypointPath(): string {
   const moduleDirectory = path.dirname(fileURLToPath(import.meta.url));
   const packageRoot =
     path.basename(moduleDirectory).toLowerCase() === "src" ||
@@ -222,7 +222,7 @@ export function pharoNexusCliEntrypointPath(): string {
 export function defaultNexusToolCommand(): NexusToolCommand {
   return {
     command: process.execPath,
-    args: [pharoNexusCliEntrypointPath(), "mcp"],
+    args: [devNexusPharoCliEntrypointPath(), "mcp"],
   };
 }
 
@@ -231,14 +231,14 @@ export const devNexusHomeConfigPath = nexusHomeConfigPath;
 export function controlProjectRootPath(homePath: string): string {
   return path.join(
     resolveNexusHome(homePath),
-    pharoNexusControlProjectDirectoryName,
+    devNexusPharoControlProjectDirectoryName,
   );
 }
 
 export function legacyControlProjectRootPath(homePath: string): string {
   return path.join(
     resolveNexusHome(homePath),
-    pharoNexusLegacyControlProjectDirectoryName,
+    devNexusPharoLegacyControlProjectDirectoryName,
   );
 }
 
@@ -272,10 +272,10 @@ export function defaultVibeKanbanBackendConfig(
     composeArgs: [],
     composeFile: path.join(remoteRoot, "docker-compose.yml"),
     envFile: path.join(remoteRoot, ".env.remote"),
-    projectName: "pharo-nexus-vibe",
+    projectName: "dev-nexus-pharo-vibe",
     workingDirectory: remoteRoot,
-    startOnPharoNexusStart: true,
-    stopOnPharoNexusStop: true,
+    startOnDevNexusPharoStart: true,
+    stopOnDevNexusPharoStop: true,
   };
 }
 
@@ -300,9 +300,9 @@ export function defaultVibeKanbanDindBackendConfig(
     autoBootstrap: true,
     dockerCommand: "docker",
     dindImage: "docker:29-dind",
-    containerName: "pharo-nexus-vibe-dind",
-    dataVolume: "pharo-nexus-vibe-dind-data",
-    projectName: "pharo-nexus-vibe",
+    containerName: "dev-nexus-pharo-vibe-dind",
+    dataVolume: "dev-nexus-pharo-vibe-dind-data",
+    projectName: "dev-nexus-pharo-vibe",
     composeFile: path.join(remoteRoot, "docker-compose.yml"),
     envFile: path.join(remoteRoot, ".env.remote"),
     workingDirectory: remoteRoot,
@@ -310,8 +310,8 @@ export function defaultVibeKanbanDindBackendConfig(
     containerWorkingDirectory: containerRemoteRoot,
     containerComposeFile: path.posix.join(containerRemoteRoot, "docker-compose.yml"),
     containerEnvFile: path.posix.join(containerRemoteRoot, ".env.remote"),
-    startOnPharoNexusStart: true,
-    stopOnPharoNexusStop: true,
+    startOnDevNexusPharoStart: true,
+    stopOnDevNexusPharoStop: true,
   };
 }
 
@@ -336,7 +336,7 @@ export function createDefaultHomeConfig(
     },
     ports: {
       vibeKanban: options.vibeKanbanPort ?? 3000,
-      pharoNexusMcp: options.pharoNexusMcpPort ?? 7330,
+      devNexusPharoMcp: options.devNexusPharoMcpPort ?? 7330,
       plexusMcp: options.plexusMcpPort ?? 7331,
     },
     mcp: {
@@ -353,7 +353,7 @@ export function createDefaultHomeConfig(
     integrations: {
       vibeKanban: {
         executor: "CODEX",
-        nexusMcpServerName: "pharo_nexus",
+        nexusMcpServerName: "dev_nexus_pharo",
         plexusMcpServerName: "plexus",
         installMcpOnStart: true,
         openBrowserOnStart: true,
@@ -361,8 +361,8 @@ export function createDefaultHomeConfig(
       },
     },
     controlProject: {
-      id: pharoNexusControlProjectId,
-      name: pharoNexusControlProjectName,
+      id: devNexusPharoControlProjectId,
+      name: devNexusPharoControlProjectName,
       root: controlProjectRootPath(resolvedHomePath),
       vibeKanbanProjectId: null,
       vibeKanbanRepoId: null,
@@ -506,8 +506,8 @@ function defaultControlProjectReference(
   homePathForDefaults: string | undefined,
 ): NexusControlProjectReference {
   return {
-    id: pharoNexusControlProjectId,
-    name: pharoNexusControlProjectName,
+    id: devNexusPharoControlProjectId,
+    name: devNexusPharoControlProjectName,
     root: controlProjectRootPath(homePathForDefaults ?? "."),
     vibeKanbanProjectId: null,
     vibeKanbanRepoId: null,
@@ -592,10 +592,10 @@ function validateVibeKanbanBackendConfig(
         defaults.sharedApiBase,
       healthPath:
         optionalString(record, "healthPath", pathName) ?? defaults.healthPath,
-      startOnPharoNexusStart:
-        optionalBoolean(record, "startOnPharoNexusStart", pathName) ?? false,
-      stopOnPharoNexusStop:
-        optionalBoolean(record, "stopOnPharoNexusStop", pathName) ?? false,
+      startOnDevNexusPharoStart:
+        optionalBoolean(record, "startOnDevNexusPharoStart", pathName) ?? false,
+      stopOnDevNexusPharoStop:
+        optionalBoolean(record, "stopOnDevNexusPharoStop", pathName) ?? false,
     };
   }
 
@@ -663,10 +663,10 @@ function validateVibeKanbanBackendConfig(
       containerEnvFile:
         optionalString(record, "containerEnvFile", pathName) ??
         path.posix.join(containerRemoteRoot, ".env.remote"),
-      startOnPharoNexusStart:
-        optionalBoolean(record, "startOnPharoNexusStart", pathName) ?? true,
-      stopOnPharoNexusStop:
-        optionalBoolean(record, "stopOnPharoNexusStop", pathName) ?? true,
+      startOnDevNexusPharoStart:
+        optionalBoolean(record, "startOnDevNexusPharoStart", pathName) ?? true,
+      stopOnDevNexusPharoStop:
+        optionalBoolean(record, "stopOnDevNexusPharoStop", pathName) ?? true,
     };
   }
 
@@ -701,10 +701,10 @@ function validateVibeKanbanBackendConfig(
     projectName:
       optionalString(record, "projectName", pathName) ?? defaults.projectName,
     workingDirectory: resolveConfiguredPath(homePath, workingDirectory),
-    startOnPharoNexusStart:
-      optionalBoolean(record, "startOnPharoNexusStart", pathName) ?? true,
-    stopOnPharoNexusStop:
-      optionalBoolean(record, "stopOnPharoNexusStop", pathName) ?? true,
+    startOnDevNexusPharoStart:
+      optionalBoolean(record, "startOnDevNexusPharoStart", pathName) ?? true,
+    stopOnDevNexusPharoStop:
+      optionalBoolean(record, "stopOnDevNexusPharoStop", pathName) ?? true,
   };
 }
 
@@ -715,8 +715,8 @@ export function createControlProjectConfig(
 
   return {
     version: 1,
-    id: controlProject?.id ?? pharoNexusControlProjectId,
-    name: controlProject?.name ?? pharoNexusControlProjectName,
+    id: controlProject?.id ?? devNexusPharoControlProjectId,
+    name: controlProject?.name ?? devNexusPharoControlProjectName,
     home: null,
     repo: {
       kind: "local",
@@ -726,7 +726,7 @@ export function createControlProjectConfig(
     components: [
       {
         id: "primary",
-        name: controlProject?.name ?? pharoNexusControlProjectName,
+        name: controlProject?.name ?? devNexusPharoControlProjectName,
         kind: "local",
         role: "primary",
         remoteUrl: null,
@@ -808,7 +808,7 @@ function validateVibeKanbanIntegration(
   if (value === undefined) {
     return {
       executor: "CODEX",
-      nexusMcpServerName: "pharo_nexus",
+      nexusMcpServerName: "dev_nexus_pharo",
       plexusMcpServerName: "plexus",
       installMcpOnStart: true,
       openBrowserOnStart: true,
@@ -845,7 +845,7 @@ function validateVibeKanbanIntegration(
         record,
         "nexusMcpServerName",
         "integrations.vibeKanban",
-      ) ?? "pharo_nexus",
+      ) ?? "dev_nexus_pharo",
     plexusMcpServerName:
       optionalString(
         record,
@@ -919,19 +919,19 @@ export function validateHomeConfig(
   );
 
   const vibeKanbanPort = requiredPort(ports, "vibeKanban");
-  const pharoNexusMcpPort =
-    ports.pharoNexusMcp === undefined
+  const devNexusPharoMcpPort =
+    ports.devNexusPharoMcp === undefined
       ? 7330
-      : requiredPort(ports, "pharoNexusMcp");
+      : requiredPort(ports, "devNexusPharoMcp");
   const plexusMcpPort = requiredPort(ports, "plexusMcp");
   const uniquePorts = new Set([
     vibeKanbanPort,
-    pharoNexusMcpPort,
+    devNexusPharoMcpPort,
     plexusMcpPort,
   ]);
   if (uniquePorts.size !== 3) {
     throw new NexusConfigError(
-      "ports.vibeKanban, ports.pharoNexusMcp, and ports.plexusMcp must be different",
+      "ports.vibeKanban, ports.devNexusPharoMcp, and ports.plexusMcp must be different",
     );
   }
 
@@ -943,7 +943,7 @@ export function validateHomeConfig(
     },
     ports: {
       vibeKanban: vibeKanbanPort,
-      pharoNexusMcp: pharoNexusMcpPort,
+      devNexusPharoMcp: devNexusPharoMcpPort,
       plexusMcp: plexusMcpPort,
     },
     mcp: {
@@ -965,7 +965,7 @@ export function validateHomeConfig(
 export function loadHomeConfig(homePath: string): NexusHomeConfig {
   return loadNexusHomeConfigFile(homePath, validateHomeConfig, {
     missingMessage: (configPath) =>
-      `PharoNexus home is not initialized: ${configPath}. Run "pharo-nexus init" first, or set PHARO_NEXUS_HOME to an initialized home.`,
+      `DevNexus-Pharo home is not initialized: ${configPath}. Run "dev-nexus-pharo init" first, or set DEV_NEXUS_PHARO_HOME to an initialized home.`,
   });
 }
 
@@ -983,7 +983,7 @@ export function initNexusHome(
   const configPath = devNexusHomeConfigPath(homePath);
   if (fs.existsSync(configPath) && !options.force) {
     throw new NexusConfigError(
-      `PharoNexus home is already initialized: ${configPath}`,
+      `DevNexus-Pharo home is already initialized: ${configPath}`,
     );
   }
 

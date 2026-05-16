@@ -4,21 +4,21 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   defaultPlexusImageExecutionPolicy,
-  pharoNexusExtension,
-  pharoNexusSkillPack,
-  pharoNexusProjectFilesFromExtensionResult,
+  devNexusPharoExtension,
+  devNexusPharoSkillPack,
+  devNexusPharoProjectFilesFromExtensionResult,
   projectPlexusImageExecutionPolicy,
   resolvePlexusImageExecutionPolicy,
-} from "./pharoNexusExtension.js";
+} from "./devNexusPharoExtension.js";
 import { scaffoldNexusProject } from "dev-nexus";
 import {
   nexusProjectWorktreesDirectoryName,
   type NexusProjectConfig,
 } from "./config.js";
 import {
-  pharoNexusProjectExtensionConfigKey,
+  devNexusPharoProjectExtensionConfigKey,
   plexusProjectConfigFileName,
-} from "./pharoNexusExtension.js";
+} from "./devNexusPharoExtension.js";
 
 const tempDirs: string[] = [];
 
@@ -55,10 +55,10 @@ afterEach(() => {
   }
 });
 
-describe("PharoNexus extension", () => {
+describe("DevNexus-Pharo extension", () => {
   it("owns Pharo and PLexus project files", () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
-    const projectRoot = path.join(makeTempDir("pharo-nexus-project-"), "Project");
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
+    const projectRoot = path.join(makeTempDir("dev-nexus-pharo-project-"), "Project");
     const sourceRoot = path.join(projectRoot, "git");
     const worktreesRoot = path.join(projectRoot, "worktrees");
     const config = projectConfig();
@@ -69,10 +69,10 @@ describe("PharoNexus extension", () => {
       projectRoot,
       worktreesRoot,
       projectConfig: config,
-      extensions: [pharoNexusExtension],
+      extensions: [devNexusPharoExtension],
     });
-    const files = pharoNexusProjectFilesFromExtensionResult(
-      scaffold.extensionResults[pharoNexusExtension.id],
+    const files = devNexusPharoProjectFilesFromExtensionResult(
+      scaffold.extensionResults[devNexusPharoExtension.id],
     );
 
     expect(JSON.parse(fs.readFileSync(files.plexusProjectConfigPath, "utf8"))).toEqual({
@@ -102,13 +102,13 @@ describe("PharoNexus extension", () => {
     });
   });
 
-  it("reads PLexus metadata paths from PharoNexus extension config", () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
-    const projectRoot = path.join(makeTempDir("pharo-nexus-project-"), "Project");
+  it("reads PLexus metadata paths from DevNexus-Pharo extension config", () => {
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
+    const projectRoot = path.join(makeTempDir("dev-nexus-pharo-project-"), "Project");
     const worktreesRoot = path.join(projectRoot, "worktrees");
     const config = projectConfig({
       extensions: {
-        [pharoNexusProjectExtensionConfigKey]: {
+        [devNexusPharoProjectExtensionConfigKey]: {
           plexusProjectConfig: path.join("config", "plexus.project.json"),
         },
       },
@@ -119,10 +119,10 @@ describe("PharoNexus extension", () => {
       projectRoot,
       worktreesRoot,
       projectConfig: config,
-      extensions: [pharoNexusExtension],
+      extensions: [devNexusPharoExtension],
     });
-    const files = pharoNexusProjectFilesFromExtensionResult(
-      scaffold.extensionResults[pharoNexusExtension.id],
+    const files = devNexusPharoProjectFilesFromExtensionResult(
+      scaffold.extensionResults[devNexusPharoExtension.id],
     );
 
     expect(files.plexusProjectConfigPath).toBe(
@@ -138,7 +138,7 @@ describe("PharoNexus extension", () => {
     expect(
       projectPlexusImageExecutionPolicy({
         extensions: {
-          [pharoNexusProjectExtensionConfigKey]: {
+          [devNexusPharoProjectExtensionConfigKey]: {
             imageExecution: {
               mode: "docker",
               docker: {
@@ -169,12 +169,12 @@ describe("PharoNexus extension", () => {
   });
 
   it("writes configured Docker image execution policy into PLexus metadata", () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
-    const projectRoot = path.join(makeTempDir("pharo-nexus-project-"), "Project");
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
+    const projectRoot = path.join(makeTempDir("dev-nexus-pharo-project-"), "Project");
     const worktreesRoot = path.join(projectRoot, "worktrees");
     const config = projectConfig({
       extensions: {
-        [pharoNexusProjectExtensionConfigKey]: {
+        [devNexusPharoProjectExtensionConfigKey]: {
           imageExecution: {
             mode: "docker",
             requireDisposableImage: true,
@@ -195,10 +195,10 @@ describe("PharoNexus extension", () => {
       projectRoot,
       worktreesRoot,
       projectConfig: config,
-      extensions: [pharoNexusExtension],
+      extensions: [devNexusPharoExtension],
     });
-    const files = pharoNexusProjectFilesFromExtensionResult(
-      scaffold.extensionResults[pharoNexusExtension.id],
+    const files = devNexusPharoProjectFilesFromExtensionResult(
+      scaffold.extensionResults[devNexusPharoExtension.id],
     );
 
     expect(JSON.parse(fs.readFileSync(files.plexusProjectConfigPath, "utf8"))).toMatchObject({
@@ -216,13 +216,13 @@ describe("PharoNexus extension", () => {
     });
   });
 
-  it("adds PharoNexus specialization skills only for marked projects", () => {
-    const homePath = makeTempDir("pharo-nexus-home-");
-    const projectRoot = path.join(makeTempDir("pharo-nexus-project-"), "Project");
+  it("adds DevNexus-Pharo specialization skills only for marked projects", () => {
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
+    const projectRoot = path.join(makeTempDir("dev-nexus-pharo-project-"), "Project");
     const worktreesRoot = path.join(projectRoot, "worktrees");
     const config = projectConfig({
       extensions: {
-        [pharoNexusProjectExtensionConfigKey]: {},
+        [devNexusPharoProjectExtensionConfigKey]: {},
       },
     });
 
@@ -231,13 +231,13 @@ describe("PharoNexus extension", () => {
       projectRoot,
       worktreesRoot,
       projectConfig: config,
-      extensions: [pharoNexusExtension],
+      extensions: [devNexusPharoExtension],
     });
 
     expect(scaffold.skills.installed.map((skill) => skill.id)).toEqual(
       expect.arrayContaining([
         "diagnose",
-        ...pharoNexusSkillPack.map((skill) => skill.manifest.id),
+        ...devNexusPharoSkillPack.map((skill) => skill.manifest.id),
       ]),
     );
     expect(
@@ -246,7 +246,7 @@ describe("PharoNexus extension", () => {
           projectRoot,
           ".dev-nexus",
           "skills",
-          "pharo-nexus-workflow",
+          "dev-nexus-pharo-workflow",
           "SKILL.md",
         ),
       ),
@@ -254,30 +254,30 @@ describe("PharoNexus extension", () => {
 
     const unmanaged = scaffoldNexusProject({
       homePath,
-      projectRoot: path.join(makeTempDir("pharo-nexus-project-"), "Plain"),
-      worktreesRoot: path.join(makeTempDir("pharo-nexus-worktrees-"), "worktrees"),
+      projectRoot: path.join(makeTempDir("dev-nexus-pharo-project-"), "Plain"),
+      worktreesRoot: path.join(makeTempDir("dev-nexus-pharo-worktrees-"), "worktrees"),
       projectConfig: projectConfig(),
-      extensions: [pharoNexusExtension],
+      extensions: [devNexusPharoExtension],
     });
 
     expect(unmanaged.skills.installed.map((skill) => skill.id)).not.toContain(
-      "pharo-nexus-workflow",
+      "dev-nexus-pharo-workflow",
     );
   });
 
-  it("contributes PLexus status and tracker linking only for PharoNexus projects", () => {
-    const projectRoot = path.join(makeTempDir("pharo-nexus-project-"), "Project");
+  it("contributes PLexus status and tracker linking only for DevNexus-Pharo projects", () => {
+    const projectRoot = path.join(makeTempDir("dev-nexus-pharo-project-"), "Project");
     const plexusPath = path.join(projectRoot, plexusProjectConfigFileName);
     const unmanagedConfig = projectConfig();
 
     expect(
-      pharoNexusExtension.projectStatus?.({
+      devNexusPharoExtension.projectStatus?.({
         projectRoot,
         projectConfig: unmanagedConfig,
       }),
     ).toBeUndefined();
     expect(
-      pharoNexusExtension.linkProjectTracker?.({
+      devNexusPharoExtension.linkProjectTracker?.({
         projectRoot,
         projectConfig: unmanagedConfig,
         trackerProjectId: "vk-ignored",
@@ -286,11 +286,11 @@ describe("PharoNexus extension", () => {
 
     const managedConfig = projectConfig({
       extensions: {
-        [pharoNexusProjectExtensionConfigKey]: {},
+        [devNexusPharoProjectExtensionConfigKey]: {},
       },
     });
     expect(
-      pharoNexusExtension.projectStatus?.({
+      devNexusPharoExtension.projectStatus?.({
         projectRoot,
         projectConfig: managedConfig,
       }),
@@ -299,7 +299,7 @@ describe("PharoNexus extension", () => {
       plexusProjectConfigExists: false,
     });
 
-    const linked = pharoNexusExtension.linkProjectTracker?.({
+    const linked = devNexusPharoExtension.linkProjectTracker?.({
       projectRoot,
       projectConfig: managedConfig,
       trackerProjectId: "vk-linked",
@@ -321,7 +321,7 @@ describe("PharoNexus extension", () => {
       linked?.plexusProjectConfig,
     );
     expect(
-      pharoNexusExtension.projectStatus?.({
+      devNexusPharoExtension.projectStatus?.({
         projectRoot,
         projectConfig: managedConfig,
       }),

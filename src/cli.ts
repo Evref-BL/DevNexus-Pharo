@@ -45,10 +45,10 @@ import {
   stopPlexusGateway,
 } from "./plexusGatewayService.js";
 import {
-  getPharoNexusStatus,
-  startPharoNexus,
-  stopPharoNexus,
-} from "./pharoNexusRuntime.js";
+  getDevNexusPharoStatus,
+  startDevNexusPharo,
+  stopDevNexusPharo,
+} from "./devNexusPharoRuntime.js";
 import {
   configureNexusProjectTracker,
   createNexusProject,
@@ -67,13 +67,13 @@ import {
   type GitRunner,
 } from "./nexusProjectService.js";
 import {
-  createPharoNexusProject,
-  importPharoNexusProject,
-  syncPharoNexusProjectTracker,
-  type CreatePharoNexusProjectResult,
-  type ImportPharoNexusProjectResult,
-  type SyncPharoNexusProjectTrackerResult,
-} from "./pharoNexusProjectService.js";
+  createDevNexusPharoProject,
+  importDevNexusPharoProject,
+  syncDevNexusPharoProjectTracker,
+  type CreateDevNexusPharoProjectResult,
+  type ImportDevNexusPharoProjectResult,
+  type SyncDevNexusPharoProjectTrackerResult,
+} from "./devNexusPharoProjectService.js";
 import {
   getProjectSkillStatus,
   refreshProjectSkills,
@@ -82,10 +82,10 @@ import {
 } from "./nexusProjectSkillService.js";
 import type { WorkComment } from "dev-nexus";
 import {
-  runPharoNexusMcpServer,
-  runPharoNexusMcpStdioServer,
+  runDevNexusPharoMcpServer,
+  runDevNexusPharoMcpStdioServer,
 } from "./mcpServer.js";
-import { installPharoNexusAndPlexusMcpForExecutor } from "./vibeKanbanMcpConfig.js";
+import { installDevNexusPharoAndPlexusMcpForExecutor } from "./vibeKanbanMcpConfig.js";
 import {
   getVibeKanbanStatus,
   startVibeKanban,
@@ -100,47 +100,47 @@ import {
 export function usage(): string {
   return [
     "Usage:",
-    "  pharo-nexus --help",
-    "  pharo-nexus init [home] [options]",
-    "  pharo-nexus start [home] [options]",
-    "  pharo-nexus status [home] [options]",
-    "  pharo-nexus stop [home] [options]",
-    "  pharo-nexus mcp [home] [--host <host>] [--port <port>]",
-    "  pharo-nexus mcp-stdio",
-    "  pharo-nexus codex init <workspace> [options]",
-    "  pharo-nexus codex doctor <workspace> [options]",
-    "  pharo-nexus codex worktree guide [options]",
-    "  pharo-nexus codex worktree list [options]",
-    "  pharo-nexus codex worktree status <id> [options]",
-    "  pharo-nexus codex worktree prepare <project> [options]",
-    "  pharo-nexus codex worktree record <id> [options]",
-    "  pharo-nexus codex worktree archive <id> [options]",
-    "  pharo-nexus project create <name> [--from <git-url> | --git-init] [--generic] [options]",
-    "  pharo-nexus project import <path> [--name <name>] [--generic] [options]",
-    "  pharo-nexus project configure-tracker <id-or-path> --provider <local|github|gitlab|jira> [options]",
-    "  pharo-nexus project link-tracker <id-or-path> --tracker-project-id <id> [options]",
-    "  pharo-nexus project sync-tracker <id-or-path> [options]",
-    "  pharo-nexus project skills status <id-or-path> [options]",
-    "  pharo-nexus project skills refresh <id-or-path> [options]",
-    "  pharo-nexus project list [options]",
-    "  pharo-nexus project status <id-or-path> [options]",
-    "  pharo-nexus plexus-gateway start <home> [--force]",
-    "  pharo-nexus plexus-gateway status <home> [--check-health]",
-    "  pharo-nexus plexus-gateway stop <home> [--force]",
-    "  pharo-nexus vibe-kanban start <home> [--force]",
-    "  pharo-nexus vibe-kanban status <home> [--check-health]",
-    "  pharo-nexus vibe-kanban stop <home> [--force]",
-    "  pharo-nexus vibe-backend start <home> [--force]",
-    "  pharo-nexus vibe-backend status <home> [--check-health]",
-    "  pharo-nexus vibe-backend stop <home>",
-    "  pharo-nexus vibe-kanban mcp-config install <home> --executor <name> [options]",
+    "  dev-nexus-pharo --help",
+    "  dev-nexus-pharo init [home] [options]",
+    "  dev-nexus-pharo start [home] [options]",
+    "  dev-nexus-pharo status [home] [options]",
+    "  dev-nexus-pharo stop [home] [options]",
+    "  dev-nexus-pharo mcp [home] [--host <host>] [--port <port>]",
+    "  dev-nexus-pharo mcp-stdio",
+    "  dev-nexus-pharo codex init <workspace> [options]",
+    "  dev-nexus-pharo codex doctor <workspace> [options]",
+    "  dev-nexus-pharo codex worktree guide [options]",
+    "  dev-nexus-pharo codex worktree list [options]",
+    "  dev-nexus-pharo codex worktree status <id> [options]",
+    "  dev-nexus-pharo codex worktree prepare <project> [options]",
+    "  dev-nexus-pharo codex worktree record <id> [options]",
+    "  dev-nexus-pharo codex worktree archive <id> [options]",
+    "  dev-nexus-pharo project create <name> [--from <git-url> | --git-init] [--generic] [options]",
+    "  dev-nexus-pharo project import <path> [--name <name>] [--generic] [options]",
+    "  dev-nexus-pharo project configure-tracker <id-or-path> --provider <local|github|gitlab|jira> [options]",
+    "  dev-nexus-pharo project link-tracker <id-or-path> --tracker-project-id <id> [options]",
+    "  dev-nexus-pharo project sync-tracker <id-or-path> [options]",
+    "  dev-nexus-pharo project skills status <id-or-path> [options]",
+    "  dev-nexus-pharo project skills refresh <id-or-path> [options]",
+    "  dev-nexus-pharo project list [options]",
+    "  dev-nexus-pharo project status <id-or-path> [options]",
+    "  dev-nexus-pharo plexus-gateway start <home> [--force]",
+    "  dev-nexus-pharo plexus-gateway status <home> [--check-health]",
+    "  dev-nexus-pharo plexus-gateway stop <home> [--force]",
+    "  dev-nexus-pharo vibe-kanban start <home> [--force]",
+    "  dev-nexus-pharo vibe-kanban status <home> [--check-health]",
+    "  dev-nexus-pharo vibe-kanban stop <home> [--force]",
+    "  dev-nexus-pharo vibe-backend start <home> [--force]",
+    "  dev-nexus-pharo vibe-backend status <home> [--check-health]",
+    "  dev-nexus-pharo vibe-backend stop <home>",
+    "  dev-nexus-pharo vibe-kanban mcp-config install <home> --executor <name> [options]",
     "",
     "Options for init:",
     "  --projects-root <path>",
     "  --workspaces-root <path>",
     "  --plexus-state-root <path>",
     "  --vibe-kanban-port <port>",
-    "  --pharo-nexus-mcp-port <port>",
+    "  --dev-nexus-pharo-mcp-port <port>",
     "  --plexus-mcp-port <port>",
     "  --interactive",
     "  --force",
@@ -285,7 +285,7 @@ export function usage(): string {
     "  --dry-run",
     "",
     "Planned commands:",
-    "  pharo-nexus config show",
+    "  dev-nexus-pharo config show",
   ].join("\n");
 }
 
@@ -308,7 +308,7 @@ function parsePositiveInteger(value: string, optionName: string): number {
 }
 
 function printProgress(message: string): void {
-  console.error(`[pharo-nexus] ${message}`);
+  console.error(`[dev-nexus-pharo] ${message}`);
 }
 
 interface ParsedInitCommand extends InitNexusHomeOptions {
@@ -348,8 +348,8 @@ function parseInitCommand(argv: string[]): ParsedInitCommand {
       case "--vibe-kanban-port":
         options.vibeKanbanPort = parsePort(next(), arg);
         break;
-      case "--pharo-nexus-mcp-port":
-        options.pharoNexusMcpPort = parsePort(next(), arg);
+      case "--dev-nexus-pharo-mcp-port":
+        options.devNexusPharoMcpPort = parsePort(next(), arg);
         break;
       case "--plexus-mcp-port":
         options.plexusMcpPort = parsePort(next(), arg);
@@ -412,7 +412,7 @@ async function promptInitCommand(
     };
 
     const homePath = await ask(
-      "PharoNexus home",
+      "DevNexus-Pharo home",
       options.homePath,
     );
     const defaults = createDefaultHomeConfig(homePath, {
@@ -420,7 +420,7 @@ async function promptInitCommand(
       workspacesRoot: options.workspacesRoot,
       plexusStateRoot: options.plexusStateRoot,
       vibeKanbanPort: options.vibeKanbanPort,
-      pharoNexusMcpPort: options.pharoNexusMcpPort,
+      devNexusPharoMcpPort: options.devNexusPharoMcpPort,
       plexusMcpPort: options.plexusMcpPort,
     });
 
@@ -438,10 +438,10 @@ async function promptInitCommand(
         defaults.ports.vibeKanban,
         "--vibe-kanban-port",
       ),
-      pharoNexusMcpPort: await askPort(
-        "PharoNexus MCP port",
-        defaults.ports.pharoNexusMcp,
-        "--pharo-nexus-mcp-port",
+      devNexusPharoMcpPort: await askPort(
+        "DevNexus-Pharo MCP port",
+        defaults.ports.devNexusPharoMcp,
+        "--dev-nexus-pharo-mcp-port",
       ),
       plexusMcpPort: await askPort(
         "PLexus MCP port",
@@ -475,7 +475,7 @@ function printInitResult(
     return;
   }
 
-  console.log("PharoNexus home initialized.");
+  console.log("DevNexus-Pharo home initialized.");
   console.log(`  Home: ${initResult.homePath}`);
   console.log(`  Config: ${initResult.configPath}`);
   console.log("  Paths:");
@@ -485,11 +485,11 @@ function printInitResult(
   console.log(`    Control project: ${initResult.config.controlProject.root}`);
   console.log("  Ports:");
   console.log(`    Vibe Kanban: ${initResult.config.ports.vibeKanban}`);
-  console.log(`    PharoNexus MCP: ${initResult.config.ports.pharoNexusMcp}`);
+  console.log(`    DevNexus-Pharo MCP: ${initResult.config.ports.devNexusPharoMcp}`);
   console.log(`    PLexus MCP: ${initResult.config.ports.plexusMcp}`);
   console.log("");
   console.log("Next:");
-  console.log("  pharo-nexus start");
+  console.log("  dev-nexus-pharo start");
 }
 
 interface ParsedMcpCommand {
@@ -543,10 +543,10 @@ function parseMcpCommand(argv: string[]): ParsedMcpCommand {
 async function handleMcpCommand(argv: string[]): Promise<number> {
   const parsed = parseMcpCommand(argv);
   const config = loadHomeConfig(parsed.homePath);
-  process.env.PHARO_NEXUS_HOME = parsed.homePath;
-  await runPharoNexusMcpServer({
+  process.env.DEV_NEXUS_PHARO_HOME = parsed.homePath;
+  await runDevNexusPharoMcpServer({
     host: parsed.host ?? config.mcp.host,
-    port: parsed.port ?? config.ports.pharoNexusMcp,
+    port: parsed.port ?? config.ports.devNexusPharoMcp,
   });
   return 0;
 }
@@ -1317,7 +1317,7 @@ export async function main(argv: string[], context: CliContext = {}): Promise<nu
   }
 
   if (argv[0] === "mcp-stdio") {
-    await runPharoNexusMcpStdioServer();
+    await runDevNexusPharoMcpStdioServer();
     return 0;
   }
 
@@ -1416,7 +1416,7 @@ function parseStartCommand(argv: string[]): ParsedStartCommand {
 }
 
 async function handleStartCommand(argv: string[]): Promise<number> {
-  const result = await startPharoNexus({
+  const result = await startDevNexusPharo({
     ...parseStartCommand(argv),
     progress: printProgress,
   });
@@ -1473,7 +1473,7 @@ function parseStatusCommand(argv: string[]): ParsedStatusCommand {
 }
 
 async function handleStatusCommand(argv: string[]): Promise<number> {
-  const result = await getPharoNexusStatus(parseStatusCommand(argv));
+  const result = await getDevNexusPharoStatus(parseStatusCommand(argv));
   console.log(JSON.stringify({ ok: true, ...result }, null, 2));
   return 0;
 }
@@ -1531,7 +1531,7 @@ function parseStopCommand(argv: string[]): ParsedStopCommand {
 }
 
 async function handleStopCommand(argv: string[]): Promise<number> {
-  const result = await stopPharoNexus({
+  const result = await stopDevNexusPharo({
     ...parseStopCommand(argv),
     progress: printProgress,
   });
@@ -2061,8 +2061,8 @@ function parseProjectStatusCommand(argv: string[]): ParsedProjectStatusCommand {
 }
 
 function printProjectCreateResult(
-  result: CreatePharoNexusProjectResult,
-  syncResult: SyncPharoNexusProjectTrackerResult | undefined,
+  result: CreateDevNexusPharoProjectResult,
+  syncResult: SyncDevNexusPharoProjectTrackerResult | undefined,
   json: boolean | undefined,
 ): void {
   const payload = {
@@ -2075,7 +2075,7 @@ function printProjectCreateResult(
     return;
   }
 
-  console.log("PharoNexus project created.");
+  console.log("DevNexus-Pharo project created.");
   console.log(`  Name: ${result.projectConfig.name}`);
   console.log(`  Id: ${result.projectConfig.id}`);
   console.log(`  Root: ${result.projectRoot}`);
@@ -2102,8 +2102,8 @@ function printProjectCreateResult(
 }
 
 function printProjectImportResult(
-  result: ImportPharoNexusProjectResult,
-  syncResult: SyncPharoNexusProjectTrackerResult | undefined,
+  result: ImportDevNexusPharoProjectResult,
+  syncResult: SyncDevNexusPharoProjectTrackerResult | undefined,
   json: boolean | undefined,
 ): void {
   const payload = {
@@ -2116,7 +2116,7 @@ function printProjectImportResult(
     return;
   }
 
-  console.log("PharoNexus project imported.");
+  console.log("DevNexus-Pharo project imported.");
   console.log(`  Name: ${result.projectConfig.name}`);
   console.log(`  Id: ${result.projectConfig.id}`);
   console.log(`  Root: ${result.projectRoot}`);
@@ -2218,7 +2218,7 @@ function printProjectLinkTrackerResult(
     return;
   }
 
-  console.log("PharoNexus project linked to tracker.");
+  console.log("DevNexus-Pharo project linked to tracker.");
   console.log(`  Project: ${result.project.id} (${result.project.name})`);
   console.log(`  Tracker project: ${result.vibeKanbanProjectId}`);
   if (result.vibeKanbanRepoId) {
@@ -2241,7 +2241,7 @@ function printProjectConfigureTrackerResult(
     return;
   }
 
-  console.log("PharoNexus project tracker configured.");
+  console.log("DevNexus-Pharo project tracker configured.");
   console.log(`  Project: ${result.project.id} (${result.project.name})`);
   console.log(`  Provider: ${result.workTracking.provider}`);
   if (result.workTracking.provider === "github") {
@@ -2271,7 +2271,7 @@ function printProjectConfigureTrackerResult(
 }
 
 function printProjectSyncTrackerResult(
-  result: SyncPharoNexusProjectTrackerResult,
+  result: SyncDevNexusPharoProjectTrackerResult,
   json: boolean | undefined,
 ): void {
   const payload = { ok: true, ...result };
@@ -2280,7 +2280,7 @@ function printProjectSyncTrackerResult(
     return;
   }
 
-  console.log("PharoNexus project synced to tracker.");
+  console.log("DevNexus-Pharo project synced to tracker.");
   console.log(`  Project: ${result.project.id} (${result.project.name})`);
   console.log(`  Tracker board: ${result.vibeKanbanProjectId}`);
   console.log(`  Tracker repo: ${result.vibeKanbanRepoId}`);
@@ -2321,7 +2321,7 @@ function printProjectListResult(
     return;
   }
 
-  console.log(`PharoNexus projects: ${result.projects.length}`);
+  console.log(`DevNexus-Pharo projects: ${result.projects.length}`);
   for (const project of result.projects) {
     printProjectStatus(project);
   }
@@ -2340,7 +2340,7 @@ function printProjectStatusResult(
     return;
   }
 
-  console.log("PharoNexus project status.");
+  console.log("DevNexus-Pharo project status.");
   printProjectStatus(result.project);
   console.log("");
   console.log("JSON:");
@@ -2370,7 +2370,7 @@ function printProjectSkillStatusResult(
     return;
   }
 
-  console.log("PharoNexus project skill status.");
+  console.log("DevNexus-Pharo project skill status.");
   console.log(`  Project: ${result.project.id} (${result.project.name})`);
   console.log(`  Skills directory: ${result.skillStatus.skillsDirectory}`);
   console.log(`  Summary: ${skillStatusSummaryLine(result.skillStatus.summary)}`);
@@ -2399,7 +2399,7 @@ function printProjectSkillRefreshResult(
     return;
   }
 
-  console.log("PharoNexus project skills refreshed.");
+  console.log("DevNexus-Pharo project skills refreshed.");
   console.log(`  Project: ${result.project.id} (${result.project.name})`);
   console.log(`  Before: ${skillStatusSummaryLine(result.refresh.before.summary)}`);
   console.log(`  After: ${skillStatusSummaryLine(result.refresh.after.summary)}`);
@@ -2422,14 +2422,14 @@ async function handleProjectCommand(argv: string[]): Promise<number> {
       return 0;
     }
 
-    const result = createPharoNexusProject({
+    const result = createDevNexusPharoProject({
       ...parsed,
       vibeKanbanProjectId: parsed.trackerProjectId,
     });
-    let syncResult: SyncPharoNexusProjectTrackerResult | undefined;
+    let syncResult: SyncDevNexusPharoProjectTrackerResult | undefined;
     if (parsed.syncTracker) {
       try {
-        syncResult = await syncPharoNexusProjectTracker({
+        syncResult = await syncDevNexusPharoProjectTracker({
           homePath: parsed.homePath,
           project: result.projectRoot,
           host: parsed.vibeHost,
@@ -2460,14 +2460,14 @@ async function handleProjectCommand(argv: string[]): Promise<number> {
       return 0;
     }
 
-    const result = importPharoNexusProject({
+    const result = importDevNexusPharoProject({
       ...parsed,
       vibeKanbanProjectId: parsed.trackerProjectId,
     });
-    let syncResult: SyncPharoNexusProjectTrackerResult | undefined;
+    let syncResult: SyncDevNexusPharoProjectTrackerResult | undefined;
     if (parsed.syncTracker) {
       try {
-        syncResult = await syncPharoNexusProjectTracker({
+        syncResult = await syncDevNexusPharoProjectTracker({
           homePath: parsed.homePath,
           project: result.projectRoot,
           host: parsed.vibeHost,
@@ -2503,7 +2503,7 @@ async function handleProjectCommand(argv: string[]): Promise<number> {
 
   if (command === "sync-tracker") {
     const parsed = parseProjectSyncTrackerCommand(argv);
-    const result = await syncPharoNexusProjectTracker({
+    const result = await syncDevNexusPharoProjectTracker({
       homePath: parsed.homePath,
       project: parsed.project,
       host: parsed.vibeHost,
@@ -2666,7 +2666,7 @@ async function handleVibeKanbanCommand(argv: string[]): Promise<number> {
 
   const parsed = parseVibeKanbanMcpInstallCommand(argv);
   const config = loadHomeConfig(parsed.homePath);
-  const result = await installPharoNexusAndPlexusMcpForExecutor({
+  const result = await installDevNexusPharoAndPlexusMcpForExecutor({
     homePath: parsed.homePath,
     config,
     executor: parsed.executor,

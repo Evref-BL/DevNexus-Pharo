@@ -17,9 +17,9 @@ import {
   saveHomeConfig,
 } from "./config.js";
 import {
-  buildPharoNexusMcpServerConfig,
+  buildDevNexusPharoMcpServerConfig,
   buildPlexusMcpServerConfig,
-  installPharoNexusAndPlexusMcpForExecutor,
+  installDevNexusPharoAndPlexusMcpForExecutor,
   installPlexusMcpForExecutor,
 } from "./vibeKanbanMcpConfig.js";
 
@@ -119,7 +119,7 @@ async function startFakeVibeKanbanApi(): Promise<{
 }
 
 function initHome(): string {
-  const homePath = makeTempDir("pharo-nexus-home-");
+  const homePath = makeTempDir("dev-nexus-pharo-home-");
   initNexusHome({ homePath });
   const config = loadHomeConfig(homePath);
   config.tools.plexus = {
@@ -167,13 +167,13 @@ describe("Vibe Kanban MCP config adapter", () => {
     });
   });
 
-  it("builds the PharoNexus MCP server config from PharoNexus home config", () => {
+  it("builds the DevNexus-Pharo MCP server config from DevNexus-Pharo home config", () => {
     const homePath = initHome();
     const config = loadHomeConfig(homePath);
-    config.ports.pharoNexusMcp = 7440;
+    config.ports.devNexusPharoMcp = 7440;
     saveHomeConfig(homePath, config);
 
-    expect(buildPharoNexusMcpServerConfig(homePath, config)).toEqual({
+    expect(buildDevNexusPharoMcpServerConfig(homePath, config)).toEqual({
       type: "http",
       url: "http://127.0.0.1:7440/mcp",
     });
@@ -342,21 +342,21 @@ describe("Vibe Kanban MCP config adapter", () => {
     }
   });
 
-  it("installs PharoNexus and PLexus MCP configs in one Vibe Kanban update", async () => {
+  it("installs DevNexus-Pharo and PLexus MCP configs in one Vibe Kanban update", async () => {
     const homePath = initHome();
     const config = loadHomeConfig(homePath);
     config.tools.nexus = {
-      command: "pharo-nexus",
+      command: "dev-nexus-pharo",
       args: ["mcp"],
     };
-    config.integrations.vibeKanban.nexusMcpServerName = "pharo_nexus_local";
+    config.integrations.vibeKanban.nexusMcpServerName = "dev_nexus_pharo_local";
     config.integrations.vibeKanban.plexusMcpServerName = "plexus_local";
     saveHomeConfig(homePath, config);
     const api = await startFakeVibeKanbanApi();
 
     try {
       await expect(
-        installPharoNexusAndPlexusMcpForExecutor({
+        installDevNexusPharoAndPlexusMcpForExecutor({
           homePath,
           config,
           port: api.port,
@@ -364,8 +364,8 @@ describe("Vibe Kanban MCP config adapter", () => {
         }),
       ).resolves.toMatchObject({
         executor: "CODEX",
-        pharoNexus: {
-          serverName: "pharo_nexus_local",
+        devNexusPharo: {
+          serverName: "dev_nexus_pharo_local",
         },
         plexus: {
           serverName: "plexus_local",
@@ -380,7 +380,7 @@ describe("Vibe Kanban MCP config adapter", () => {
               command: "node",
               args: ["existing.js"],
             },
-            pharo_nexus_local: {
+            dev_nexus_pharo_local: {
               type: "http",
               url: "http://127.0.0.1:7330/mcp",
             },

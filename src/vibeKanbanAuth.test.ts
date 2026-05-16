@@ -17,7 +17,7 @@ function jsonResponse(value: unknown, status = 200): Response {
 }
 
 function makeHomeWithEnvFile(content: string): string {
-  const homePath = fs.mkdtempSync(path.join(os.tmpdir(), "pharo-nexus-home-"));
+  const homePath = fs.mkdtempSync(path.join(os.tmpdir(), "dev-nexus-pharo-home-"));
   initNexusHome({ homePath });
   const remoteRoot = path.join(homePath, "vibe-kanban", "crates", "remote");
   fs.mkdirSync(remoteRoot, { recursive: true });
@@ -35,10 +35,10 @@ function makeHomeWithEnvFile(content: string): string {
     composeArgs: [],
     composeFile: path.join(remoteRoot, "docker-compose.yml"),
     envFile,
-    projectName: "pharo-nexus-vibe",
+    projectName: "dev-nexus-pharo-vibe",
     workingDirectory: remoteRoot,
-    startOnPharoNexusStart: true,
-    stopOnPharoNexusStop: true,
+    startOnDevNexusPharoStart: true,
+    stopOnDevNexusPharoStop: true,
   };
   saveHomeConfig(homePath, config);
 

@@ -58,7 +58,7 @@ function initHomeWithVibeKanban(
   args: string[],
   configure?: (config: NexusHomeConfig) => void,
 ): string {
-  const homePath = makeTempDir("pharo-nexus-home-");
+  const homePath = makeTempDir("dev-nexus-pharo-home-");
   initNexusHome({ homePath });
   const config = loadHomeConfig(homePath);
   config.tools.vibeKanban = {
