@@ -1,26 +1,36 @@
 {
-  "name": "pharo-nexus",
-  "version": "0.1.0",
-  "private": true,
+  "name": "@evref-bl/pharo-nexus",
+  "version": "0.1.0-alpha.0",
+  "private": false,
   "description": "Pharo specialization layer for DevNexus, PLexus, and Pharo project workspaces.",
   "license": "Apache-2.0",
   "type": "module",
   "bin": {
-    "pharo-nexus": "./dist/cli.js"
+    "pharo-nexus": "dist/cli.js"
+  },
+  "main": "./dist/index.js",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "package.json"
+  ],
+  "publishConfig": {
+    "access": "public"
   },
   "engines": {
     "node": ">=24"
   },
   "scripts": {
-    "build:dev-nexus": "npm --prefix ../DevNexus run build",
-    "prebuild": "npm run build:dev-nexus",
     "build": "tsc -p tsconfig.json",
-    "pretest": "npm run build:dev-nexus",
     "test": "vitest run",
     "check": "npm run build && npm test"
   },
   "dependencies": {
-    "dev-nexus": "file:../DevNexus"
+    "dev-nexus": "npm:@evref-bl/dev-nexus@0.1.0-alpha.0"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
@@ -28,4 +38,3 @@
     "vitest": "^4.0.0"
   }
 }
-
