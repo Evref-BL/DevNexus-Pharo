@@ -15,7 +15,9 @@ state or assuming a single repository layout.
   pharo-launcher-mcp underneath.
 - Use `pharo` tools to execute code inside images. In the intended
   architecture, this surface is reached through the PLexus gateway and backed
-  by the Evref-BL/MCP Pharo project.
+  by the Evref-BL/MCP Pharo project. If a task requires Pharo code changes and
+  the `pharo` MCP surface is missing or unreachable, stop and report the MCP
+  infrastructure blocker instead of editing Pharo code through files.
 
 ## System Shape
 
@@ -50,6 +52,8 @@ depend on implementation details inside Pharo images.
 - Prefer MCP tools for project creation, import, list, status, workspace, and
   image operations. Manual edits to PharoNexus/PLexus config files are for
   implementation or repair work only.
+- Prepared Codex worktrees should inherit `.codex/config.toml`; verify direct
+  `pharo` MCP availability before changing Pharo code.
 
 ## Git Workflow
 

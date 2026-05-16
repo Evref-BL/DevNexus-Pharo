@@ -1,11 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
-import { codexConfigPath } from "./codexConfig.js";
+import { codexConfigPath, initCodexWorkspace } from "./codexConfig.js";
 import {
+  loadHomeConfig,
   loadProjectConfig,
   nexusGeneratedDirectoryName,
-  projectWorktreesRootPath,
   resolveNexusHome,
+  type NexusHomeConfig,
   type NexusProjectConfig,
 } from "./config.js";
 import {
@@ -44,6 +45,7 @@ export const codexWorktreeMetadataStoreVersion = 1;
 export interface PrepareCodexWorktreeOptions {
   homePath: string;
   project: string;
+  componentId?: string;
   branchName?: string;
   worktreeName?: string;
   baseRef?: string;
@@ -87,6 +89,7 @@ export interface PrepareCodexWorktreeResult {
   metadataPath: string;
   metadataRecord: CodexWorktreeRecord;
   projectRoot: string;
+  componentId: string;
   sourceRoot: string;
   worktreesRoot: string;
   worktreePath: string;
@@ -150,6 +153,7 @@ export interface CodexWorktreeRecord {
   id: string;
   state: CodexWorktreeState;
   projectId: string;
+  componentId: string | null;
   projectRoot: string;
   sourceRoot: string;
   worktreePath: string;
@@ -178,27 +182,89 @@ export class CodexWorktreeServiceError extends Error {
   }
 }
 
+interface CodexWorktreeComponent {
+  id: string;
+  role: string;
+  sourceRoot: string;
+  worktreesRoot: string;
+}
+
+function resolveCodexWorktreeComponent(
+  components: readonly CodexWorktreeComponent[],
+  componentId: string | undefined,
+): CodexWorktreeComponent {
+  const component = componentId
+    ? components.find((candidate) => candidate.id === componentId)
+    : components.find((candidate) => candidate.role === "primary") ?? components[0];
+  if (!component) {
+    throw new CodexWorktreeServiceError(
+      componentId
+        ? `Project component is not configured: ${componentId}`
+        : "DevNexus project has no components",
+    );
+  }
+
+  return component;
+}
+
+function projectUsesPharoNexusExtension(
+  projectConfig: Pick<NexusProjectConfig, "extensions">,
+): boolean {
+  return Boolean(projectConfig.extensions?.["pharo-nexus"]);
+}
+
+function refreshCodexWorktreeMcpConfig(options: {
+  homePath: string;
+  homeConfig: NexusHomeConfig;
+  projectConfig: NexusProjectConfig;
+  projectRoot: string;
+  worktreePath: string;
+  projectId: string;
+  componentId: string;
+}): void {
+  if (!projectUsesPharoNexusExtension(options.projectConfig)) {
+    return;
+  }
+
+  initCodexWorkspace({
+    homePath: options.homePath,
+    workspacePath: options.worktreePath,
+    config: options.homeConfig,
+    projectRoot: options.projectRoot,
+    projectId: options.projectId,
+    workspaceId: `${options.componentId}-${path.basename(options.worktreePath)}`,
+    includePharo: true,
+  });
+}
+
 export function prepareCodexWorktree(
   options: PrepareCodexWorktreeOptions,
 ): PrepareCodexWorktreeResult {
   const homePath = resolveNexusHome(options.homePath);
+  const homeConfig = loadHomeConfig(homePath);
   const status = getNexusProjectStatus({
     homePath,
     project: options.project,
   }).project;
   const projectRoot = path.resolve(status.projectRoot);
   const projectConfig = loadProjectConfig(projectRoot);
-  const sourceRoot = resolveProjectSourceRoot(projectRoot, projectConfig);
-  const worktreesRoot = projectWorktreesRootPath(projectRoot, projectConfig);
+  const component = resolveCodexWorktreeComponent(
+    status.components,
+    options.componentId,
+  );
+  const sourceRoot = component.sourceRoot;
+  const worktreesRoot = component.worktreesRoot;
   const branchName = resolveBranchName(status.id, options);
   const gitRunner = options.gitRunner ?? defaultGitRunner;
   const preparedGit = runGitWorktreeOperation(() =>
     prepareGitWorktree({
+      componentId: component.id,
       sourceRoot,
       worktreesRoot,
       branchName,
       worktreeName: options.worktreeName,
       baseRef: options.baseRef,
+      workItemId: options.workItem?.id,
       gitRunner,
     }),
   );
@@ -208,6 +274,15 @@ export function prepareCodexWorktree(
     projectRoot,
     preparedGit.worktreePath,
   );
+  refreshCodexWorktreeMcpConfig({
+    homePath,
+    homeConfig,
+    projectConfig,
+    projectRoot,
+    worktreePath: preparedGit.worktreePath,
+    projectId: status.id,
+    componentId: component.id,
+  });
   const excludedEntries = ensureSupportFileExcludes(
     gitRunner,
     commands,
@@ -218,6 +293,7 @@ export function prepareCodexWorktree(
   const metadataRecord: CodexWorktreeRecord = {
     id: `${status.id}:${branchName}`,
     projectId: status.id,
+    componentId: component.id,
     projectRoot,
     sourceRoot,
     worktreePath: preparedGit.worktreePath,
@@ -240,6 +316,7 @@ export function prepareCodexWorktree(
     metadataPath,
     metadataRecord,
     projectRoot,
+    componentId: component.id,
     sourceRoot,
     worktreesRoot: preparedGit.worktreesRoot,
     worktreePath: preparedGit.worktreePath,
@@ -402,20 +479,6 @@ function codexWorktreeStatusFromRecord(
     sourceRootExists: fs.existsSync(metadataRecord.sourceRoot),
     worktreeExists: fs.existsSync(metadataRecord.worktreePath),
   };
-}
-
-function resolveProjectSourceRoot(
-  projectRoot: string,
-  projectConfig: NexusProjectConfig,
-): string {
-  const sourceRoot = projectConfig.repo.sourceRoot;
-  if (!sourceRoot) {
-    return path.resolve(projectRoot);
-  }
-
-  return path.isAbsolute(sourceRoot)
-    ? path.resolve(sourceRoot)
-    : path.resolve(projectRoot, sourceRoot);
 }
 
 function resolveBranchName(
@@ -632,6 +695,10 @@ function normalizeCodexWorktreeRecord(value: unknown): CodexWorktreeRecord {
   const record = value as Record<string, unknown>;
   return {
     ...(record as unknown as CodexWorktreeRecord),
+    componentId:
+      typeof record.componentId === "string" && record.componentId.trim()
+        ? record.componentId
+        : null,
     state: record.state === "archived" ? "archived" : "active",
     archivedAt: typeof record.archivedAt === "string" ? record.archivedAt : null,
     removedAt: typeof record.removedAt === "string" ? record.removedAt : null,

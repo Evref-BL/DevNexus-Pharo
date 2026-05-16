@@ -253,6 +253,7 @@ const tools: McpTool[] = [
       properties: {
         homePath: { type: "string" },
         project: { type: "string" },
+        componentId: { type: "string" },
         branchName: { type: "string" },
         worktreeName: { type: "string" },
         baseRef: { type: "string" },
@@ -878,6 +879,7 @@ export async function callPharoNexusMcpTool(
         const prepared = prepareCodexWorktree({
           homePath,
           project: requiredString(args, "project", "arguments"),
+          componentId: optionalString(args, "componentId", "arguments"),
           branchName: optionalString(args, "branchName", "arguments"),
           worktreeName: optionalString(args, "worktreeName", "arguments"),
           baseRef: optionalString(args, "baseRef", "arguments"),

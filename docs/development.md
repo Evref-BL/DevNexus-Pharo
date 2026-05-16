@@ -173,14 +173,19 @@ only the managed MCP server entries:
 pharo_nexus
 plexus
 vibe_kanban
+pharo
 ```
 
 PharoNexus and PLexus entries use URL MCP connections to supervised local
 endpoints. `vibe_kanban` remains a pinned command entry for Vibe's own MCP
-mode.
+mode. `pharo` is emitted only for PharoNexus-managed projects and prepared
+worktrees; it is a PLexus gateway command facade scoped with project, workspace,
+target, and state-root environment variables.
 
 `codex doctor` validates managed config sections, endpoint health, MCP
-`initialize`, `tools/list`, and expected tool names.
+`initialize`, `tools/list`, and expected tool names. For the `pharo` facade it
+performs only a read-only config check and records the command probe as skipped,
+so the check does not launch images or open PLexus routes.
 
 ## Agent Model Policy
 
@@ -235,6 +240,11 @@ startup sets `DOCKER_BUILDKIT=1` and `COMPOSE_DOCKER_CLI_BUILD=1`.
   `PLEXUS_MCP_PORT`, and `PORT`
 - stops the service by persisted pid
 - optionally checks HTTP health on the configured PLexus MCP port
+
+Prepared Codex worktrees depend on this gateway for direct Pharo MCP access.
+When a Pharo code task lacks the `pharo` MCP surface, agents should report the
+missing route/configuration as a blocker instead of editing Pharo code through
+files.
 
 ## Vibe Kanban Backend Service
 

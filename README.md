@@ -9,7 +9,8 @@ PharoNexus owns:
 - the user-level PharoNexus home
 - Vibe Kanban backend and local app startup
 - the PLexus gateway startup
-- Codex/Vibe MCP configuration for PharoNexus and PLexus
+- Codex/Vibe MCP configuration for PharoNexus, PLexus, and the projected Pharo
+  MCP facade
 - PharoNexus project creation, import, registry, work tracking, and local
   Codex worktree metadata
 
@@ -304,8 +305,17 @@ Open a fresh Codex chat from that workspace after `codex doctor` passes. A
 running chat may keep the MCP tool list it loaded at startup.
 
 `codex init` preserves unrelated Codex settings and unrelated MCP servers. It
-replaces only the PharoNexus-managed `pharo_nexus`, `plexus`, and
-`vibe_kanban` entries.
+replaces only the PharoNexus-managed `pharo_nexus`, `plexus`, `vibe_kanban`,
+and, for PharoNexus-managed projects, `pharo` entries. The `pharo` entry is a
+command facade for the PLexus gateway; `codex doctor` verifies that it is
+projected without spawning the command, opening images, or creating routes.
+
+`worktree_prepare` creates component-scoped worktrees under
+`worktrees\<component-id>\...` and refreshes the worktree `.codex\config.toml`
+with the same projected Pharo MCP facade. Workers changing Pharo code should
+use the direct `pharo` MCP tools. If those tools are missing or unreachable,
+report the MCP infrastructure blocker and use read-only PLexus status or route
+discovery instead of editing Pharo code through files.
 
 ## MCP Server
 
@@ -370,7 +380,7 @@ $env:PHARO_NEXUS_GITHUB_OAUTH_CLIENT_SECRET = "<github-oauth-client-secret>"
 
 ## Troubleshooting
 
-- Missing `pharo_nexus` or `plexus` tools: run `pharo-nexus codex doctor
+- Missing `pharo_nexus`, `plexus`, or `pharo` tools: run `pharo-nexus codex doctor
   <workspace>`, then open a fresh Codex chat after the checks pass.
 - Service health failures: run `pharo-nexus status --check-health`, inspect
   logs under `<home>\logs\`, then rerun `pharo-nexus start`.

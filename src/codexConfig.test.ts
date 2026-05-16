@@ -7,8 +7,10 @@ import {
   createDefaultHomeConfig,
   initNexusHome,
   loadHomeConfig,
+  saveProjectConfig,
   saveHomeConfig,
 } from "./config.js";
+import { pharoNexusProjectExtensionConfigKey } from "./pharoNexusExtension.js";
 import {
   buildCodexMcpServers,
   codexConfigPath,
@@ -251,6 +253,55 @@ describe("Codex config", () => {
     expect(content).toContain('"--mcp"');
   });
 
+  it("writes a scoped Pharo MCP facade for PharoNexus project workspaces", () => {
+    const homePath = makeTempDir("pharo-nexus-home-");
+    initNexusHome({ homePath });
+    const projectRoot = makeTempDir("pharo-nexus-project-");
+    saveProjectConfig(projectRoot, {
+      version: 1,
+      id: "pharo-project",
+      name: "Pharo Project",
+      home: null,
+      repo: {
+        kind: "local",
+        remoteUrl: null,
+        defaultBranch: "main",
+      },
+      worktreesRoot: "worktrees",
+      kanban: {
+        provider: "vibe-kanban",
+        projectId: "vk-pharo-project",
+      },
+      extensions: {
+        [pharoNexusProjectExtensionConfigKey]: {},
+      },
+    });
+
+    const result = initCodexWorkspace({ homePath, workspacePath: projectRoot });
+    const pharoServer = result.servers.pharo;
+
+    expect(pharoServer).toMatchObject({
+      enabled: true,
+      command: "plexus-gateway",
+      args: ["--stdio"],
+      env: {
+        PLEXUS_GATEWAY_SURFACE: "pharo",
+        PLEXUS_PROJECT_ROOT: path.resolve(projectRoot),
+        PLEXUS_PROJECT_ID: "pharo-project",
+        PLEXUS_WORKSPACE_ID: path.basename(projectRoot),
+        PLEXUS_WORKSPACE_ROOT: path.resolve(projectRoot),
+        PLEXUS_TARGET_ID: `pharo-project--${path.basename(projectRoot)}`,
+        PLEXUS_STATE_ROOT: path.join(homePath, "state", "plexus"),
+      },
+      defaultToolsApprovalMode: "approve",
+    });
+    expect(JSON.parse(pharoServer?.env?.PLEXUS_PHARO_TOOLS_JSON ?? "[]")).toEqual([
+      expect.objectContaining({ name: "pharo_eval" }),
+    ]);
+    expect(result.content).toContain("[mcp_servers.pharo]");
+    expect(result.content).toContain("[mcp_servers.pharo.env]");
+  });
+
   it("reports missing Codex config as an actionable doctor failure", async () => {
     const homePath = makeTempDir("pharo-nexus-home-");
     initNexusHome({ homePath });
@@ -299,6 +350,56 @@ describe("Codex config", () => {
         expect.objectContaining({ name: "plexus:initialize", status: "ok" }),
         expect.objectContaining({ name: "plexus:tools", status: "ok" }),
         expect.objectContaining({ name: "vibe_kanban:command", status: "skipped" }),
+      ]),
+    );
+  });
+
+  it("checks Pharo MCP facade config without launching the command", async () => {
+    const pharo = await startFakeMcpServer([
+      "project_create",
+      "project_import",
+      "project_status",
+    ]);
+    const plexus = await startFakeMcpServer([
+      "plexus_project_open",
+      "plexus_project_status",
+    ]);
+    const homePath = makeTempDir("pharo-nexus-home-");
+    const config = createDefaultHomeConfig(homePath, {
+      pharoNexusMcpPort: pharo.port,
+      plexusMcpPort: plexus.port,
+    });
+    initNexusHome({ homePath });
+    saveHomeConfig(homePath, config);
+    const workspacePath = makeTempDir("pharo-nexus-project-");
+    saveProjectConfig(workspacePath, {
+      version: 1,
+      id: "doctor-pharo",
+      name: "Doctor Pharo",
+      home: null,
+      repo: {
+        kind: "local",
+        remoteUrl: null,
+        defaultBranch: "main",
+      },
+      worktreesRoot: "worktrees",
+      kanban: {
+        provider: "vibe-kanban",
+        projectId: "vk-doctor-pharo",
+      },
+      extensions: {
+        [pharoNexusProjectExtensionConfigKey]: {},
+      },
+    });
+    initCodexWorkspace({ homePath, workspacePath, config: loadHomeConfig(homePath) });
+
+    const result = await doctorCodexWorkspace({ homePath, workspacePath });
+
+    expect(result.ok).toBe(true);
+    expect(result.checks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: "config:pharo", status: "ok" }),
+        expect.objectContaining({ name: "pharo:command", status: "skipped" }),
       ]),
     );
   });

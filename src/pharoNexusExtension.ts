@@ -144,8 +144,9 @@ Use this skill when working inside a PharoNexus-managed project.
 1. Identify whether the request belongs to the control project or an owning source project.
 2. Read local AGENTS.md, NOTES.md, and the project config before changing files.
 3. Use provider-neutral project and work-item tools where possible.
-4. Keep Vibe Kanban as tracker context only unless a task explicitly asks for Vibe diagnostics.
-5. Verify focused behavior before broader checks, then record commits and publication state.
+4. Confirm direct \`pharo\` MCP tools are available before changing Pharo code; if not, report the MCP infrastructure blocker instead of editing Pharo files.
+5. Keep Vibe Kanban as tracker context only unless a task explicitly asks for Vibe diagnostics.
+6. Verify focused behavior before broader checks, then record commits and publication state.
 `,
   ),
   pharoNexusSkill(
@@ -188,9 +189,10 @@ Use this skill when a task touches image creation, launch, or cleanup.
 Use this skill when validating in-image MCP tool reachability or routed calls.
 
 1. Prove transport reachability before assuming tool behavior is wrong.
-2. Keep routed calls non-mutating until an isolated image boundary is explicit.
-3. Capture request shape, response payload, route id, and owning project.
-4. Add regression coverage at the lowest layer that owns the failure.
+2. Use direct \`pharo\` MCP tools for Pharo code work; do not substitute file edits when the MCP surface is missing.
+3. Keep routed calls non-mutating until an isolated image boundary is explicit.
+4. Capture request shape, response payload, route id, and owning project.
+5. Add regression coverage at the lowest layer that owns the failure.
 `,
   ),
 ];

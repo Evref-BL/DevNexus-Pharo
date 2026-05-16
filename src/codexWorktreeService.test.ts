@@ -3,8 +3,13 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { codexConfigPath } from "./codexConfig.js";
-import { initNexusHome } from "./config.js";
 import {
+  initNexusHome,
+  loadProjectConfig,
+  saveProjectConfig,
+} from "./config.js";
+import {
+  createNexusProject,
   type GitCommandResult,
   type GitRunner,
 } from "./nexusProjectService.js";
@@ -28,6 +33,10 @@ function makeTempDir(prefix: string): string {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
   tempDirs.push(tempDir);
   return tempDir;
+}
+
+function tomlString(value: string): string {
+  return `"${value.replaceAll("\\", "\\\\").replaceAll('"', '\\"')}"`;
 }
 
 afterEach(() => {
@@ -121,12 +130,15 @@ describe("Codex worktree service", () => {
     const expectedWorktreePath = path.join(
       projectRoot,
       "worktrees",
+      "primary",
       "codex-fcd-123",
     );
     expect(result).toMatchObject({
       homePath,
       projectRoot,
+      componentId: "primary",
       sourceRoot: projectRoot,
+      worktreesRoot: path.join(projectRoot, "worktrees", "primary"),
       worktreePath: expectedWorktreePath,
       branchName: "codex/fcd-123",
       baseRef: null,
@@ -157,6 +169,7 @@ describe("Codex worktree service", () => {
           id: "ready:codex/fcd-123",
           state: "active",
           projectId: "ready",
+          componentId: "primary",
           branchName: "codex/fcd-123",
           worktreePath: expectedWorktreePath,
           excludedEntries: ["AGENTS.md", ".codex/"],
@@ -169,6 +182,17 @@ describe("Codex worktree service", () => {
         },
       ],
     });
+    const worktreeCodexConfig = fs.readFileSync(
+      codexConfigPath(expectedWorktreePath),
+      "utf8",
+    );
+    expect(worktreeCodexConfig).toContain("[mcp_servers.pharo]");
+    expect(worktreeCodexConfig).toContain(
+      `PLEXUS_PROJECT_ROOT = ${tomlString(projectRoot)}`,
+    );
+    expect(worktreeCodexConfig).toContain(
+      `PLEXUS_WORKSPACE_ROOT = ${tomlString(expectedWorktreePath)}`,
+    );
   });
 
   it("uses an imported source checkout as the Git worktree source", () => {
@@ -211,23 +235,134 @@ describe("Codex worktree service", () => {
           "add",
           "-b",
           "codex/imported/fcd-42",
-          path.join(projectRoot, "worktrees", "codex-imported-fcd-42"),
+          path.join(projectRoot, "worktrees", "primary", "codex-imported-fcd-42"),
           "main",
         ],
       },
       {
-        cwd: path.join(projectRoot, "worktrees", "codex-imported-fcd-42"),
+        cwd: path.join(projectRoot, "worktrees", "primary", "codex-imported-fcd-42"),
         args: ["rev-parse", "--git-path", "info/exclude"],
       },
     ]);
     expect(result.metadataRecord).toMatchObject({
       id: "imported:codex/imported/fcd-42",
       projectId: "imported",
+      componentId: "primary",
       sourceRoot,
       workItem: {
         id: "FCD-42",
       },
     });
+  });
+
+  it("prepares an explicitly selected component worktree with projected Pharo MCP config", () => {
+    const homePath = makeTempDir("pharo-nexus-home-");
+    initNexusHome({ homePath });
+    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "Components");
+    const addonRoot = path.join(projectRoot, "components", "addon");
+    createPharoNexusProject({
+      homePath,
+      name: "Components",
+      root: projectRoot,
+      gitInit: true,
+      gitRunner: fakeProjectGitRunner(),
+    });
+    fs.mkdirSync(addonRoot, { recursive: true });
+    saveProjectConfig(projectRoot, {
+      ...loadProjectConfig(projectRoot),
+      components: [
+        {
+          id: "primary",
+          name: "Primary",
+          kind: "local",
+          role: "primary",
+          remoteUrl: null,
+          defaultBranch: "main",
+          sourceRoot: ".",
+          relationships: [],
+        },
+        {
+          id: "addon",
+          name: "Addon",
+          kind: "local",
+          role: "extension",
+          remoteUrl: null,
+          defaultBranch: "main",
+          sourceRoot: "components/addon",
+          relationships: [{ kind: "related", componentId: "primary" }],
+        },
+      ],
+    });
+    const calls: Array<{ args: string[]; cwd?: string }> = [];
+
+    const result = prepareCodexWorktree({
+      homePath,
+      project: "components",
+      componentId: "addon",
+      branchName: "codex/addon-work",
+      gitRunner: fakeWorktreeGitRunner(calls),
+    });
+
+    const expectedWorktreePath = path.join(
+      projectRoot,
+      "worktrees",
+      "addon",
+      "codex-addon-work",
+    );
+    expect(result).toMatchObject({
+      componentId: "addon",
+      sourceRoot: addonRoot,
+      worktreesRoot: path.join(projectRoot, "worktrees", "addon"),
+      worktreePath: expectedWorktreePath,
+      metadataRecord: {
+        componentId: "addon",
+      },
+    });
+    expect(calls[0]).toEqual({
+      cwd: addonRoot,
+      args: ["worktree", "add", "-b", "codex/addon-work", expectedWorktreePath],
+    });
+    const worktreeCodexConfig = fs.readFileSync(
+      codexConfigPath(expectedWorktreePath),
+      "utf8",
+    );
+    expect(worktreeCodexConfig).toContain("[mcp_servers.pharo]");
+    expect(worktreeCodexConfig).toContain(
+      `PLEXUS_PROJECT_ROOT = ${tomlString(projectRoot)}`,
+    );
+    expect(worktreeCodexConfig).toContain(
+      `PLEXUS_WORKSPACE_ROOT = ${tomlString(expectedWorktreePath)}`,
+    );
+    expect(worktreeCodexConfig).toContain(
+      'PLEXUS_WORKSPACE_ID = "addon-codex-addon-work"',
+    );
+  });
+
+  it("leaves Pharo MCP projection out of generic DevNexus worktrees", () => {
+    const homePath = makeTempDir("pharo-nexus-home-");
+    initNexusHome({ homePath });
+    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "Generic");
+    createNexusProject({
+      homePath,
+      name: "Generic",
+      root: projectRoot,
+      gitInit: true,
+      gitRunner: fakeProjectGitRunner(),
+    });
+    const calls: Array<{ args: string[]; cwd?: string }> = [];
+
+    const result = prepareCodexWorktree({
+      homePath,
+      project: "generic",
+      branchName: "codex/generic",
+      gitRunner: fakeWorktreeGitRunner(calls),
+    });
+
+    expect(result).toMatchObject({
+      projectRoot,
+      componentId: "primary",
+    });
+    expect(fs.existsSync(codexConfigPath(result.worktreePath))).toBe(false);
   });
 
   it("rejects unsafe branch names before running Git", () => {

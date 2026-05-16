@@ -1322,16 +1322,18 @@ describe("PharoNexus MCP server tools", () => {
         { gitRunner },
       ),
     );
-    const worktreePath = path.join(projectRoot, "worktrees", "codex-fcd-900");
+    const worktreePath = path.join(projectRoot, "worktrees", "primary", "codex-fcd-900");
     expect(preparePayload).toMatchObject({
       ok: true,
       projectRoot,
+      componentId: "primary",
       sourceRoot: projectRoot,
       worktreePath,
       branchName: "codex/fcd-900",
       baseRef: "main",
       metadataRecord: {
         id: "codex-mcp:codex/fcd-900",
+        componentId: "primary",
         workItem: {
           id: createWorkItemPayload.workItem.id,
         },

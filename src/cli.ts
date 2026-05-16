@@ -196,6 +196,7 @@ export function usage(): string {
     "",
     "Options for codex worktree prepare:",
     "  --home <path>",
+    "  --component-id <id>",
     "  --branch <name>",
     "  --worktree-name <name>",
     "  --base-ref <ref>",
@@ -563,6 +564,7 @@ interface ParsedCodexWorktreePrepareCommand {
   command: "worktree_prepare";
   project: string;
   homePath: string;
+  componentId?: string;
   branchName?: string;
   worktreeName?: string;
   baseRef?: string;
@@ -799,6 +801,12 @@ function parseCodexWorktreeCommand(argv: string[]): ParsedCodexCommand {
             | Partial<ParsedCodexWorktreePrepareCommand>
             | Partial<ParsedCodexWorktreeGuideCommand>
         ).branchName = next();
+        break;
+      case "--component-id":
+        if (action !== "prepare") {
+          throw new Error("--component-id is only supported for codex worktree prepare");
+        }
+        (parsed as Partial<ParsedCodexWorktreePrepareCommand>).componentId = next();
         break;
       case "--worktree-name":
         if (action !== "prepare") {
@@ -1186,6 +1194,7 @@ async function handleCodexCommand(
     const result = prepareCodexWorktree({
       homePath: parsed.homePath,
       project: parsed.project,
+      componentId: parsed.componentId,
       branchName: parsed.branchName,
       worktreeName: parsed.worktreeName,
       baseRef: parsed.baseRef,

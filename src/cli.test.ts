@@ -79,6 +79,7 @@ describe("pharo-nexus cli", () => {
     expect(usage()).toContain("--no-open-browser");
     expect(usage()).toContain("--state <active|archived>");
     expect(usage()).toContain("--id <worktree-id>");
+    expect(usage()).toContain("--component-id");
     expect(usage()).toContain("--work-item-id");
     expect(usage()).toContain("--comment-work-item");
     expect(usage()).toContain("--commit-id");
@@ -304,10 +305,11 @@ describe("pharo-nexus cli", () => {
         context,
       ),
     ).resolves.toBe(0);
-    const worktreePath = path.join(projectRoot, "worktrees", "codex-fcd-900");
+    const worktreePath = path.join(projectRoot, "worktrees", "primary", "codex-fcd-900");
     expect(JSON.parse(String(log.mock.calls[0]?.[0]))).toMatchObject({
       ok: true,
       projectRoot,
+      componentId: "primary",
       sourceRoot: projectRoot,
       worktreePath,
       branchName: "codex/fcd-900",
