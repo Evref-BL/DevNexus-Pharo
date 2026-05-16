@@ -416,7 +416,7 @@ describe("PharoNexus project service", () => {
               sourceRoot: path.join(projectRoot, "git"),
               sourceRootExists: true,
               worktreesRoot: path.join(projectRoot, "worktrees", "primary"),
-              worktreesRootExists: false,
+              worktreesRootExists: true,
               workTracking: null,
               workTrackingCapabilities: null,
               workTrackingCapabilityReport: null,
