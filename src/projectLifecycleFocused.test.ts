@@ -126,6 +126,18 @@ describe("PharoNexus focused project lifecycle contracts", () => {
         remoteUrl: null,
         defaultBranch: null,
       },
+      components: [
+        {
+          id: "primary",
+          name: "Validated",
+          kind: "local",
+          role: "primary",
+          remoteUrl: null,
+          defaultBranch: null,
+          sourceRoot: ".",
+          relationships: [],
+        },
+      ],
       worktreesRoot: "worktrees",
       kanban: {
         provider: "vibe-kanban",

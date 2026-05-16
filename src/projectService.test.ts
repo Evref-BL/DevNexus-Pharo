@@ -164,6 +164,18 @@ describe("PharoNexus project service", () => {
         remoteUrl: null,
         defaultBranch: "main",
       },
+      components: [
+        {
+          id: "primary",
+          name: "MyProject",
+          kind: "local",
+          role: "primary",
+          remoteUrl: null,
+          defaultBranch: "main",
+          sourceRoot: ".",
+          relationships: [],
+        },
+      ],
       worktreesRoot: "worktrees",
       kanban: {
         provider: "vibe-kanban",
@@ -392,6 +404,25 @@ describe("PharoNexus project service", () => {
             defaultBranch: "main",
             sourceRoot: "git",
           },
+          components: [
+            {
+              id: "primary",
+              name: "Listed",
+              kind: "git",
+              role: "primary",
+              remoteUrl: "https://github.com/example/listed.git",
+              defaultBranch: "main",
+              sourceRoot: path.join(projectRoot, "git"),
+              sourceRootExists: true,
+              worktreesRoot: path.join(projectRoot, "worktrees", "primary"),
+              worktreesRootExists: false,
+              workTracking: null,
+              workTrackingCapabilities: null,
+              verification: null,
+              publication: null,
+              relationships: [],
+            },
+          ],
           workTracking: null,
           vibeKanbanProjectId: null,
           vibeKanbanRepoId: null,
@@ -1235,6 +1266,18 @@ describe("PharoNexus project service", () => {
 
     expect(result.projectConfig).toEqual({
       ...existingConfig,
+      components: [
+        {
+          id: "primary",
+          name: "Existing Name",
+          kind: "local",
+          role: "primary",
+          remoteUrl: null,
+          defaultBranch: "dev",
+          sourceRoot: ".",
+          relationships: [],
+        },
+      ],
       extensions: {
         [pharoNexusProjectExtensionConfigKey]: {},
       },
@@ -1275,6 +1318,7 @@ describe("PharoNexus project service", () => {
       name: "Missing",
       projectRoot,
       repo: null,
+      components: [],
       workTracking: null,
       vibeKanbanProjectId: "kanban-missing",
       vibeKanbanRepoId: null,

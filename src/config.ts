@@ -721,6 +721,18 @@ export function createControlProjectConfig(
       remoteUrl: null,
       defaultBranch: null,
     },
+    components: [
+      {
+        id: "primary",
+        name: controlProject?.name ?? pharoNexusControlProjectName,
+        kind: "local",
+        role: "primary",
+        remoteUrl: null,
+        defaultBranch: null,
+        sourceRoot: ".",
+        relationships: [],
+      },
+    ],
     worktreesRoot: nexusProjectWorktreesDirectoryName,
     kanban: {
       provider: "vibe-kanban",

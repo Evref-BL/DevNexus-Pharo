@@ -3,7 +3,11 @@ import http from "node:http";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { defaultCoreSkillPack } from "dev-nexus";
+import {
+  defaultCoreSkillPack,
+  defaultNexusAutomationConfig,
+  type NexusProjectComponentConfig,
+} from "dev-nexus";
 import {
   initNexusHome,
   loadHomeConfig,
@@ -26,6 +30,28 @@ const tempDirs: string[] = [];
 const expectedGenericSkillCount = defaultCoreSkillPack.length;
 const expectedPharoNexusSkillCount =
   defaultCoreSkillPack.length + pharoNexusSkillPack.length;
+
+function localComponent(
+  id: string,
+  role: NexusProjectComponentConfig["role"],
+  storePath: string,
+  relationships: NexusProjectComponentConfig["relationships"] = [],
+): NexusProjectComponentConfig {
+  return {
+    id,
+    name: id,
+    kind: "local",
+    role,
+    remoteUrl: null,
+    defaultBranch: null,
+    sourceRoot: ".",
+    workTracking: {
+      provider: "local",
+      storePath,
+    },
+    relationships,
+  };
+}
 
 function makeTempDir(prefix: string): string {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
@@ -229,6 +255,10 @@ describe("PharoNexus MCP server tools", () => {
       "worktree_status",
       "worktree_record_execution",
       "worktree_archive",
+      "automation_status",
+      "target_cycle_list",
+      "target_cycle_record",
+      "target_report",
       "work_item_create",
       "work_item_list",
       "work_item_get",
@@ -527,10 +557,16 @@ describe("PharoNexus MCP server tools", () => {
     expect(createProject.isError).toBeUndefined();
     saveProjectConfig(projectRoot, {
       ...loadProjectConfig(projectRoot),
-      workTracking: {
-        provider: "local",
-        storePath: path.join(".tracker", "items.json"),
-      },
+      workTracking: undefined,
+      components: [
+        localComponent("primary", "primary", path.join(".tracker", "items.json")),
+        localComponent(
+          "addon",
+          "extension",
+          path.join(".tracker", "addon-items.json"),
+          [{ kind: "related", componentId: "primary" }],
+        ),
+      ],
     });
 
     const createPayload = parseToolText(
@@ -552,6 +588,24 @@ describe("PharoNexus MCP server tools", () => {
       },
     });
 
+    const addonCreatePayload = parseToolText(
+      await callPharoNexusMcpTool("work_item_create", {
+        homePath,
+        project: "tracked",
+        componentId: "addon",
+        title: "Component MCP item",
+        labels: ["component"],
+      }),
+    );
+    expect(addonCreatePayload).toMatchObject({
+      ok: true,
+      workItem: {
+        id: "local-1",
+        title: "Component MCP item",
+        labels: ["component"],
+      },
+    });
+
     const listPayload = parseToolText(
       await callPharoNexusMcpTool("work_item_list", {
         homePath,
@@ -565,6 +619,24 @@ describe("PharoNexus MCP server tools", () => {
         {
           id: "local-1",
           title: "Local MCP item",
+        },
+      ],
+    });
+
+    const addonListPayload = parseToolText(
+      await callPharoNexusMcpTool("work_item_list", {
+        homePath,
+        project: "tracked",
+        componentId: "addon",
+        labels: ["component"],
+      }),
+    );
+    expect(addonListPayload).toMatchObject({
+      ok: true,
+      workItems: [
+        {
+          id: "local-1",
+          title: "Component MCP item",
         },
       ],
     });
@@ -641,6 +713,163 @@ describe("PharoNexus MCP server tools", () => {
     expect(fs.existsSync(path.join(projectRoot, ".tracker", "items.json"))).toBe(
       true,
     );
+    expect(
+      fs.existsSync(path.join(projectRoot, ".tracker", "addon-items.json")),
+    ).toBe(true);
+  });
+
+  it("delegates automation target tools to the native DevNexus MCP surface", async () => {
+    const homePath = makeTempDir("pharo-nexus-home-");
+    const projectRoot = path.join(makeTempDir("pharo-nexus-projects-"), "Automated");
+    initNexusHome({ homePath });
+    const createProject = await callPharoNexusMcpTool(
+      "project_create",
+      {
+        homePath,
+        name: "Automated",
+        root: projectRoot,
+        gitInit: true,
+        syncTracker: false,
+      },
+      { gitRunner: fakeGitRunner },
+    );
+    expect(createProject.isError).toBeUndefined();
+    saveProjectConfig(projectRoot, {
+      ...loadProjectConfig(projectRoot),
+      workTracking: undefined,
+      components: [
+        localComponent("primary", "primary", path.join(".tracker", "primary.json")),
+        localComponent(
+          "addon",
+          "extension",
+          path.join(".tracker", "addon.json"),
+          [{ kind: "related", componentId: "primary" }],
+        ),
+      ],
+      automation: {
+        ...defaultNexusAutomationConfig,
+        mode: "agent_launch",
+        selector: {
+          ...defaultNexusAutomationConfig.selector,
+          statuses: ["ready"],
+          labels: ["dogfood"],
+        },
+        target: {
+          ...defaultNexusAutomationConfig.target,
+          id: "adapter-alignment",
+          objective: "Verify PharoNexus can expose DevNexus target facts.",
+        },
+      },
+    });
+
+    await callPharoNexusMcpTool(
+      "work_item_create",
+      {
+        homePath,
+        project: "automated",
+        componentId: "addon",
+        title: "Component work",
+        status: "ready",
+        labels: ["dogfood"],
+      },
+      { now: () => "2026-05-16T10:00:00.000Z" },
+    );
+
+    const automationStatus = parseToolText(
+      await callPharoNexusMcpTool(
+        "automation_status",
+        {
+          homePath,
+          project: "automated",
+        },
+        { now: () => "2026-05-16T10:05:00.000Z" },
+      ),
+    );
+    expect(automationStatus).toMatchObject({
+      ok: true,
+      status: "ready",
+      target: {
+        id: "adapter-alignment",
+      },
+      componentEligibleWorkItems: [
+        {
+          componentId: "primary",
+          workItems: [],
+        },
+        {
+          componentId: "addon",
+          workItems: [
+            {
+              id: "local-1",
+              title: "Component work",
+            },
+          ],
+        },
+      ],
+    });
+
+    const recorded = parseToolText(
+      await callPharoNexusMcpTool(
+        "target_cycle_record",
+        {
+          homePath,
+          project: "automated",
+          cycleId: "cycle-1",
+          status: "completed",
+          summary: "Native target cycle recorded through PharoNexus.",
+          eligibleWorkItemCount: 1,
+          workItems: [
+            {
+              componentId: "addon",
+              id: "local-1",
+              cycleStatus: "completed",
+            },
+          ],
+        },
+        { now: () => "2026-05-16T10:10:00.000Z" },
+      ),
+    );
+    expect(recorded).toMatchObject({
+      ok: true,
+      record: {
+        id: "cycle-1",
+        targetId: "adapter-alignment",
+        status: "completed",
+        workItems: [
+          {
+            componentId: "addon",
+            id: "local-1",
+            cycleStatus: "completed",
+          },
+        ],
+      },
+    });
+
+    const report = parseToolText(
+      await callPharoNexusMcpTool(
+        "target_report",
+        {
+          homePath,
+          project: "automated",
+        },
+        { now: () => "2026-05-16T10:15:00.000Z" },
+      ),
+    );
+    expect(report).toMatchObject({
+      ok: true,
+      report: {
+        status: "completed",
+        workItemSummary: {
+          uniqueReferences: [
+            {
+              componentId: "addon",
+              id: "local-1",
+              latestCycleStatus: "completed",
+            },
+          ],
+        },
+      },
+    });
   });
 
   it("configures GitLab work tracking through neutral MCP tool calls", async () => {
@@ -758,7 +987,9 @@ describe("PharoNexus MCP server tools", () => {
     expect(parseToolText(result)).toMatchObject({
       ok: false,
     });
-    expect(JSON.stringify(parseToolText(result))).toContain("vibe-kanban");
+    expect(JSON.stringify(parseToolText(result))).toContain(
+      "work tracking is not configured",
+    );
   });
 
   it("resolves project status by managed config id before MCP path fallback", async () => {
@@ -1065,6 +1296,9 @@ describe("PharoNexus MCP server tools", () => {
         provider: "local",
         storePath: path.join(".tracker", "items.json"),
       },
+      components: [
+        localComponent("primary", "primary", path.join(".tracker", "items.json")),
+      ],
     });
     const createWorkItemPayload = parseToolText(
       await callPharoNexusMcpTool("work_item_create", {

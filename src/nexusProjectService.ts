@@ -148,6 +148,7 @@ export interface NexusProjectStatus {
   name: string;
   projectRoot: string;
   repo: NexusProjectConfig["repo"] | null;
+  components: NexusProjectStatusBase["components"];
   workTracking: WorkTrackingConfig | null;
   vibeKanbanProjectId: string | null;
   vibeKanbanRepoId: string | null;

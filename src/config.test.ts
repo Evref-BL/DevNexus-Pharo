@@ -151,6 +151,18 @@ describe("PharoNexus home config", () => {
         remoteUrl: null,
         defaultBranch: null,
       },
+      components: [
+        {
+          id: "primary",
+          name: pharoNexusControlProjectName,
+          kind: "local",
+          role: "primary",
+          remoteUrl: null,
+          defaultBranch: null,
+          sourceRoot: ".",
+          relationships: [],
+        },
+      ],
       worktreesRoot: nexusProjectWorktreesDirectoryName,
       kanban: {
         provider: "vibe-kanban",
@@ -213,12 +225,27 @@ describe("PharoNexus home config", () => {
         reasoning: "high",
       },
     };
+    const expectedConfig = {
+      ...config,
+      components: [
+        {
+          id: "primary",
+          name: "My Project",
+          kind: "git" as const,
+          role: "primary" as const,
+          remoteUrl: "https://github.com/example/my-project.git",
+          defaultBranch: "main",
+          sourceRoot: ".",
+          relationships: [],
+        },
+      ],
+    };
 
-    expect(validateProjectConfig(config)).toEqual(config);
+    expect(validateProjectConfig(config)).toEqual(expectedConfig);
     expect(saveProjectConfig(projectPath, config)).toBe(
       path.join(projectPath, devNexusProjectConfigFileName),
     );
-    expect(loadProjectConfig(projectPath)).toEqual(config);
+    expect(loadProjectConfig(projectPath)).toEqual(expectedConfig);
   });
 
   it("validates optional agent defaults and rejects empty agent config", () => {
@@ -315,6 +342,18 @@ describe("PharoNexus home config", () => {
         remoteUrl: null,
         defaultBranch: null,
       },
+      components: [
+        {
+          id: "primary",
+          name: "Legacy Project",
+          kind: "local",
+          role: "primary",
+          remoteUrl: null,
+          defaultBranch: null,
+          sourceRoot: ".",
+          relationships: [],
+        },
+      ],
       worktreesRoot: "worktrees",
       kanban: {
         provider: "vibe-kanban",
