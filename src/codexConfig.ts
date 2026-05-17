@@ -7,6 +7,10 @@ import {
   type NexusHomeConfig,
   type NexusProjectConfig,
 } from "./config.js";
+import {
+  buildPlexusProjectConfig,
+  plexusProjectConfigFileName,
+} from "./devNexusPharoExtension.js";
 import { devNexusPharoPluginId } from "./devNexusPharoPlugin.js";
 import { defaultDevNexusPharoMcpHealthPath } from "./mcpServer.js";
 
@@ -74,6 +78,8 @@ export interface InitCodexWorkspaceOptions {
 export interface InitCodexWorkspaceResult {
   workspacePath: string;
   configPath: string;
+  plexusProjectConfigPath?: string;
+  plexusProjectConfigCreated?: boolean;
   servers: Record<string, CodexMcpServerConfig>;
   updated: boolean;
   content: string;
@@ -304,6 +310,79 @@ function projectUsesSharedDevNexusMcp(
   projectConfig: NexusProjectConfig | undefined,
 ): projectConfig is NexusProjectConfig {
   return Boolean(projectConfig?.mcp && projectUsesDevNexusPharo(projectConfig));
+}
+
+function sharedPlexusProjectConfigPath(workspacePath: string): string {
+  return path.join(path.resolve(workspacePath), plexusProjectConfigFileName);
+}
+
+function ensureSharedPlexusProjectConfig(
+  workspacePath: string,
+  projectConfig: NexusProjectConfig,
+  dryRun: boolean | undefined,
+): { configPath: string; created: boolean } {
+  const configPath = sharedPlexusProjectConfigPath(workspacePath);
+  if (fs.existsSync(configPath)) {
+    return { configPath, created: false };
+  }
+
+  if (!dryRun) {
+    fs.writeFileSync(
+      configPath,
+      `${JSON.stringify(
+        buildPlexusProjectConfig(projectConfig.name, projectConfig.id),
+        null,
+        2,
+      )}\n`,
+      "utf8",
+    );
+  }
+
+  return { configPath, created: true };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function inspectSharedPlexusProjectConfig(
+  workspacePath: string,
+): CodexDoctorCheck {
+  const configPath = sharedPlexusProjectConfigPath(workspacePath);
+  if (!fs.existsSync(configPath)) {
+    return {
+      name: "plexus_project:config",
+      status: "failed",
+      message: `Missing ${plexusProjectConfigFileName}. Run "dev-nexus-pharo codex init ${workspacePath}" to materialize scoped PLexus project config.`,
+    };
+  }
+
+  try {
+    const parsed = JSON.parse(fs.readFileSync(configPath, "utf8")) as unknown;
+    const kanban = isRecord(parsed) ? parsed.kanban : undefined;
+    const valid =
+      isRecord(parsed) &&
+      typeof parsed.name === "string" &&
+      isRecord(kanban) &&
+      kanban.provider === "vibe-kanban" &&
+      typeof kanban.projectId === "string" &&
+      Array.isArray(parsed.images);
+    return {
+      name: "plexus_project:config",
+      status: valid ? "ok" : "failed",
+      message: valid
+        ? `Found ${plexusProjectConfigFileName}`
+        : `${plexusProjectConfigFileName} is missing required name, kanban, or images fields.`,
+    };
+  } catch (error) {
+    return {
+      name: "plexus_project:config",
+      status: "failed",
+      message: `Could not read ${plexusProjectConfigFileName}: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    };
+  }
 }
 
 function workspaceProjectConfig(
@@ -538,6 +617,7 @@ export function initCodexWorkspace(
   const homePath = resolveNexusHome(options.homePath);
   const config = options.config ?? loadHomeConfig(homePath);
   const configPath = codexConfigPath(workspacePath);
+  const projectConfig = workspaceProjectConfig(workspacePath);
   const existingToml = fs.existsSync(configPath)
     ? fs.readFileSync(configPath, "utf8").replace(/^\uFEFF/u, "")
     : "";
@@ -553,13 +633,20 @@ export function initCodexWorkspace(
   const content = mergeCodexMcpServersIntoToml(
     existingToml,
     servers,
-    projectUsesSharedDevNexusMcp(workspaceProjectConfig(workspacePath))
+    projectUsesSharedDevNexusMcp(projectConfig)
       ? [
           config.integrations.vibeKanban.plexusMcpServerName,
           defaultVibeKanbanCodexMcpServerName,
         ]
       : [],
   );
+  const plexusProjectConfig = projectUsesSharedDevNexusMcp(projectConfig)
+    ? ensureSharedPlexusProjectConfig(
+        workspacePath,
+        projectConfig,
+        options.dryRun,
+      )
+    : undefined;
 
   if (!options.dryRun) {
     fs.mkdirSync(path.dirname(configPath), { recursive: true });
@@ -569,6 +656,12 @@ export function initCodexWorkspace(
   return {
     workspacePath,
     configPath,
+    ...(plexusProjectConfig
+      ? {
+          plexusProjectConfigPath: plexusProjectConfig.configPath,
+          plexusProjectConfigCreated: plexusProjectConfig.created,
+        }
+      : {}),
     servers,
     updated: existingToml !== content,
     content,
@@ -794,6 +887,8 @@ export async function doctorCodexWorkspace(
   }
 
   if (projectUsesSharedDevNexusMcp(projectConfig)) {
+    checks.push(inspectSharedPlexusProjectConfig(workspacePath));
+
     for (const [serverName, server] of Object.entries(servers)) {
       checks.push({
         name: `${serverName}:${server.url ? "http" : "command"}`,

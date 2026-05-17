@@ -386,6 +386,20 @@ describe("Codex config", () => {
     expect(result.content).not.toContain('command = "plexus-gateway"');
     expect(result.content).not.toContain("[mcp_servers.plexus]");
     expect(result.content).not.toContain("[mcp_servers.vibe_kanban]");
+    expect(result.plexusProjectConfigPath).toBe(
+      path.join(projectRoot, "plexus.project.json"),
+    );
+    expect(result.plexusProjectConfigCreated).toBe(true);
+    expect(
+      JSON.parse(fs.readFileSync(path.join(projectRoot, "plexus.project.json"), "utf8")),
+    ).toMatchObject({
+      name: "Shared Dogfood",
+      kanban: {
+        provider: "vibe-kanban",
+        projectId: "shared-dogfood",
+      },
+      images: [],
+    });
 
     const doctor = await doctorCodexWorkspace({
       homePath,
@@ -396,9 +410,53 @@ describe("Codex config", () => {
     expect(doctor.checks).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ name: "config:dev_nexus", status: "ok" }),
+        expect.objectContaining({ name: "plexus_project:config", status: "ok" }),
         expect.objectContaining({ name: "dev_nexus:command", status: "skipped" }),
         expect.objectContaining({ name: "pharo:http", status: "skipped" }),
       ]),
+    );
+  });
+
+  it("reports missing shared PLexus project config as a doctor failure", async () => {
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
+    initNexusHome({ homePath });
+    const projectRoot = makeTempDir("dev-nexus-pharo-shared-root-");
+    saveProjectConfig(projectRoot, {
+      version: 1,
+      id: "shared-root",
+      name: "Shared Root",
+      home: null,
+      worktreesRoot: "worktrees",
+      workTracking: {
+        provider: "local",
+        storePath: ".dev-nexus/work-items/dev-nexus.json",
+      },
+      mcp: {
+        command: "dev-nexus",
+        args: ["mcp-stdio"],
+        agentTargets: [{ agent: "codex" }],
+      },
+      plugins: [devNexusPharoDevNexusPluginConfig()],
+    });
+    initCodexWorkspace({
+      homePath,
+      workspacePath: projectRoot,
+      config: loadHomeConfig(homePath),
+    });
+    fs.rmSync(path.join(projectRoot, "plexus.project.json"), { force: true });
+
+    const doctor = await doctorCodexWorkspace({
+      homePath,
+      workspacePath: projectRoot,
+      config: loadHomeConfig(homePath),
+    });
+
+    expect(doctor.ok).toBe(false);
+    expect(doctor.checks).toContainEqual(
+      expect.objectContaining({
+        name: "plexus_project:config",
+        status: "failed",
+      }),
     );
   });
 

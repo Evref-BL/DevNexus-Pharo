@@ -182,6 +182,12 @@ enabled `dev-nexus-pharo` plugin, `project skills refresh` materializes only the
 plugin-declared Pharo skills. It does not require a legacy `kanban` block and it
 does not start PLexus, Pharo Launcher, images, or Docker.
 
+`codex init` also materializes the static `plexus.project.json` file required by
+the scoped `plexus_project` and `pharo_launcher` MCP servers. If a project-local
+runtime install exists under `.dev-nexus/runtime/npm-tools`, generated Codex MCP
+commands use those package-local binaries instead of requiring global
+`dev-nexus-pharo` or `plexus` commands.
+
 By default, DevNexus-Pharo creates the managed project root under
 `paths.projectsRoot` from `dev-nexus.home.json`. Use `--root` on
 `project create` or `--project-root` on `project import` to choose a different
