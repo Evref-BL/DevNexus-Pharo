@@ -402,6 +402,53 @@ describe("Codex config", () => {
     );
   });
 
+  it("prefers project-local runtime binaries for shared DevNexus plugin roots", () => {
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
+    initNexusHome({ homePath });
+    const projectRoot = makeTempDir("dev-nexus-pharo-shared-root-");
+    saveProjectConfig(projectRoot, {
+      version: 1,
+      id: "shared-root",
+      name: "Shared Root",
+      home: null,
+      worktreesRoot: "worktrees",
+      workTracking: {
+        provider: "local",
+        storePath: ".dev-nexus/work-items/dev-nexus.json",
+      },
+      mcp: {
+        command: "dev-nexus",
+        args: ["mcp-stdio"],
+        agentTargets: [{ agent: "codex" }],
+      },
+      plugins: [devNexusPharoDevNexusPluginConfig()],
+    });
+    const binDirectory = path.join(
+      projectRoot,
+      ".dev-nexus",
+      "runtime",
+      "npm-tools",
+      "node_modules",
+      ".bin",
+    );
+    fs.mkdirSync(binDirectory, { recursive: true });
+    const devNexusPharoBin = path.join(binDirectory, "dev-nexus-pharo.cmd");
+    const plexusBin = path.join(binDirectory, "plexus.cmd");
+    fs.writeFileSync(devNexusPharoBin, "", "utf8");
+    fs.writeFileSync(plexusBin, "", "utf8");
+
+    const result = initCodexWorkspace({
+      homePath,
+      workspacePath: projectRoot,
+      config: loadHomeConfig(homePath),
+      platform: "win32",
+    });
+
+    expect(result.servers.dev_nexus_pharo?.command).toBe(devNexusPharoBin);
+    expect(result.servers.plexus_project?.command).toBe(plexusBin);
+    expect(result.servers.pharo_launcher?.command).toBe(plexusBin);
+  });
+
   it("reports missing Codex config as an actionable doctor failure", async () => {
     const homePath = makeTempDir("dev-nexus-pharo-home-");
     initNexusHome({ homePath });

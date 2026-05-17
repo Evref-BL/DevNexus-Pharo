@@ -236,6 +236,41 @@ function withPlexusGatewayStdio(args: string[]): string[] {
   return args.includes("--stdio") ? [...args] : [...args, "--stdio"];
 }
 
+function commandLooksPathQualified(command: string): boolean {
+  return path.isAbsolute(command) || command.includes("/") || command.includes("\\");
+}
+
+function projectLocalRuntimeBinCommand(
+  workspacePath: string | undefined,
+  command: string,
+  platform: NodeJS.Platform | undefined,
+): string {
+  if (!workspacePath || commandLooksPathQualified(command)) {
+    return command;
+  }
+
+  const binDirectory = path.join(
+    path.resolve(workspacePath),
+    ".dev-nexus",
+    "runtime",
+    "npm-tools",
+    "node_modules",
+    ".bin",
+  );
+  const candidates =
+    platform === "win32"
+      ? [`${command}.cmd`, `${command}.exe`, command]
+      : [command];
+  for (const candidate of candidates) {
+    const candidatePath = path.join(binDirectory, candidate);
+    if (fs.existsSync(candidatePath)) {
+      return candidatePath;
+    }
+  }
+
+  return command;
+}
+
 function plexusCoreCommandFromConfiguredPlexusCommand(command: string): string {
   const parsed = path.parse(command);
   const executable = parsed.name.toLowerCase();
@@ -400,8 +435,15 @@ function buildSharedDevNexusPharoMcpServers(
     options.projectRoot ?? options.workspacePath ?? ".",
   );
   const plexusEnv = plexusSharedEnvironment(config, options, projectConfig);
-  const plexusCoreCommand = plexusCoreCommandFromConfiguredPlexusCommand(
-    config.tools.plexus.command,
+  const devNexusPharoCommand = projectLocalRuntimeBinCommand(
+    options.workspacePath,
+    "dev-nexus-pharo",
+    options.platform,
+  );
+  const plexusCoreCommand = projectLocalRuntimeBinCommand(
+    options.workspacePath,
+    plexusCoreCommandFromConfiguredPlexusCommand(config.tools.plexus.command),
+    options.platform,
   );
 
   return {
@@ -412,7 +454,7 @@ function buildSharedDevNexusPharoMcpServers(
     ]: buildSharedDevNexusMcpServer(projectConfig),
     [defaultDevNexusPharoCodexMcpServerName]: {
       enabled: true,
-      command: "dev-nexus-pharo",
+      command: devNexusPharoCommand,
       args: ["mcp-stdio"],
       defaultToolsApprovalMode: "approve",
     },
