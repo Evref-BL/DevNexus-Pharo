@@ -376,11 +376,14 @@ describe("Codex config", () => {
     expect(result.content).toContain("[mcp_servers.dev_nexus_pharo]");
     expect(result.content).toContain('command = "dev-nexus-pharo"');
     expect(result.content).toContain("[mcp_servers.plexus_project]");
+    expect(result.servers.plexus_project?.command).toBe("plexus");
     expect(result.content).toContain('args = ["mcp", "project"]');
     expect(result.content).toContain("[mcp_servers.pharo_launcher]");
+    expect(result.servers.pharo_launcher?.command).toBe("plexus");
     expect(result.content).toContain('args = ["mcp", "pharo-launcher", "--project-path"');
     expect(result.content).toContain("[mcp_servers.pharo]");
     expect(result.content).toContain('url = "http://127.0.0.1:7331/mcp"');
+    expect(result.content).not.toContain('command = "plexus-gateway"');
     expect(result.content).not.toContain("[mcp_servers.plexus]");
     expect(result.content).not.toContain("[mcp_servers.vibe_kanban]");
 

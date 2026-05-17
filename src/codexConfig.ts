@@ -236,6 +236,16 @@ function withPlexusGatewayStdio(args: string[]): string[] {
   return args.includes("--stdio") ? [...args] : [...args, "--stdio"];
 }
 
+function plexusCoreCommandFromConfiguredPlexusCommand(command: string): string {
+  const parsed = path.parse(command);
+  const executable = parsed.name.toLowerCase();
+  if (executable !== "plexus-gateway") {
+    return command;
+  }
+
+  return path.join(parsed.dir, `plexus${parsed.ext}`);
+}
+
 function sanitizeRuntimeId(value: string): string {
   const sanitized = value.trim().replace(/[^A-Za-z0-9._-]+/gu, "-");
   return sanitized.replace(/^-+|-+$/gu, "") || "default";
@@ -390,6 +400,9 @@ function buildSharedDevNexusPharoMcpServers(
     options.projectRoot ?? options.workspacePath ?? ".",
   );
   const plexusEnv = plexusSharedEnvironment(config, options, projectConfig);
+  const plexusCoreCommand = plexusCoreCommandFromConfiguredPlexusCommand(
+    config.tools.plexus.command,
+  );
 
   return {
     [
@@ -405,14 +418,14 @@ function buildSharedDevNexusPharoMcpServers(
     },
     [defaultPlexusProjectCodexMcpServerName]: {
       enabled: true,
-      command: config.tools.plexus.command,
+      command: plexusCoreCommand,
       args: ["mcp", "project"],
       env: plexusEnv,
       defaultToolsApprovalMode: "approve",
     },
     [defaultPharoLauncherCodexMcpServerName]: {
       enabled: true,
-      command: config.tools.plexus.command,
+      command: plexusCoreCommand,
       args: ["mcp", "pharo-launcher", "--project-path", projectRoot],
       env: plexusEnv,
       defaultToolsApprovalMode: "approve",
