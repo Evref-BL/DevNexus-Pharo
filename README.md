@@ -166,6 +166,22 @@ Managed DevNexus-Pharo projects receive copied support skills under
 commit in each skill manifest so workers do not need a sibling MCP-Pharo checkout
 to read the guidance.
 
+Shared DevNexus project roots can also use DevNexus-Pharo as a plugin without
+being created by `dev-nexus-pharo project create`. After the npm packages are
+installed and the local DevNexus-Pharo home is initialized, run the static setup
+from the shared meta root:
+
+```powershell
+dev-nexus-pharo init
+dev-nexus-pharo project skills refresh C:\dev\code\dev-nexus-dogfood
+dev-nexus-pharo codex init C:\dev\code\dev-nexus-dogfood
+```
+
+For roots whose `dev-nexus.project.json` has both a DevNexus `mcp` block and an
+enabled `dev-nexus-pharo` plugin, `project skills refresh` materializes only the
+plugin-declared Pharo skills. It does not require a legacy `kanban` block and it
+does not start PLexus, Pharo Launcher, images, or Docker.
+
 By default, DevNexus-Pharo creates the managed project root under
 `paths.projectsRoot` from `dev-nexus.home.json`. Use `--root` on
 `project create` or `--project-root` on `project import` to choose a different
@@ -341,6 +357,11 @@ replaces only the DevNexus-Pharo-managed `dev_nexus_pharo`, `plexus`, `vibe_kanb
 and, for DevNexus-Pharo-managed projects, `pharo` entries. The `pharo` entry is a
 command facade for the PLexus gateway; `codex doctor` verifies that it is
 projected without spawning the command, opening images, or creating routes.
+For shared DevNexus plugin roots, `codex init` writes the root project surface
+instead: `dev_nexus`, `dev_nexus_pharo`, `plexus_project`, `pharo_launcher`, and
+the live `pharo` gateway endpoint. In that mode it removes the older managed
+`plexus` and `vibe_kanban` entries so fresh Codex sessions load the intended
+project/plugin tool surface.
 
 `worktree_prepare` creates component-scoped worktrees under
 `worktrees\<component-id>\...` and refreshes the worktree `.codex\config.toml`

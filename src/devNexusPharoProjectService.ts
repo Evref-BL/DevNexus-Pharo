@@ -343,6 +343,8 @@ export async function syncDevNexusPharoProjectTracker(
     status.projectRoot,
     initialProjectConfig,
   );
+  const legacyVibeKanbanProjectId =
+    initialProjectConfig.kanban?.projectId ?? null;
   const setupScript = buildVibeKanbanWorkspaceSetupScript(
     status.projectRoot,
     sourceRoot,
@@ -354,7 +356,7 @@ export async function syncDevNexusPharoProjectTracker(
     fetch: options.fetch,
     config: {
       provider: "vibe-kanban",
-      projectId: initialProjectConfig.kanban.projectId,
+      projectId: legacyVibeKanbanProjectId,
     },
   });
   const trackerContext: NexusProjectContext = {
@@ -365,7 +367,7 @@ export async function syncDevNexusPharoProjectTracker(
     sourceRoot,
     workTracking: {
       provider: "vibe-kanban",
-      projectId: initialProjectConfig.kanban.projectId,
+      projectId: legacyVibeKanbanProjectId,
     },
   };
   const vibeKanbanProject = await vibeProvider.ensureProject(trackerContext);

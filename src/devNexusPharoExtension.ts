@@ -374,7 +374,7 @@ function buildSuggestedFirstPrompt(
   projectConfig: NexusProjectConfig,
 ): string {
   const sourceRoot = resolveProjectSourceRoot(projectRoot, projectConfig);
-  const kanbanProjectId = projectConfig.kanban.projectId;
+  const kanbanProjectId = projectConfig.kanban?.projectId ?? null;
   const genericSkills = defaultCoreSkillPack
     .map((skill) => skill.manifest.id)
     .join(", ");
@@ -389,8 +389,8 @@ function buildSuggestedFirstPrompt(
     "",
     `- Inspect the DevNexus-Pharo project root at ${projectRoot}.`,
     `- Inspect the source checkout at ${sourceRoot}.`,
-    "- Check the matching Vibe Kanban board and current issues with the available DevNexus-Pharo and Vibe Kanban MCP tools.",
-    "- Record durable local context in NOTES.md, including the Kanban board id and any source/workflow details future agents should know.",
+    "- Check the configured work tracker and current issues with the available DevNexus-Pharo tools.",
+    "- Record durable local context in NOTES.md, including tracker ids and any source/workflow details future agents should know.",
     "- Edit AGENTS.md only when this project needs workflow guidance beyond the default DevNexus-Pharo contract.",
     `- Use installed support skills under ${path.join(projectRoot, ".dev-nexus", "skills")} when relevant; generic skills: ${genericSkills}; DevNexus-Pharo skills: ${specializationSkills}.`,
     "- When changes are complete and verified, commit them in the relevant source repository unless the user explicitly asks not to. Push only when requested or when project instructions say to publish.",
@@ -398,7 +398,7 @@ function buildSuggestedFirstPrompt(
     "Known at prompt generation time:",
     "",
     `- DevNexus-Pharo project id: ${projectConfig.id}`,
-    `- Kanban project id: ${formatPromptValue(kanbanProjectId)}`,
+    `- Legacy Vibe Kanban project id: ${formatPromptValue(kanbanProjectId)}`,
     `- Source remote: ${formatPromptValue(projectConfig.repo.remoteUrl)}`,
     `- Default branch: ${formatPromptValue(projectConfig.repo.defaultBranch)}`,
     "",
@@ -512,7 +512,7 @@ export function installDevNexusPharoProjectFiles(
     : buildPlexusProjectConfig(
         options.projectConfig.name,
         options.projectConfig.id,
-        options.vibeKanbanProjectId ?? options.projectConfig.kanban.projectId,
+        options.vibeKanbanProjectId ?? options.projectConfig.kanban?.projectId ?? null,
         imageExecutionPolicy,
       );
 
@@ -553,7 +553,7 @@ export const devNexusPharoExtension: NexusExtension<
     installDevNexusPharoProjectFiles({
       projectRoot,
       projectConfig,
-      vibeKanbanProjectId: projectConfig.kanban.projectId,
+      vibeKanbanProjectId: projectConfig.kanban?.projectId ?? null,
     }),
   projectSkills: ({ projectConfig }) =>
     projectUsesDevNexusPharoExtension(projectConfig)

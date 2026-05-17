@@ -9,6 +9,8 @@ import {
   loadProjectConfig,
   type NexusProjectConfig,
 } from "./config.js";
+import { devNexusPharoSkillPack } from "./devNexusPharoExtension.js";
+import { devNexusPharoPluginId } from "./devNexusPharoPlugin.js";
 import {
   getNexusProjectStatus,
   registeredNexusProjectExtensions,
@@ -50,8 +52,37 @@ function extensionSkillDefinitions(
       skillDefinitions.push(...skills);
     }
   }
+  skillDefinitions.push(...projectedDevNexusPharoPluginSkills(projectConfig));
 
-  return skillDefinitions;
+  return [...new Map(
+    skillDefinitions.map((skill) => [skill.manifest.id, skill]),
+  ).values()];
+}
+
+function projectedDevNexusPharoPluginSkills(
+  projectConfig: NexusProjectConfig,
+): NexusSkillDefinition[] {
+  const plugin = projectConfig.plugins?.find(
+    (candidate) =>
+      candidate.id === devNexusPharoPluginId && candidate.enabled !== false,
+  );
+  if (!plugin) {
+    return [];
+  }
+
+  const definitionsById = new Map(
+    devNexusPharoSkillPack.map((skill) => [skill.manifest.id, skill]),
+  );
+  const requestedSkillIds = new Set(
+    plugin.capabilities.flatMap((capability) =>
+      capability.kind === "projected_skill" ? [capability.skillId] : [],
+    ),
+  );
+
+  return [...requestedSkillIds].flatMap((skillId) => {
+    const definition = definitionsById.get(skillId);
+    return definition ? [definition] : [];
+  });
 }
 
 function resolveProjectSkillsContext(options: GetNexusProjectStatusOptions): {

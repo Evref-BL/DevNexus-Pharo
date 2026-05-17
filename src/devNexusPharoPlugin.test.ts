@@ -45,6 +45,7 @@ describe("DevNexusPharo DevNexus plugin", () => {
       "skill-pharo-project-load",
       "skill-pharo-version-compat",
       "plexus-mcp",
+      "pharo-launcher-mcp",
       "mcp-pharo",
       "setup-scoped-plexus-context",
       "setup-direct-pharo-mcp",
@@ -160,11 +161,21 @@ describe("DevNexusPharo DevNexus plugin", () => {
     ).toEqual([
       {
         id: "plexus-mcp",
-        serverName: "plexus",
+        serverName: "plexus_project",
         tools: [
           "plexus_project_status",
           "plexus_project_open",
           "plexus_project_close",
+        ],
+      },
+      {
+        id: "pharo-launcher-mcp",
+        serverName: "pharo_launcher",
+        tools: [
+          "pharo_launcher_image_list",
+          "pharo_launcher_image_info",
+          "pharo_launcher_image_start",
+          "pharo_launcher_image_stop",
         ],
       },
       {

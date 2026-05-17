@@ -387,7 +387,7 @@ function migrateLegacyControlProject(
       ...migratedProject.config,
       name: devNexusPharoControlProjectName,
       kanban: {
-        ...migratedProject.config.kanban,
+        provider: "vibe-kanban",
         projectId: config.controlProject.vibeKanbanProjectId,
       },
     };
@@ -517,7 +517,7 @@ async function ensureControlProjectLinked(
       ...controlProject.config,
       name: config.controlProject.name,
       kanban: {
-        ...controlProject.config.kanban,
+        provider: "vibe-kanban",
         projectId: board.boardId,
       },
     };

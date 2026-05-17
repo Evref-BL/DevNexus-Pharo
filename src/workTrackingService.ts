@@ -53,7 +53,17 @@ export function legacyKanbanFromWorkTracking(
 export function resolveProjectWorkTrackingConfig(
   config: Pick<NexusProjectConfig, "kanban" | "workTracking">,
 ): WorkTrackingConfig {
-  return config.workTracking ?? workTrackingFromLegacyKanban(config.kanban);
+  if (config.workTracking) {
+    return config.workTracking;
+  }
+
+  if (config.kanban) {
+    return workTrackingFromLegacyKanban(config.kanban);
+  }
+
+  throw new WorkTrackingServiceError(
+    "Project does not define workTracking or legacy kanban configuration",
+  );
 }
 
 export function createWorkTrackerProvider(

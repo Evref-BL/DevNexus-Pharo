@@ -46,7 +46,7 @@ export function devNexusPharoDevNexusPluginConfig(): NexusProjectPluginConfig {
       {
         kind: "mcp_server",
         id: "plexus-mcp",
-        serverName: "plexus",
+        serverName: "plexus_project",
         description:
           "Scoped PLexus project and lifecycle surface; live open/close remains policy-gated.",
         tools: [
@@ -63,6 +63,31 @@ export function devNexusPharoDevNexusPluginConfig(): NexusProjectPluginConfig {
             name: "plexus_project_close",
             description:
               "Close only runtime resources owned by the scoped project/workspace.",
+          },
+        ],
+      },
+      {
+        kind: "mcp_server",
+        id: "pharo-launcher-mcp",
+        serverName: "pharo_launcher",
+        description:
+          "Scoped Pharo Launcher image lifecycle surface supplied through PLexus.",
+        tools: [
+          {
+            name: "pharo_launcher_image_list",
+            description: "List scoped Pharo images.",
+          },
+          {
+            name: "pharo_launcher_image_info",
+            description: "Inspect one scoped Pharo image.",
+          },
+          {
+            name: "pharo_launcher_image_start",
+            description: "Start one scoped Pharo image when runtime policy allows it.",
+          },
+          {
+            name: "pharo_launcher_image_stop",
+            description: "Stop one scoped Pharo image owned by the current project.",
           },
         ],
       },

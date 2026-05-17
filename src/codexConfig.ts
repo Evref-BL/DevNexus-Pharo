@@ -7,10 +7,15 @@ import {
   type NexusHomeConfig,
   type NexusProjectConfig,
 } from "./config.js";
+import { devNexusPharoPluginId } from "./devNexusPharoPlugin.js";
 import { defaultDevNexusPharoMcpHealthPath } from "./mcpServer.js";
 
 export const codexConfigDirectoryName = ".codex";
 export const codexConfigFileName = "config.toml";
+export const defaultDevNexusCodexMcpServerName = "dev_nexus";
+export const defaultDevNexusPharoCodexMcpServerName = "dev_nexus_pharo";
+export const defaultPlexusProjectCodexMcpServerName = "plexus_project";
+export const defaultPharoLauncherCodexMcpServerName = "pharo_launcher";
 export const defaultVibeKanbanCodexMcpServerName = "vibe_kanban";
 export const defaultPharoCodexMcpServerName = "pharo";
 
@@ -191,8 +196,12 @@ function isTomlHeader(line: string): boolean {
 export function mergeCodexMcpServersIntoToml(
   existingToml: string,
   servers: Record<string, CodexMcpServerConfig>,
+  extraManagedServerNames: string[] = [],
 ): string {
-  const managedServerNames = new Set(Object.keys(servers));
+  const managedServerNames = new Set([
+    ...Object.keys(servers),
+    ...extraManagedServerNames,
+  ]);
   const keptLines: string[] = [];
   let skippingManagedBlock = false;
 
@@ -237,7 +246,19 @@ function defaultTargetId(projectId: string, workspaceId: string): string {
 }
 
 function projectUsesDevNexusPharo(projectConfig: NexusProjectConfig | undefined): boolean {
-  return Boolean(projectConfig?.extensions?.[devNexusPharoExtensionConfigKey]);
+  return Boolean(
+    projectConfig?.extensions?.[devNexusPharoExtensionConfigKey] ||
+      projectConfig?.plugins?.some(
+        (plugin) =>
+          plugin.id === devNexusPharoPluginId && plugin.enabled !== false,
+      ),
+  );
+}
+
+function projectUsesSharedDevNexusMcp(
+  projectConfig: NexusProjectConfig | undefined,
+): projectConfig is NexusProjectConfig {
+  return Boolean(projectConfig?.mcp && projectUsesDevNexusPharo(projectConfig));
 }
 
 function workspaceProjectConfig(
@@ -307,6 +328,104 @@ function buildPharoMcpServer(
   };
 }
 
+function codexProjectMcpTarget(
+  projectConfig: NexusProjectConfig,
+): NonNullable<NonNullable<NexusProjectConfig["mcp"]>["agentTargets"]>[number] | undefined {
+  return projectConfig.mcp?.agentTargets?.find(
+    (target) => target.agent === "codex" && target.enabled !== false,
+  );
+}
+
+function buildSharedDevNexusMcpServer(
+  projectConfig: NexusProjectConfig,
+): CodexMcpServerConfig {
+  const target = codexProjectMcpTarget(projectConfig);
+  const mcpConfig = projectConfig.mcp;
+
+  return {
+    enabled: true,
+    command: target?.command ?? mcpConfig?.command ?? "dev-nexus",
+    args: [
+      ...(target?.args ?? mcpConfig?.args ?? ["mcp-stdio"]),
+    ],
+    defaultToolsApprovalMode:
+      target?.defaultToolsApprovalMode ??
+      mcpConfig?.defaultToolsApprovalMode ??
+      "approve",
+  };
+}
+
+function plexusSharedEnvironment(
+  config: NexusHomeConfig,
+  options: BuildCodexMcpServersOptions,
+  projectConfig: NexusProjectConfig,
+): Record<string, string> {
+  const projectRoot = path.resolve(
+    options.projectRoot ?? options.workspacePath ?? ".",
+  );
+  const workspaceRoot = path.resolve(options.workspacePath ?? projectRoot);
+  const workspaceId = sanitizeRuntimeId(
+    options.workspaceId ?? path.basename(workspaceRoot),
+  );
+  const targetId =
+    options.targetId ?? defaultTargetId(projectConfig.id, workspaceId);
+
+  return {
+    PLEXUS_PROJECT_ROOT: projectRoot,
+    PLEXUS_PROJECT_ID: projectConfig.id,
+    PLEXUS_WORKSPACE_ID: workspaceId,
+    PLEXUS_WORKSPACE_ROOT: workspaceRoot,
+    VIBE_KANBAN_WORKSPACE_ID: workspaceId,
+    PLEXUS_TARGET_ID: targetId,
+    PLEXUS_STATE_ROOT: config.paths.plexusStateRoot,
+  };
+}
+
+function buildSharedDevNexusPharoMcpServers(
+  config: NexusHomeConfig,
+  options: BuildCodexMcpServersOptions,
+  projectConfig: NexusProjectConfig,
+): Record<string, CodexMcpServerConfig> {
+  const projectRoot = path.resolve(
+    options.projectRoot ?? options.workspacePath ?? ".",
+  );
+  const plexusEnv = plexusSharedEnvironment(config, options, projectConfig);
+
+  return {
+    [
+      codexProjectMcpTarget(projectConfig)?.serverName ??
+      projectConfig.mcp?.serverName ??
+      defaultDevNexusCodexMcpServerName
+    ]: buildSharedDevNexusMcpServer(projectConfig),
+    [defaultDevNexusPharoCodexMcpServerName]: {
+      enabled: true,
+      command: "dev-nexus-pharo",
+      args: ["mcp-stdio"],
+      defaultToolsApprovalMode: "approve",
+    },
+    [defaultPlexusProjectCodexMcpServerName]: {
+      enabled: true,
+      command: config.tools.plexus.command,
+      args: ["mcp", "project"],
+      env: plexusEnv,
+      defaultToolsApprovalMode: "approve",
+    },
+    [defaultPharoLauncherCodexMcpServerName]: {
+      enabled: true,
+      command: config.tools.plexus.command,
+      args: ["mcp", "pharo-launcher", "--project-path", projectRoot],
+      env: plexusEnv,
+      defaultToolsApprovalMode: "approve",
+    },
+    [defaultPharoCodexMcpServerName]: {
+      type: "http",
+      enabled: true,
+      url: `http://${config.mcp.host}:${config.ports.plexusMcp}/mcp`,
+      defaultToolsApprovalMode: "approve",
+    },
+  };
+}
+
 export function buildCodexMcpServers(
   homePath: string,
   config: NexusHomeConfig,
@@ -322,6 +441,10 @@ export function buildCodexMcpServers(
   const plexusServerName = config.integrations.vibeKanban.plexusMcpServerName;
   const vibeKanbanArgs = withVibeKanbanMcpMode(config.tools.vibeKanban.args);
   const projectConfig = workspaceProjectConfig(options.workspacePath);
+  if (projectUsesSharedDevNexusMcp(projectConfig)) {
+    return buildSharedDevNexusPharoMcpServers(config, options, projectConfig);
+  }
+
   const pharoServer = buildPharoMcpServer(config, options, projectConfig);
 
   return {
@@ -371,7 +494,16 @@ export function initCodexWorkspace(
     targetId: options.targetId,
     includePharo: options.includePharo,
   });
-  const content = mergeCodexMcpServersIntoToml(existingToml, servers);
+  const content = mergeCodexMcpServersIntoToml(
+    existingToml,
+    servers,
+    projectUsesSharedDevNexusMcp(workspaceProjectConfig(workspacePath))
+      ? [
+          config.integrations.vibeKanban.plexusMcpServerName,
+          defaultVibeKanbanCodexMcpServerName,
+        ]
+      : [],
+  );
 
   if (!options.dryRun) {
     fs.mkdirSync(path.dirname(configPath), { recursive: true });
@@ -590,6 +722,7 @@ export async function doctorCodexWorkspace(
   }
 
   const toml = fs.readFileSync(configPath, "utf8").replace(/^\uFEFF/u, "");
+  const projectConfig = workspaceProjectConfig(workspacePath);
   const servers = buildCodexMcpServers(homePath, config, {
     platform: options.platform,
     workspacePath,
@@ -603,6 +736,26 @@ export async function doctorCodexWorkspace(
         : `Missing [mcp_servers.${serverName}]`,
     });
   }
+
+  if (projectUsesSharedDevNexusMcp(projectConfig)) {
+    for (const [serverName, server] of Object.entries(servers)) {
+      checks.push({
+        name: `${serverName}:${server.url ? "http" : "command"}`,
+        status: "skipped",
+        message: server.url
+          ? "Shared DevNexus-Pharo live gateway reachability is runtime-profile dependent; doctor verifies the generated config entry only."
+          : "Shared DevNexus-Pharo MCP server is command-based; doctor verifies the generated config entry but does not spawn it.",
+      });
+    }
+
+    return {
+      workspacePath,
+      configPath,
+      ok: checks.every((check) => check.status !== "failed"),
+      checks,
+    };
+  }
+
   const hasPharoServerSection = hasManagedServerSection(
     toml,
     defaultPharoCodexMcpServerName,

@@ -198,10 +198,6 @@ describe("DevNexus-Pharo project service", () => {
         },
       ],
       worktreesRoot: "worktrees",
-      kanban: {
-        provider: "vibe-kanban",
-        projectId: null,
-      },
       extensions: {
         [devNexusPharoProjectExtensionConfigKey]: {},
       },
@@ -252,7 +248,9 @@ describe("DevNexus-Pharo project service", () => {
     );
     expect(suggestedFirstPrompt).toContain(".dev-nexus");
     expect(suggestedFirstPrompt).toContain("DevNexus-Pharo skills: dev-nexus-pharo-workflow");
-    expect(suggestedFirstPrompt).toContain("Kanban project id: (not known yet)");
+    expect(suggestedFirstPrompt).toContain(
+      "Legacy Vibe Kanban project id: (not known yet)",
+    );
     expect(suggestedFirstPrompt).toContain("Record durable local context in NOTES.md");
     expect(suggestedFirstPrompt).toContain(
       "commit them in the relevant source repository",
@@ -383,7 +381,7 @@ describe("DevNexus-Pharo project service", () => {
 
     expect(result.projectConfig.kanban.projectId).toBe("vk-project-1");
     expect(fs.readFileSync(result.suggestedFirstPromptPath, "utf8")).toContain(
-      "Kanban project id: vk-project-1",
+      "Legacy Vibe Kanban project id: vk-project-1",
     );
     expect(
       JSON.parse(fs.readFileSync(result.plexusProjectConfigPath, "utf8")),

@@ -2089,7 +2089,7 @@ function printProjectCreateResult(
   if (result.git.defaultBranch) {
     console.log(`  Default branch: ${result.git.defaultBranch}`);
   }
-  if (result.projectConfig.kanban.projectId) {
+  if (result.projectConfig.kanban?.projectId) {
     console.log(`  Vibe Kanban project: ${result.projectConfig.kanban.projectId}`);
   }
   if (syncResult) {
@@ -2129,7 +2129,7 @@ function printProjectImportResult(
   if (result.git.defaultBranch) {
     console.log(`  Default branch: ${result.git.defaultBranch}`);
   }
-  if (result.projectConfig.kanban.projectId) {
+  if (result.projectConfig.kanban?.projectId) {
     console.log(`  Vibe Kanban project: ${result.projectConfig.kanban.projectId}`);
   }
   if (syncResult) {
@@ -2167,7 +2167,7 @@ function printNexusProjectCreateResult(
   if (result.git.defaultBranch) {
     console.log(`  Default branch: ${result.git.defaultBranch}`);
   }
-  if (result.projectConfig.kanban.projectId) {
+  if (result.projectConfig.kanban?.projectId) {
     console.log(`  Vibe Kanban project: ${result.projectConfig.kanban.projectId}`);
   }
   console.log("");
@@ -2200,7 +2200,7 @@ function printNexusProjectImportResult(
   if (result.git.defaultBranch) {
     console.log(`  Default branch: ${result.git.defaultBranch}`);
   }
-  if (result.projectConfig.kanban.projectId) {
+  if (result.projectConfig.kanban?.projectId) {
     console.log(`  Vibe Kanban project: ${result.projectConfig.kanban.projectId}`);
   }
   console.log("");

@@ -11,6 +11,7 @@ import {
   saveHomeConfig,
 } from "./config.js";
 import { devNexusPharoProjectExtensionConfigKey } from "./devNexusPharoExtension.js";
+import { devNexusPharoDevNexusPluginConfig } from "./devNexusPharoPlugin.js";
 import {
   buildCodexMcpServers,
   codexConfigPath,
@@ -300,6 +301,102 @@ describe("Codex config", () => {
     ]);
     expect(result.content).toContain("[mcp_servers.pharo]");
     expect(result.content).toContain("[mcp_servers.pharo.env]");
+  });
+
+  it("writes shared DevNexus project MCP entries for DevNexus-Pharo plugin roots", async () => {
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
+    initNexusHome({ homePath });
+    const projectRoot = makeTempDir("dev-nexus-pharo-shared-root-");
+    saveProjectConfig(projectRoot, {
+      version: 1,
+      id: "shared-dogfood",
+      name: "Shared Dogfood",
+      home: null,
+      repo: {
+        kind: "git",
+        remoteUrl: "git@github.com:example/shared-dogfood.git",
+        defaultBranch: "main",
+      },
+      components: [
+        {
+          id: "dev-nexus",
+          name: "DevNexus",
+          kind: "git",
+          role: "primary",
+          remoteUrl: "git@github.com:example/dev-nexus.git",
+          defaultBranch: "main",
+          sourceRoot: "sourcesRoot:dev-nexus",
+          relationships: [],
+        },
+      ],
+      worktreesRoot: "worktrees",
+      workTracking: {
+        provider: "local",
+        storePath: ".dev-nexus/work-items/dev-nexus.json",
+      },
+      mcp: {
+        command: "dev-nexus",
+        args: ["mcp-stdio"],
+        defaultToolsApprovalMode: "approve",
+        agentTargets: [{ agent: "codex" }],
+      },
+      plugins: [devNexusPharoDevNexusPluginConfig()],
+    });
+    const configPath = codexConfigPath(projectRoot);
+    fs.mkdirSync(path.dirname(configPath), { recursive: true });
+    fs.writeFileSync(
+      configPath,
+      [
+        "[mcp_servers.plexus]",
+        'url = "http://127.0.0.1:7331/mcp"',
+        "",
+        "[mcp_servers.vibe_kanban]",
+        'command = "npx"',
+      ].join("\n"),
+      "utf8",
+    );
+
+    const result = initCodexWorkspace({
+      homePath,
+      workspacePath: projectRoot,
+      config: loadHomeConfig(homePath),
+      platform: "darwin",
+    });
+
+    expect(Object.keys(result.servers)).toEqual([
+      "dev_nexus",
+      "dev_nexus_pharo",
+      "plexus_project",
+      "pharo_launcher",
+      "pharo",
+    ]);
+    expect(result.content).toContain("[mcp_servers.dev_nexus]");
+    expect(result.content).toContain('command = "dev-nexus"');
+    expect(result.content).toContain('args = ["mcp-stdio"]');
+    expect(result.content).toContain("[mcp_servers.dev_nexus_pharo]");
+    expect(result.content).toContain('command = "dev-nexus-pharo"');
+    expect(result.content).toContain("[mcp_servers.plexus_project]");
+    expect(result.content).toContain('args = ["mcp", "project"]');
+    expect(result.content).toContain("[mcp_servers.pharo_launcher]");
+    expect(result.content).toContain('args = ["mcp", "pharo-launcher", "--project-path"');
+    expect(result.content).toContain("[mcp_servers.pharo]");
+    expect(result.content).toContain('url = "http://127.0.0.1:7331/mcp"');
+    expect(result.content).not.toContain("[mcp_servers.plexus]");
+    expect(result.content).not.toContain("[mcp_servers.vibe_kanban]");
+
+    const doctor = await doctorCodexWorkspace({
+      homePath,
+      workspacePath: projectRoot,
+      config: loadHomeConfig(homePath),
+    });
+    expect(doctor.ok).toBe(true);
+    expect(doctor.checks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: "config:dev_nexus", status: "ok" }),
+        expect.objectContaining({ name: "dev_nexus:command", status: "skipped" }),
+        expect.objectContaining({ name: "pharo:http", status: "skipped" }),
+      ]),
+    );
   });
 
   it("reports missing Codex config as an actionable doctor failure", async () => {
