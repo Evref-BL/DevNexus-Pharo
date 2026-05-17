@@ -24,14 +24,22 @@ DevNexus-Pharo owns:
 - logs and generated integration files
 - the registry of Vibe Kanban repo/project ids and their PLexus project roots
 - installation of DevNexus-Pharo and PLexus MCP entries into Vibe Kanban executors
+- bundled Pharo-domain support skills projected through DevNexus project skill
+  refresh and plugin `projected_skill` capabilities
 
 DevNexus-Pharo does not own:
 
 - PharoLauncher CLI details
 - Pharo image creation, launch, or kill semantics
 - in-image Pharo code editing or test execution
+- MCP-Pharo's image-side MCP server behavior
 
 Those belong to pharo-launcher-mcp, PLexus, and the Pharo MCP worker respectively.
+DevNexus-Pharo may copy MCP-Pharo repo-local skills such as Pharo CI
+reproduction, image Git handoff, project loading, and version compatibility into
+`.dev-nexus/skills` with upstream commit provenance. These copies are worker
+guidance only; they do not make DevNexus-Pharo the source of MCP-Pharo runtime
+behavior.
 
 ## Boundary Rule
 

@@ -1,8 +1,39 @@
 import type { NexusProjectPluginConfig } from "dev-nexus";
+import { devNexusPharoSkillPack } from "./devNexusPharoExtension.js";
 
 export const devNexusPharoPluginId = "dev-nexus-pharo";
 export const devNexusPharoPluginName = "DevNexus-Pharo";
 export const devNexusPharoPluginVersion = "0.1.0";
+
+const projectedSkillDescriptions: Record<string, string> = {
+  "dev-nexus-pharo-workflow":
+    "Project DevNexus-Pharo workflow guidance into Pharo-capable Codex workers.",
+  "plexus-diagnostics":
+    "Project static PLexus diagnostic guidance without launching live images.",
+  "pharo-launcher-lifecycle":
+    "Project safe image lifecycle guidance for explicitly approved launcher work.",
+  "mcp-pharo-execution": "Project image-side Pharo MCP execution guidance.",
+  "pharo-ci-repro":
+    "Project MCP-Pharo Pharo CI reproduction guidance, including local smalltalkCI log capture.",
+  "pharo-image-git-handoff":
+    "Project MCP-Pharo image-to-Tonel Git handoff guidance for Pharo-capable workers.",
+  "pharo-project-load":
+    "Project MCP-Pharo project loading and Metacello diagnostic guidance.",
+  "pharo-version-compat":
+    "Project MCP-Pharo PharoCompatibility and version compatibility guidance.",
+};
+
+function projectedSkillCapabilities(): NexusProjectPluginConfig["capabilities"] {
+  return devNexusPharoSkillPack.map((skill) => ({
+    kind: "projected_skill",
+    id: `skill-${skill.manifest.id}`,
+    skillId: skill.manifest.id,
+    description:
+      projectedSkillDescriptions[skill.manifest.id] ??
+      `Project ${skill.manifest.name} guidance into Pharo-capable Codex workers.`,
+    targetAgents: ["codex"],
+  }));
+}
 
 export function devNexusPharoDevNexusPluginConfig(): NexusProjectPluginConfig {
   return {
@@ -11,37 +42,7 @@ export function devNexusPharoDevNexusPluginConfig(): NexusProjectPluginConfig {
     version: devNexusPharoPluginVersion,
     enabled: true,
     capabilities: [
-      {
-        kind: "projected_skill",
-        id: "skill-dev-nexus-pharo-workflow",
-        skillId: "dev-nexus-pharo-workflow",
-        description:
-          "Project DevNexus-Pharo workflow guidance into Pharo-capable Codex workers.",
-        targetAgents: ["codex"],
-      },
-      {
-        kind: "projected_skill",
-        id: "skill-plexus-diagnostics",
-        skillId: "plexus-diagnostics",
-        description:
-          "Project static PLexus diagnostic guidance without launching live images.",
-        targetAgents: ["codex"],
-      },
-      {
-        kind: "projected_skill",
-        id: "skill-pharo-launcher-lifecycle",
-        skillId: "pharo-launcher-lifecycle",
-        description:
-          "Project safe image lifecycle guidance for explicitly approved launcher work.",
-        targetAgents: ["codex"],
-      },
-      {
-        kind: "projected_skill",
-        id: "skill-mcp-pharo-execution",
-        skillId: "mcp-pharo-execution",
-        description: "Project image-side Pharo MCP execution guidance.",
-        targetAgents: ["codex"],
-      },
+      ...projectedSkillCapabilities(),
       {
         kind: "mcp_server",
         id: "plexus-mcp",

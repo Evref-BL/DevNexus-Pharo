@@ -18,6 +18,12 @@ DevNexus-Pharo owns:
   setup obligations, Pharo MCP projection, worker briefing fragments, and
   cleanup expectations for Pharo-capable agents
 
+The bundled Pharo skills include DevNexus-Pharo workflow guidance plus copied
+MCP-Pharo domain guidance for Pharo CI reproduction, image Git handoff, project
+loading, and Pharo version compatibility. The MCP-Pharo copies are support
+material projected under `.dev-nexus/skills`; MCP-Pharo remains the source for
+image-side MCP server behavior and image-owned repository operations.
+
 PLexus owns Pharo runtime/project/workspace behavior. pharo-launcher-mcp owns
 PharoLauncher access.
 
@@ -152,6 +158,13 @@ Inspect or refresh generated DevNexus support skills for a managed project:
 dev-nexus-pharo project skills status MyProject
 dev-nexus-pharo project skills refresh MyProject
 ```
+
+Managed DevNexus-Pharo projects receive copied support skills under
+`.dev-nexus\skills`, including the MCP-Pharo-derived `pharo-ci-repro`,
+`pharo-image-git-handoff`, `pharo-project-load`, and
+`pharo-version-compat` skills. DevNexus-Pharo records the upstream MCP-Pharo
+commit in each skill manifest so workers do not need a sibling MCP-Pharo checkout
+to read the guidance.
 
 By default, DevNexus-Pharo creates the managed project root under
 `paths.projectsRoot` from `dev-nexus.home.json`. Use `--root` on

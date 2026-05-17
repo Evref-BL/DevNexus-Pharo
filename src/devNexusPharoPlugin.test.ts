@@ -1,11 +1,12 @@
-import fs from "node:fs";
 import { describe, expect, it } from "vitest";
+import { projectPluginCapabilityProjections } from "dev-nexus";
 import {
   devNexusPharoDevNexusPluginConfig,
   devNexusPharoPluginId,
   devNexusPharoPluginName,
   devNexusPharoPluginVersion,
 } from "./devNexusPharoPlugin.js";
+import { devNexusPharoSkillPack } from "./devNexusPharoExtension.js";
 
 type DevNexusPharoCapability =
   ReturnType<typeof devNexusPharoDevNexusPluginConfig>["capabilities"][number];
@@ -20,15 +21,7 @@ function capabilitiesOfKind<K extends DevNexusPharoCapability["kind"]>(
 }
 
 function devNexusPharoSkillPackIds(): string[] {
-  const extensionSource = fs.readFileSync(
-    new URL("./devNexusPharoExtension.ts", import.meta.url),
-    "utf8",
-  );
-  expect(extensionSource).toContain("export const devNexusPharoSkillPack");
-
-  return [...extensionSource.matchAll(/devNexusPharoSkill\(\s*"([^"]+)"/gu)].map(
-    (match) => match[1],
-  );
+  return devNexusPharoSkillPack.map((skill) => skill.manifest.id);
 }
 
 describe("DevNexusPharo DevNexus plugin", () => {
@@ -47,6 +40,10 @@ describe("DevNexusPharo DevNexus plugin", () => {
       "skill-plexus-diagnostics",
       "skill-pharo-launcher-lifecycle",
       "skill-mcp-pharo-execution",
+      "skill-pharo-ci-repro",
+      "skill-pharo-image-git-handoff",
+      "skill-pharo-project-load",
+      "skill-pharo-version-compat",
       "plexus-mcp",
       "mcp-pharo",
       "setup-scoped-plexus-context",
@@ -109,7 +106,46 @@ describe("DevNexusPharo DevNexus plugin", () => {
         skillId: "mcp-pharo-execution",
         targetAgents: ["codex"],
       },
+      {
+        id: "skill-pharo-ci-repro",
+        skillId: "pharo-ci-repro",
+        targetAgents: ["codex"],
+      },
+      {
+        id: "skill-pharo-image-git-handoff",
+        skillId: "pharo-image-git-handoff",
+        targetAgents: ["codex"],
+      },
+      {
+        id: "skill-pharo-project-load",
+        skillId: "pharo-project-load",
+        targetAgents: ["codex"],
+      },
+      {
+        id: "skill-pharo-version-compat",
+        skillId: "pharo-version-compat",
+        targetAgents: ["codex"],
+      },
     ]);
+
+    const projectedProfileCapabilities = projectPluginCapabilityProjections({
+      plugins: [devNexusPharoDevNexusPluginConfig()],
+    })[0].capabilities.filter(
+      (capability) => capability.kind === "projected_skill",
+    );
+    expect(
+      projectedProfileCapabilities.map((capability) => ({
+        id: capability.id,
+        skillId: capability.skillId,
+        targetAgents: capability.targetAgents,
+      })),
+    ).toEqual(
+      projectedSkills.map((capability) => ({
+        id: capability.id,
+        skillId: capability.skillId,
+        targetAgents: capability.targetAgents ?? [],
+      })),
+    );
   });
 
   it("declares scoped PLexus and direct Pharo MCP server surfaces", () => {

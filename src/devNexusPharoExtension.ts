@@ -9,6 +9,7 @@ import {
 import {
   type NexusProjectConfig,
 } from "./config.js";
+import { mcpPharoDomainSkillPack } from "./mcpPharoDomainSkills.js";
 import type {
   NexusProjectStatusExtensionContribution,
   NexusProjectTrackerLinkExtensionContribution,
@@ -195,6 +196,7 @@ Use this skill when validating in-image MCP tool reachability or routed calls.
 5. Add regression coverage at the lowest layer that owns the failure.
 `,
   ),
+  ...mcpPharoDomainSkillPack,
 ];
 
 function packageRootPath(): string {

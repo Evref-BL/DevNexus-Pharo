@@ -21,6 +21,13 @@ import {
 } from "./devNexusPharoExtension.js";
 
 const tempDirs: string[] = [];
+const mcpPharoSkillSourceCommit = "8ba98ede78404d6a1e3937a8a759022f90c33bde";
+const mcpPharoDomainSkillIds = [
+  "pharo-ci-repro",
+  "pharo-image-git-handoff",
+  "pharo-project-load",
+  "pharo-version-compat",
+];
 
 function makeTempDir(prefix: string): string {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
@@ -262,6 +269,58 @@ describe("DevNexus-Pharo extension", () => {
 
     expect(unmanaged.skills.installed.map((skill) => skill.id)).not.toContain(
       "dev-nexus-pharo-workflow",
+    );
+  });
+
+  it("bundles MCP-Pharo domain skills with copied upstream provenance", () => {
+    const skillsById = new Map(
+      devNexusPharoSkillPack.map((skill) => [skill.manifest.id, skill]),
+    );
+
+    expect(mcpPharoDomainSkillIds.map((skillId) => skillsById.get(skillId)?.manifest))
+      .toMatchObject([
+        {
+          id: "pharo-ci-repro",
+          description: expect.stringContaining("Recreate Pharo smalltalkCI"),
+        },
+        {
+          id: "pharo-image-git-handoff",
+          description: expect.stringContaining("Turn image-side Pharo changes"),
+        },
+        {
+          id: "pharo-project-load",
+          description: expect.stringContaining("Load Pharo projects into an image"),
+        },
+        {
+          id: "pharo-version-compat",
+          description: expect.stringContaining("Use PharoCompatibility"),
+        },
+      ]);
+
+    for (const skillId of mcpPharoDomainSkillIds) {
+      const skill = skillsById.get(skillId);
+      expect(skill?.manifest).toMatchObject({
+        id: skillId,
+        version: "0.1.0",
+        supportedAgents: ["codex"],
+        materialization: "copy",
+        sourceControl: "support",
+        source: {
+          type: "git",
+          commit: mcpPharoSkillSourceCommit,
+        },
+      });
+      expect(skill?.manifest.source.uri).toContain("github.com/Evref-BL/MCP");
+      expect(skill?.manifest.source.uri).toContain(`user/skills/${skillId}`);
+      expect(skill?.files["SKILL.md"]).toContain(`name: ${skillId}`);
+    }
+
+    const ciSkill = skillsById.get("pharo-ci-repro");
+    expect(ciSkill?.files["references/pharo-smalltalkci.md"]).toContain(
+      "Pharo smalltalkCI Log Reading Notes",
+    );
+    expect(ciSkill?.files["scripts/run-smalltalkci-docker.sh"]).toContain(
+      "docker run --rm --platform linux/amd64",
     );
   });
 

@@ -55,6 +55,14 @@ dev-nexus-pharo project skills status MyProject
 dev-nexus-pharo project skills refresh MyProject
 ```
 
+Project skill refresh materializes generic DevNexus skills, DevNexus-Pharo
+workflow/runtime-boundary skills, and copied MCP-Pharo domain skills:
+`pharo-ci-repro`, `pharo-image-git-handoff`, `pharo-project-load`, and
+`pharo-version-compat`. Those MCP-Pharo-derived skills are bundled guidance with
+upstream commit provenance in their `dev-nexus.skill.json` manifests. They must
+not require a runtime sibling checkout; MCP-Pharo remains the source project for
+image-side MCP behavior.
+
 Codex workspace commands:
 
 ```powershell

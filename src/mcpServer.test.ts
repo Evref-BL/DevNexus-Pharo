@@ -484,6 +484,10 @@ describe("DevNexus-Pharo MCP server tools", () => {
       path.join(projectRoot, ".dev-nexus", "skills", "dev-nexus-pharo-workflow"),
       { recursive: true, force: true },
     );
+    fs.rmSync(
+      path.join(projectRoot, ".dev-nexus", "skills", "pharo-project-load"),
+      { recursive: true, force: true },
+    );
     fs.appendFileSync(
       path.join(projectRoot, ".dev-nexus", "skills", "diagnose", "SKILL.md"),
       "\nLocal edit.\n",
@@ -501,7 +505,7 @@ describe("DevNexus-Pharo MCP server tools", () => {
       skillStatus: {
         summary: {
           expected: expectedDevNexusPharoSkillCount,
-          missing: 1,
+          missing: 2,
           stale: 1,
         },
       },
@@ -518,7 +522,7 @@ describe("DevNexus-Pharo MCP server tools", () => {
       refresh: {
         before: {
           summary: {
-            missing: 1,
+            missing: 2,
             stale: 1,
           },
         },
@@ -535,6 +539,11 @@ describe("DevNexus-Pharo MCP server tools", () => {
     expect(
       fs.existsSync(
         path.join(projectRoot, ".dev-nexus", "skills", "dev-nexus-pharo-workflow", "SKILL.md"),
+      ),
+    ).toBe(true);
+    expect(
+      fs.existsSync(
+        path.join(projectRoot, ".dev-nexus", "skills", "pharo-project-load", "SKILL.md"),
       ),
     ).toBe(true);
   });
