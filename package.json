@@ -1,6 +1,6 @@
 {
   "name": "@evref-bl/dev-nexus-pharo",
-  "version": "0.1.0-alpha.3",
+  "version": "0.1.0-alpha.4",
   "private": false,
   "description": "Pharo specialization layer for DevNexus, PLexus, and Pharo project workspaces.",
   "license": "Apache-2.0",

@@ -435,15 +435,16 @@ function buildSharedDevNexusPharoMcpServers(
     options.projectRoot ?? options.workspacePath ?? ".",
   );
   const plexusEnv = plexusSharedEnvironment(config, options, projectConfig);
+  const platform = options.platform ?? process.platform;
   const devNexusPharoCommand = projectLocalRuntimeBinCommand(
     options.workspacePath,
     "dev-nexus-pharo",
-    options.platform,
+    platform,
   );
   const plexusCoreCommand = projectLocalRuntimeBinCommand(
     options.workspacePath,
     plexusCoreCommandFromConfiguredPlexusCommand(config.tools.plexus.command),
-    options.platform,
+    platform,
   );
 
   return {
