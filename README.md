@@ -12,8 +12,8 @@ DevNexus-Pharo owns:
 - the PLexus gateway startup
 - Codex/Vibe MCP configuration for DevNexus-Pharo, PLexus, and the projected Pharo
   MCP facade
-- DevNexus-Pharo project creation, import, registry, work tracking, and local
-  Codex worktree metadata
+- Pharo-oriented project creation/import helpers, home registry integration, and
+  compatibility wrappers around older local Codex worktree metadata
 - the DevNexus plugin declaration that contributes Pharo skills, scoped PLexus
   setup obligations, Pharo MCP projection, worker briefing fragments, and
   cleanup expectations for Pharo-capable agents
@@ -187,7 +187,22 @@ For `project create --from`, the source repository is cloned under
 `<project-root>\git`. For `project import <source-checkout>`, the managed
 project points at the existing source checkout.
 
-Configure provider-neutral work tracking for a project:
+Configure provider-neutral work tracking through DevNexus core. DevNexus owns
+generic project and component work tracking; DevNexus-Pharo only contributes the
+Pharo plugin layer.
+
+```powershell
+dev-nexus project tracker configure C:\dev\code\MyProject --provider local --store-path .dev-nexus\work-items.json
+dev-nexus project tracker configure C:\dev\code\MyProject --provider github --repository-owner example --repository-name MyProject
+dev-nexus project tracker configure C:\dev\code\MyProject --provider github --host github.enterprise.test --repository-owner example --repository-name MyProject
+dev-nexus project tracker configure C:\dev\code\MyProject --provider gitlab --repository-id example/MyProject
+dev-nexus project tracker configure C:\dev\code\MyProject --provider gitlab --host gitlab.enterprise.test --repository-id example/MyProject
+dev-nexus project tracker configure C:\dev\code\MyProject --provider jira --host example.atlassian.net --project-key FCD
+```
+
+`dev-nexus-pharo project configure-tracker` remains as a legacy convenience
+wrapper for projects registered in a DevNexus-Pharo home. New automation and
+documentation should prefer the DevNexus command above.
 
 ```powershell
 dev-nexus-pharo project configure-tracker MyProject --provider local --store-path .dev-nexus-pharo\work-items.json
@@ -210,7 +225,7 @@ exists.
 GitHub Projects v2 is optional. If the project config includes a
 `workTracking.board` with `kind: "github-project-v2"` and a project node id,
 new and status-updated GitHub issues are added to that project through
-GitHub's GraphQL API. To map DevNexus-Pharo statuses to a Projects v2 single-select
+GitHub's GraphQL API. To map DevNexus statuses to a Projects v2 single-select
 Status field, configure the field node id and option ids:
 
 ```json
@@ -237,7 +252,7 @@ Status field, configure the field node id and option ids:
 ```
 
 GitHub requires those Project v2 project, field, and option node ids for GraphQL
-updates. If `statusOptions` does not include a status, DevNexus-Pharo still adds
+updates. If `statusOptions` does not include a status, DevNexus still adds
 the issue to the project but skips the status-field update for that status.
 
 The GitLab provider uses the GitLab project Issues and Notes REST APIs under
@@ -260,7 +275,7 @@ Jira issue descriptions and comments are sent as Atlassian Document Format.
 Assignees are Jira account ids, and Jira milestones are intentionally not
 mapped yet.
 
-Jira workflow transitions are project-specific. To let DevNexus-Pharo move Jira
+Jira workflow transitions are project-specific. To let DevNexus move Jira
 issues through the real Jira workflow when setting a neutral status, configure
 transition ids in `workTracking.board.statusOptions` with
 `kind: "jira-workflow"`:
@@ -282,7 +297,7 @@ transition ids in `workTracking.board.statusOptions` with
 }
 ```
 
-When no transition id is configured for a status, DevNexus-Pharo still records the
+When no transition id is configured for a status, DevNexus still records the
 neutral status with a `status:<name>` Jira label and skips the workflow
 transition.
 
