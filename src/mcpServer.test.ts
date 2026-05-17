@@ -994,14 +994,17 @@ describe("DevNexus-Pharo MCP server tools", () => {
 
   it("resolves project status by managed config id before MCP path fallback", async () => {
     const homePath = makeTempDir("dev-nexus-pharo-home-");
-    const projectRoot = path.join(makeTempDir("dev-nexus-pharo-projects-"), "MCP-PL");
+    const projectRoot = path.join(
+      makeTempDir("dev-nexus-pharo-projects-"),
+      "pharo-launcher-mcp",
+    );
     initNexusHome({ homePath });
 
     const createResult = await callDevNexusPharoMcpTool(
       "project_create",
       {
         homePath,
-        name: "MCP-PL",
+        name: "pharo-launcher-mcp",
         root: projectRoot,
         gitInit: true,
         syncTracker: false,

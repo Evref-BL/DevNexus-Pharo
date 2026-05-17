@@ -44,7 +44,7 @@ export function devNexusPharoDevNexusPluginConfig(): NexusProjectPluginConfig {
       },
       {
         kind: "mcp_server",
-        id: "mcp-plexus",
+        id: "plexus-mcp",
         serverName: "plexus",
         description:
           "Scoped PLexus project and lifecycle surface; live open/close remains policy-gated.",

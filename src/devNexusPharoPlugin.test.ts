@@ -47,7 +47,7 @@ describe("DevNexusPharo DevNexus plugin", () => {
       "skill-plexus-diagnostics",
       "skill-pharo-launcher-lifecycle",
       "skill-mcp-pharo-execution",
-      "mcp-plexus",
+      "plexus-mcp",
       "mcp-pharo",
       "setup-scoped-plexus-context",
       "setup-direct-pharo-mcp",
@@ -123,7 +123,7 @@ describe("DevNexusPharo DevNexus plugin", () => {
       })),
     ).toEqual([
       {
-        id: "mcp-plexus",
+        id: "plexus-mcp",
         serverName: "plexus",
         tools: [
           "plexus_project_status",
