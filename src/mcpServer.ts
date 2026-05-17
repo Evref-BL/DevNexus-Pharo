@@ -36,6 +36,7 @@ import {
 import {
   callDevNexusMcpTool,
   listDevNexusMcpTools,
+  providerCompatibleMcpTools,
   type DevNexusMcpToolContext,
 } from "dev-nexus";
 import { legacyTrackerWrapperToolDescription } from "./trackerDeprecation.js";
@@ -615,7 +616,7 @@ export function listDevNexusPharoMcpTools(): McpTool[] {
   );
   const localTools = tools.filter((tool) => !isDelegatedDevNexusTool(tool.name));
 
-  return [...localTools, ...delegatedTools];
+  return providerCompatibleMcpTools([...localTools, ...delegatedTools]);
 }
 
 function shouldSyncTracker(args: Record<string, unknown>): boolean {

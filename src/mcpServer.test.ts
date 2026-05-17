@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   defaultCoreSkillPack,
   defaultNexusAutomationConfig,
+  listMcpInputSchemaProviderIssues,
   type NexusProjectComponentConfig,
 } from "dev-nexus";
 import {
@@ -285,6 +286,17 @@ describe("DevNexus-Pharo MCP server tools", () => {
       expect(tool?.description).toContain("Legacy compatibility wrapper");
       expect(tool?.description).toContain("DevNexus core");
     }
+  });
+
+  it("lists provider-compatible tool input schemas", () => {
+    const issues = listDevNexusPharoMcpTools().flatMap((tool) =>
+      listMcpInputSchemaProviderIssues(tool.inputSchema).map((issue) => ({
+        tool: tool.name,
+        ...issue,
+      })),
+    );
+
+    expect(issues).toEqual([]);
   });
 
   it("creates, lists, and reads a project through MCP tool calls", async () => {
