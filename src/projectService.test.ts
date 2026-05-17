@@ -560,6 +560,11 @@ describe("DevNexus-Pharo project service", () => {
       trackerProjectId: "vk-linkable",
     });
 
+    expect(result.deprecation).toMatchObject({
+      status: "deprecated",
+      command: "dev-nexus-pharo project link-tracker",
+      replacement: "dev-nexus project tracker link",
+    });
     expect(result.project.vibeKanbanProjectId).toBe("vk-linkable");
     expect(loadProjectConfig(projectRoot).kanban.projectId).toBe("vk-linkable");
     expect(
@@ -667,6 +672,11 @@ describe("DevNexus-Pharo project service", () => {
         owner: "example",
         name: "project",
       },
+    });
+    expect(result.deprecation).toMatchObject({
+      status: "deprecated",
+      command: "dev-nexus-pharo project configure-tracker",
+      replacement: "dev-nexus project tracker configure",
     });
     expect(loadProjectConfig(projectRoot).workTracking).toEqual(result.workTracking);
     expect(
@@ -906,6 +916,10 @@ describe("DevNexus-Pharo project service", () => {
       fetch: fetchMock,
     });
 
+    expect(result.deprecation).toMatchObject({
+      status: "deprecated",
+      command: "dev-nexus-pharo project sync-tracker",
+    });
     expect(String(fetchMock.mock.calls[0]?.[0])).toBe(
       "http://127.0.0.1:3200/api/repos",
     );

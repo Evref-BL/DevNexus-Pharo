@@ -85,6 +85,10 @@ import {
   runDevNexusPharoMcpServer,
   runDevNexusPharoMcpStdioServer,
 } from "./mcpServer.js";
+import {
+  legacyTrackerWrapperNotice,
+  type LegacyTrackerWrapperCommand,
+} from "./trackerDeprecation.js";
 import { installDevNexusPharoAndPlexusMcpForExecutor } from "./vibeKanbanMcpConfig.js";
 import {
   getVibeKanbanStatus,
@@ -117,9 +121,9 @@ export function usage(): string {
     "  dev-nexus-pharo codex worktree archive <id> [options]",
     "  dev-nexus-pharo project create <name> [--from <git-url> | --git-init] [--generic] [options]",
     "  dev-nexus-pharo project import <path> [--name <name>] [--generic] [options]",
-    "  dev-nexus-pharo project configure-tracker <id-or-path> --provider <local|github|gitlab|jira> [options]",
-    "  dev-nexus-pharo project link-tracker <id-or-path> --tracker-project-id <id> [options]",
-    "  dev-nexus-pharo project sync-tracker <id-or-path> [options]",
+    "  dev-nexus-pharo project configure-tracker <id-or-path> --provider <local|github|gitlab|jira> [options]  (legacy; use dev-nexus project tracker configure)",
+    "  dev-nexus-pharo project link-tracker <id-or-path> --tracker-project-id <id> [options]  (legacy; use dev-nexus project tracker link)",
+    "  dev-nexus-pharo project sync-tracker <id-or-path> [options]  (legacy Vibe Kanban registration)",
     "  dev-nexus-pharo project skills status <id-or-path> [options]",
     "  dev-nexus-pharo project skills refresh <id-or-path> [options]",
     "  dev-nexus-pharo project list [options]",
@@ -228,8 +232,8 @@ export function usage(): string {
     "  --git-init",
     "  --generic",
     "  --root <path>",
-    "  --tracker-project-id <id>",
-    "  --sync-tracker",
+    "  --tracker-project-id <id>        legacy Vibe Kanban board id",
+    "  --sync-tracker                  legacy Vibe Kanban board/repo registration",
     "  --vibe-host <host>",
     "  --vibe-port <port>",
     "  --home <path>",
@@ -239,14 +243,15 @@ export function usage(): string {
     "  --name <name>",
     "  --project-root <path>",
     "  --generic",
-    "  --tracker-project-id <id>",
-    "  --sync-tracker",
+    "  --tracker-project-id <id>        legacy Vibe Kanban board id",
+    "  --sync-tracker                  legacy Vibe Kanban board/repo registration",
     "  --vibe-host <host>",
     "  --vibe-port <port>",
     "  --home <path>",
     "  --json",
     "",
     "Options for project configure-tracker:",
+    "  Legacy compatibility wrapper. Prefer dev-nexus project tracker configure for generic work tracking.",
     "  --provider <local|github|gitlab|jira>",
     "  --repository-owner <owner>    required for GitHub",
     "  --repository-name <name>      required for GitHub",
@@ -259,11 +264,13 @@ export function usage(): string {
     "  --json",
     "",
     "Options for project link-tracker:",
+    "  Legacy compatibility wrapper. Prefer dev-nexus project tracker link for generic tracker links.",
     "  --tracker-project-id <id>",
     "  --home <path>",
     "  --json",
     "",
     "Options for project sync-tracker:",
+    "  Legacy Vibe Kanban registration wrapper. Configure generic tracking through DevNexus core.",
     "  --vibe-host <host>",
     "  --vibe-port <port>",
     "  --home <path>",
@@ -2208,6 +2215,15 @@ function printNexusProjectImportResult(
   console.log(JSON.stringify(payload, null, 2));
 }
 
+function printLegacyTrackerWrapperNotice(
+  command: LegacyTrackerWrapperCommand,
+  json: boolean | undefined,
+): void {
+  if (!json) {
+    console.error(legacyTrackerWrapperNotice(command));
+  }
+}
+
 function printProjectLinkTrackerResult(
   result: LinkNexusProjectTrackerResult,
   json: boolean | undefined,
@@ -2218,7 +2234,8 @@ function printProjectLinkTrackerResult(
     return;
   }
 
-  console.log("DevNexus-Pharo project linked to tracker.");
+  printLegacyTrackerWrapperNotice("link-tracker", json);
+  console.log("Legacy DevNexus-Pharo tracker link wrapper completed.");
   console.log(`  Project: ${result.project.id} (${result.project.name})`);
   console.log(`  Tracker project: ${result.vibeKanbanProjectId}`);
   if (result.vibeKanbanRepoId) {
@@ -2241,7 +2258,8 @@ function printProjectConfigureTrackerResult(
     return;
   }
 
-  console.log("DevNexus-Pharo project tracker configured.");
+  printLegacyTrackerWrapperNotice("configure-tracker", json);
+  console.log("Legacy DevNexus-Pharo tracker configuration wrapper completed.");
   console.log(`  Project: ${result.project.id} (${result.project.name})`);
   console.log(`  Provider: ${result.workTracking.provider}`);
   if (result.workTracking.provider === "github") {
@@ -2280,7 +2298,8 @@ function printProjectSyncTrackerResult(
     return;
   }
 
-  console.log("DevNexus-Pharo project synced to tracker.");
+  printLegacyTrackerWrapperNotice("sync-tracker", json);
+  console.log("Legacy DevNexus-Pharo tracker sync wrapper completed.");
   console.log(`  Project: ${result.project.id} (${result.project.name})`);
   console.log(`  Tracker board: ${result.vibeKanbanProjectId}`);
   console.log(`  Tracker repo: ${result.vibeKanbanRepoId}`);

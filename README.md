@@ -223,17 +223,9 @@ dev-nexus project tracker configure C:\dev\code\MyProject --provider jira --host
 ```
 
 `dev-nexus-pharo project configure-tracker` remains as a legacy convenience
-wrapper for projects registered in a DevNexus-Pharo home. New automation and
-documentation should prefer the DevNexus command above.
-
-```powershell
-dev-nexus-pharo project configure-tracker MyProject --provider local --store-path .dev-nexus-pharo\work-items.json
-dev-nexus-pharo project configure-tracker MyProject --provider github --repository-owner example --repository-name MyProject
-dev-nexus-pharo project configure-tracker MyProject --provider github --host github.enterprise.test --repository-owner example --repository-name MyProject
-dev-nexus-pharo project configure-tracker MyProject --provider gitlab --repository-id example/MyProject
-dev-nexus-pharo project configure-tracker MyProject --provider gitlab --host gitlab.enterprise.test --repository-id example/MyProject
-dev-nexus-pharo project configure-tracker MyProject --provider jira --host example.atlassian.net --project-key FCD
-```
+wrapper for projects registered in a DevNexus-Pharo home. It delegates to
+DevNexus core and returns a deprecation notice. New automation and documentation
+should prefer the DevNexus command above.
 
 The GitHub provider uses the GitHub Issues REST API. It reads credentials in
 this order: explicit provider token from code, `GITHUB_TOKEN`, `GH_TOKEN`, then
@@ -323,8 +315,8 @@ When no transition id is configured for a status, DevNexus still records the
 neutral status with a `status:<name>` Jira label and skips the workflow
 transition.
 
-Existing local Vibe Kanban installations can still be used as a tracker
-provider for board/repo registration:
+Existing local Vibe Kanban installations can still be used through legacy
+DevNexus-Pharo compatibility wrappers for board/repo registration:
 
 ```powershell
 dev-nexus-pharo project create MyProject --git-init --tracker-project-id <id>
@@ -416,6 +408,12 @@ worktree_status
 worktree_record_execution
 worktree_archive
 ```
+
+`project_configure_tracker`, `project_link_tracker`, and
+`project_sync_tracker` are legacy compatibility wrappers. Generic tracker
+configuration and linking belong to DevNexus core; use
+`dev-nexus project tracker configure` and `dev-nexus project tracker link` for
+new automation.
 
 ## Configuration Notes
 

@@ -38,6 +38,7 @@ import {
   listDevNexusMcpTools,
   type DevNexusMcpToolContext,
 } from "dev-nexus";
+import { legacyTrackerWrapperToolDescription } from "./trackerDeprecation.js";
 
 type JsonRpcId = string | number | null;
 
@@ -115,8 +116,14 @@ const tools: McpTool[] = [
         remoteUrl: { type: "string" },
         from: { type: "string" },
         gitInit: { type: "boolean" },
-        trackerProjectId: { type: "string" },
-        syncTracker: { type: "boolean" },
+        trackerProjectId: {
+          type: "string",
+          description: "Legacy Vibe Kanban board id compatibility.",
+        },
+        syncTracker: {
+          type: "boolean",
+          description: "Legacy Vibe Kanban repo/board registration compatibility.",
+        },
         generic: { type: "boolean" },
         vibeHost: { type: "string" },
         vibePort: { type: "number" },
@@ -135,8 +142,14 @@ const tools: McpTool[] = [
         root: { type: "string" },
         projectRoot: { type: "string" },
         name: { type: "string" },
-        trackerProjectId: { type: "string" },
-        syncTracker: { type: "boolean" },
+        trackerProjectId: {
+          type: "string",
+          description: "Legacy Vibe Kanban board id compatibility.",
+        },
+        syncTracker: {
+          type: "boolean",
+          description: "Legacy Vibe Kanban repo/board registration compatibility.",
+        },
         generic: { type: "boolean" },
         vibeHost: { type: "string" },
         vibePort: { type: "number" },
@@ -147,7 +160,7 @@ const tools: McpTool[] = [
   },
   {
     name: "project_link_tracker",
-    description: "Link a DevNexus-Pharo project to an existing tracker project id.",
+    description: legacyTrackerWrapperToolDescription("link-tracker"),
     inputSchema: {
       type: "object",
       properties: {
@@ -161,7 +174,7 @@ const tools: McpTool[] = [
   },
   {
     name: "project_configure_tracker",
-    description: "Configure a DevNexus-Pharo project's provider-neutral work tracker.",
+    description: legacyTrackerWrapperToolDescription("configure-tracker"),
     inputSchema: {
       type: "object",
       properties: {
@@ -182,7 +195,7 @@ const tools: McpTool[] = [
   },
   {
     name: "project_sync_tracker",
-    description: "Register a DevNexus-Pharo project with its configured tracker provider.",
+    description: legacyTrackerWrapperToolDescription("sync-tracker"),
     inputSchema: {
       type: "object",
       properties: {

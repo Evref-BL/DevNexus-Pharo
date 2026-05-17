@@ -47,13 +47,22 @@ Project commands:
 dev-nexus-pharo project create MyProject --git-init
 dev-nexus-pharo project create MyProject --from https://github.com/example/MyProject.git
 dev-nexus-pharo project import C:\dev\code\git\ExistingProject --name ExistingProject
-dev-nexus-pharo project link-tracker my-project --tracker-project-id <id>
-dev-nexus-pharo project sync-tracker my-project
 dev-nexus-pharo project list
 dev-nexus-pharo project status MyProject
 dev-nexus-pharo project skills status MyProject
 dev-nexus-pharo project skills refresh MyProject
 ```
+
+Generic tracker configuration belongs to DevNexus core:
+
+```powershell
+dev-nexus project tracker configure MyProject --provider local --store-path .dev-nexus\work-items.json
+dev-nexus project tracker link MyProject --tracker-project-id <id>
+```
+
+`dev-nexus-pharo project configure-tracker`, `link-tracker`, and
+`sync-tracker` remain only as legacy compatibility wrappers for older
+DevNexus-Pharo homes and Vibe Kanban board/repo registration.
 
 Project skill refresh materializes generic DevNexus skills, DevNexus-Pharo
 workflow/runtime-boundary skills, and copied MCP-Pharo domain skills:

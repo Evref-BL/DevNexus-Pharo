@@ -60,6 +60,9 @@ describe("dev-nexus-pharo cli", () => {
     expect(usage()).toContain("dev-nexus-pharo project configure-tracker <id-or-path>");
     expect(usage()).toContain("dev-nexus-pharo project link-tracker <id-or-path>");
     expect(usage()).toContain("dev-nexus-pharo project sync-tracker <id-or-path>");
+    expect(usage()).toContain("legacy; use dev-nexus project tracker configure");
+    expect(usage()).toContain("Legacy compatibility wrapper. Prefer dev-nexus project tracker configure");
+    expect(usage()).toContain("Legacy Vibe Kanban registration wrapper");
     expect(usage()).toContain("dev-nexus-pharo project skills status <id-or-path>");
     expect(usage()).toContain("dev-nexus-pharo project skills refresh <id-or-path>");
     expect(usage()).toContain("dev-nexus-pharo vibe-kanban start <home>");
@@ -834,6 +837,11 @@ describe("dev-nexus-pharo cli", () => {
         name: "Linked",
         vibeKanbanProjectId: "vk-linked",
       },
+      deprecation: {
+        status: "deprecated",
+        command: "dev-nexus-pharo project link-tracker",
+        replacement: "dev-nexus project tracker link",
+      },
       plexusProjectConfig: {
         kanban: {
           provider: "vibe-kanban",
@@ -845,6 +853,57 @@ describe("dev-nexus-pharo cli", () => {
       id: "linked",
       vibeKanbanProjectId: "vk-linked",
     });
+  });
+
+  it("emits a deprecation notice for legacy tracker CLI wrappers", async () => {
+    const homePath = path.join(makeTempDir("dev-nexus-pharo-parent-"), "home");
+    const projectRoot = path.join(makeTempDir("dev-nexus-pharo-projects-"), "Notice");
+    initHome(homePath);
+    const homeConfig = loadHomeConfig(homePath);
+    homeConfig.projects.push({
+      id: "notice",
+      name: "Notice",
+      projectRoot: projectRoot,
+    });
+    saveHomeConfig(homePath, homeConfig);
+    saveProjectConfig(projectRoot, {
+      version: 1,
+      id: "notice",
+      name: "Notice",
+      home: null,
+      repo: {
+        kind: "local",
+        remoteUrl: null,
+        defaultBranch: "main",
+      },
+      worktreesRoot: "worktrees",
+      kanban: {
+        provider: "vibe-kanban",
+        projectId: null,
+      },
+    });
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await expect(
+      main([
+        "project",
+        "configure-tracker",
+        "notice",
+        "--home",
+        homePath,
+        "--provider",
+        "local",
+        "--store-path",
+        ".tracker/items.json",
+      ]),
+    ).resolves.toBe(0);
+
+    const notice = String(error.mock.calls[0]?.[0]);
+    expect(notice).toContain(
+      "Deprecated: dev-nexus-pharo project configure-tracker",
+    );
+    expect(notice).toContain("dev-nexus project tracker configure");
   });
 
   it("configures GitHub work tracking from the CLI", async () => {
@@ -911,6 +970,11 @@ describe("dev-nexus-pharo cli", () => {
         workTracking: {
           provider: "github",
         },
+      },
+      deprecation: {
+        status: "deprecated",
+        command: "dev-nexus-pharo project configure-tracker",
+        replacement: "dev-nexus project tracker configure",
       },
     });
     expect(loadProjectConfig(projectRoot).workTracking).toEqual(payload.workTracking);
@@ -1201,6 +1265,10 @@ describe("dev-nexus-pharo cli", () => {
       },
       vibeKanbanBoard: {
         boardId: "board-synced",
+      },
+      deprecation: {
+        status: "deprecated",
+        command: "dev-nexus-pharo project sync-tracker",
       },
     });
   });

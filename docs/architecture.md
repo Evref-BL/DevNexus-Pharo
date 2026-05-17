@@ -29,12 +29,14 @@ DevNexus-Pharo owns:
 
 DevNexus-Pharo does not own:
 
+- generic DevNexus project, component, work-item, or tracker configuration
 - PharoLauncher CLI details
 - Pharo image creation, launch, or kill semantics
 - in-image Pharo code editing or test execution
 - MCP-Pharo's image-side MCP server behavior
 
-Those belong to pharo-launcher-mcp, PLexus, and the Pharo MCP worker respectively.
+Those belong to DevNexus core, pharo-launcher-mcp, PLexus, and the Pharo MCP
+worker respectively.
 DevNexus-Pharo may copy MCP-Pharo repo-local skills such as Pharo CI
 reproduction, image Git handoff, project loading, and version compatibility into
 `.dev-nexus/skills` with upstream commit provenance. These copies are worker

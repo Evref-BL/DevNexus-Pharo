@@ -49,6 +49,7 @@ import {
   type PlexusProjectConfig,
 } from "./devNexusPharoExtension.js";
 import { devNexusPharoDevNexusPluginConfig } from "./devNexusPharoPlugin.js";
+import { legacyTrackerWrapperDeprecation } from "./trackerDeprecation.js";
 
 registerNexusProjectExtension(devNexusPharoExtension);
 
@@ -322,6 +323,11 @@ export function importDevNexusPharoProject(
   };
 }
 
+/**
+ * @deprecated Generic work tracking belongs to DevNexus core. This helper is
+ * retained only for legacy Vibe Kanban repo/board registration for
+ * DevNexus-Pharo-managed projects.
+ */
 export async function syncDevNexusPharoProjectTracker(
   options: SyncDevNexusPharoProjectTrackerOptions,
 ): Promise<SyncDevNexusPharoProjectTrackerResult> {
@@ -418,5 +424,6 @@ export async function syncDevNexusPharoProjectTracker(
       repoSetup: vibeKanbanRepoSetup,
       board: vibeKanbanBoard,
     },
+    deprecation: legacyTrackerWrapperDeprecation("sync-tracker"),
   };
 }

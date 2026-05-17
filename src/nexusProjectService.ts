@@ -50,6 +50,10 @@ import {
   type NexusProjectConfig,
   type NexusProjectReference,
 } from "./config.js";
+import {
+  legacyTrackerWrapperDeprecation,
+  type LegacyTrackerWrapperDeprecation,
+} from "./trackerDeprecation.js";
 
 const defaultGitRunner = defaultProjectGitRunner;
 const runGitCommand = runProjectGitCommand;
@@ -205,6 +209,7 @@ export interface ConfigureNexusProjectTrackerResult {
   plexusProjectConfigPath: string | null;
   projectConfig: NexusProjectConfig;
   workTracking: WorkTrackingConfig;
+  deprecation: LegacyTrackerWrapperDeprecation;
 }
 
 export interface LinkNexusProjectTrackerResult {
@@ -215,6 +220,7 @@ export interface LinkNexusProjectTrackerResult {
   projectConfigPath: string;
   plexusProjectConfigPath: string | null;
   plexusProjectConfig: unknown | null;
+  deprecation: LegacyTrackerWrapperDeprecation;
 }
 
 export interface NexusProjectStatusExtensionContribution {
@@ -434,6 +440,10 @@ export function getNexusProjectStatus(
   };
 }
 
+/**
+ * @deprecated Generic tracker linking belongs to DevNexus core. This wrapper is
+ * retained only for DevNexus-Pharo legacy compatibility.
+ */
 export function linkNexusProjectTracker(
   options: LinkNexusProjectTrackerOptions,
 ): LinkNexusProjectTrackerResult {
@@ -461,9 +471,14 @@ export function linkNexusProjectTracker(
     projectConfigPath: linked.projectConfigPath,
     plexusProjectConfigPath: trackerLinkContribution.plexusProjectConfigPath,
     plexusProjectConfig: trackerLinkContribution.plexusProjectConfig,
+    deprecation: legacyTrackerWrapperDeprecation("link-tracker"),
   };
 }
 
+/**
+ * @deprecated Generic tracker configuration belongs to DevNexus core. This
+ * wrapper is retained only for DevNexus-Pharo legacy compatibility.
+ */
 export function configureNexusProjectTracker(
   options: ConfigureNexusProjectTrackerOptions,
 ): ConfigureNexusProjectTrackerResult {
@@ -497,6 +512,7 @@ export function configureNexusProjectTracker(
     ).plexusProjectConfigPath,
     projectConfig: result.projectConfig,
     workTracking: result.workTracking,
+    deprecation: legacyTrackerWrapperDeprecation("configure-tracker"),
   };
 }
 

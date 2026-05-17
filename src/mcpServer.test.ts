@@ -239,7 +239,8 @@ describe("DevNexus-Pharo MCP server tools", () => {
   });
 
   it("lists project management tools", () => {
-    expect(listDevNexusPharoMcpTools().map((tool) => tool.name)).toEqual([
+    const tools = listDevNexusPharoMcpTools();
+    expect(tools.map((tool) => tool.name)).toEqual([
       "project_create",
       "project_import",
       "project_link_tracker",
@@ -275,6 +276,15 @@ describe("DevNexus-Pharo MCP server tools", () => {
     expect(listDevNexusPharoMcpTools().map((tool) => tool.name)).not.toContain(
       "codex_worktree_prepare",
     );
+    for (const toolName of [
+      "project_link_tracker",
+      "project_configure_tracker",
+      "project_sync_tracker",
+    ]) {
+      const tool = tools.find((entry) => entry.name === toolName);
+      expect(tool?.description).toContain("Legacy compatibility wrapper");
+      expect(tool?.description).toContain("DevNexus core");
+    }
   });
 
   it("creates, lists, and reads a project through MCP tool calls", async () => {
@@ -333,6 +343,10 @@ describe("DevNexus-Pharo MCP server tools", () => {
         id: "mcp-project",
         vibeKanbanProjectId: "vk-mcp",
       },
+      deprecation: {
+        status: "deprecated",
+        command: "dev-nexus-pharo project link-tracker",
+      },
     });
 
     const configurePayload = parseToolText(
@@ -359,6 +373,11 @@ describe("DevNexus-Pharo MCP server tools", () => {
           provider: "github",
         },
         vibeKanbanProjectId: "vk-mcp",
+      },
+      deprecation: {
+        status: "deprecated",
+        command: "dev-nexus-pharo project configure-tracker",
+        replacement: "dev-nexus project tracker configure",
       },
     });
 
