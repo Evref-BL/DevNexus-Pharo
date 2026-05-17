@@ -502,6 +502,7 @@ describe("Codex config", () => {
       platform: "win32",
     });
 
+    expect(result.servers.dev_nexus?.command).toBe("dev-nexus.cmd");
     expect(result.servers.dev_nexus_pharo?.command).toBe(devNexusPharoBin);
     expect(result.servers.plexus_project?.command).toBe(plexusBin);
     expect(result.servers.pharo_launcher?.command).toBe(plexusBin);

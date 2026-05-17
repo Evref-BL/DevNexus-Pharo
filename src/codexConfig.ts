@@ -462,13 +462,15 @@ function codexProjectMcpTarget(
 
 function buildSharedDevNexusMcpServer(
   projectConfig: NexusProjectConfig,
+  platform: NodeJS.Platform,
 ): CodexMcpServerConfig {
   const target = codexProjectMcpTarget(projectConfig);
   const mcpConfig = projectConfig.mcp;
+  const command = target?.command ?? mcpConfig?.command ?? "dev-nexus";
 
   return {
     enabled: true,
-    command: target?.command ?? mcpConfig?.command ?? "dev-nexus",
+    command: windowsDevNexusCommand(command, platform),
     args: [
       ...(target?.args ?? mcpConfig?.args ?? ["mcp-stdio"]),
     ],
@@ -477,6 +479,22 @@ function buildSharedDevNexusMcpServer(
       mcpConfig?.defaultToolsApprovalMode ??
       "approve",
   };
+}
+
+function windowsDevNexusCommand(
+  command: string,
+  platform: NodeJS.Platform,
+): string {
+  if (
+    platform === "win32" &&
+    command === "dev-nexus" &&
+    !command.includes("/") &&
+    !command.includes("\\") &&
+    path.extname(command) === ""
+  ) {
+    return "dev-nexus.cmd";
+  }
+  return command;
 }
 
 function plexusSharedEnvironment(
@@ -531,7 +549,7 @@ function buildSharedDevNexusPharoMcpServers(
       codexProjectMcpTarget(projectConfig)?.serverName ??
       projectConfig.mcp?.serverName ??
       defaultDevNexusCodexMcpServerName
-    ]: buildSharedDevNexusMcpServer(projectConfig),
+    ]: buildSharedDevNexusMcpServer(projectConfig, platform),
     [defaultDevNexusPharoCodexMcpServerName]: {
       enabled: true,
       command: devNexusPharoCommand,
