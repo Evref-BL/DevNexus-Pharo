@@ -37,6 +37,7 @@ import {
   callDevNexusMcpTool,
   listDevNexusMcpTools,
   providerCompatibleMcpTools,
+  StdioJsonRpcTransport,
   type DevNexusMcpToolContext,
 } from "dev-nexus";
 import { legacyTrackerWrapperToolDescription } from "./trackerDeprecation.js";
@@ -1401,94 +1402,6 @@ export function startDevNexusPharoMcpHttpServer(
       });
     });
   });
-}
-
-class StdioJsonRpcTransport {
-  private buffer = Buffer.alloc(0);
-  private processing = false;
-
-  constructor(
-    private readonly onMessage: (
-      message: JsonRpcRequest,
-    ) => Promise<unknown | undefined>,
-  ) {}
-
-  start(): Promise<void> {
-    return new Promise((resolve) => {
-      process.stdin.on("data", (chunk: Buffer) => {
-        this.buffer = Buffer.concat([this.buffer, chunk]);
-        void this.processBuffer().catch((error: unknown) => {
-          this.send(
-            jsonRpcError(
-              undefined,
-              -32603,
-              error instanceof Error ? error.message : String(error),
-            ),
-          );
-        });
-      });
-      process.stdin.once("end", resolve);
-    });
-  }
-
-  private async processBuffer(): Promise<void> {
-    if (this.processing) {
-      return;
-    }
-
-    this.processing = true;
-    try {
-      while (true) {
-        const headerEnd = this.headerEndIndex();
-        if (!headerEnd) {
-          return;
-        }
-
-        const [endIndex, separatorLength] = headerEnd;
-        const header = this.buffer.slice(0, endIndex).toString("utf8");
-        const lengthMatch = /^Content-Length:\s*(\d+)\s*$/im.exec(header);
-        if (!lengthMatch) {
-          throw new Error("Missing Content-Length header");
-        }
-
-        const contentLength = Number(lengthMatch[1]);
-        const messageStart = endIndex + separatorLength;
-        const messageEnd = messageStart + contentLength;
-        if (this.buffer.length < messageEnd) {
-          return;
-        }
-
-        const body = this.buffer.slice(messageStart, messageEnd).toString("utf8");
-        this.buffer = this.buffer.slice(messageEnd);
-        const response = await this.onMessage(JSON.parse(body) as JsonRpcRequest);
-        if (response) {
-          this.send(response);
-        }
-      }
-    } finally {
-      this.processing = false;
-      if (this.headerEndIndex()) {
-        void this.processBuffer();
-      }
-    }
-  }
-
-  private headerEndIndex(): [number, number] | undefined {
-    const crlfIndex = this.buffer.indexOf("\r\n\r\n");
-    if (crlfIndex >= 0) {
-      return [crlfIndex, 4];
-    }
-
-    const lfIndex = this.buffer.indexOf("\n\n");
-    return lfIndex >= 0 ? [lfIndex, 2] : undefined;
-  }
-
-  private send(message: unknown): void {
-    const body = JSON.stringify(message);
-    process.stdout.write(
-      `Content-Length: ${Buffer.byteLength(body, "utf8")}\r\n\r\n${body}`,
-    );
-  }
 }
 
 export async function runDevNexusPharoMcpStdioServer(): Promise<void> {
