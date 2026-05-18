@@ -68,11 +68,11 @@ export type {
 };
 
 export const devNexusPharoControlProjectDirectoryName = "DevNexus-Pharo";
-export const devNexusPharoLegacyControlProjectDirectoryName = "control";
 export const devNexusPharoControlProjectId = "dev-nexus-pharo-control";
 export const devNexusPharoControlProjectName = "DevNexus-Pharo";
 export const vibeKanbanPinnedVersion = "0.1.43";
 export const vibeKanbanPinnedPackage = `vibe-kanban@${vibeKanbanPinnedVersion}`;
+const obsoleteControlProjectDirectoryName = "control";
 
 export interface NexusControlProjectReference {
   id: string;
@@ -235,10 +235,10 @@ export function controlProjectRootPath(homePath: string): string {
   );
 }
 
-export function legacyControlProjectRootPath(homePath: string): string {
+function obsoleteControlProjectRootPath(homePath: string): string {
   return path.join(
     resolveNexusHome(homePath),
-    devNexusPharoLegacyControlProjectDirectoryName,
+    obsoleteControlProjectDirectoryName,
   );
 }
 
@@ -500,6 +500,25 @@ function validateToolCommand(
   }
 
   return { command, args };
+}
+
+function normalizedExecutableName(command: string): string {
+  return path
+    .basename(command)
+    .toLowerCase()
+    .replace(/\.(cmd|exe|ps1)$/u, "");
+}
+
+function assertNexusToolDoesNotUseObsoleteBareCommand(
+  tool: NexusToolCommand,
+): void {
+  if (normalizedExecutableName(tool.command) !== "dev-nexus-pharo") {
+    return;
+  }
+
+  throw new NexusConfigError(
+    'tools.nexus.command uses obsolete bare command "dev-nexus-pharo". Regenerate the MCP config through current DevNexus/DevNexus-Pharo setup so it uses the current Node executable and CLI entrypoint.',
+  );
 }
 
 function defaultControlProjectReference(
@@ -894,6 +913,24 @@ function assertProjectsDoNotCollideWithControlProject(
   }
 }
 
+function assertControlProjectDoesNotUseObsoleteRoot(
+  controlProject: NexusControlProjectReference,
+  homePathForDefaults: string | undefined,
+): void {
+  if (!homePathForDefaults || controlProject.id !== devNexusPharoControlProjectId) {
+    return;
+  }
+
+  const obsoleteRoot = obsoleteControlProjectRootPath(homePathForDefaults);
+  if (!samePath(controlProject.root, obsoleteRoot)) {
+    return;
+  }
+
+  throw new NexusConfigError(
+    `DevNexus-Pharo home config uses obsolete controlProject.root "${obsoleteRoot}". Regenerate the home through current DevNexus/DevNexus-Pharo setup; this version will not move or rewrite that root.`,
+  );
+}
+
 export function validateHomeConfig(
   value: unknown,
   homePathForDefaults?: string,
@@ -911,6 +948,10 @@ export function validateHomeConfig(
   );
   const controlProject = validateControlProjectReference(
     record.controlProject,
+    homePathForDefaults,
+  );
+  assertControlProjectDoesNotUseObsoleteRoot(
+    controlProject,
     homePathForDefaults,
   );
   assertProjectsDoNotCollideWithControlProject(
@@ -934,6 +975,11 @@ export function validateHomeConfig(
       "ports.vibeKanban, ports.devNexusPharoMcp, and ports.plexusMcp must be different",
     );
   }
+  const nexusTool = validateToolCommand(
+    tools.nexus ?? defaultNexusToolCommand(),
+    "tools.nexus",
+  );
+  assertNexusToolDoesNotUseObsoleteBareCommand(nexusTool);
 
   return {
     ...baseConfig,
@@ -950,10 +996,7 @@ export function validateHomeConfig(
       host: optionalString(mcp, "host", "mcp") ?? "127.0.0.1",
     },
     tools: {
-      nexus: validateToolCommand(
-        tools.nexus ?? defaultNexusToolCommand(),
-        "tools.nexus",
-      ),
+      nexus: nexusTool,
       vibeKanban: validateToolCommand(tools.vibeKanban, "tools.vibeKanban"),
       plexus: validateToolCommand(tools.plexus, "tools.plexus"),
     },

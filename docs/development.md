@@ -192,7 +192,7 @@ pharo
 Shared DevNexus-Pharo project roots emit command-based `plexus_project` and
 `pharo_launcher` entries plus separate URL MCP entries for `route_control` and
 the agent-facing `gateway`. The gateway URLs come from the project-local PLexus
-runtime policy in `plexus.project.json`; legacy home-scoped `plexus`,
+runtime policy in `plexus.project.json`; obsolete home-scoped `plexus`,
 `vibe_kanban`, and `pharo` entries are removed during regeneration.
 Shared roots also include the generic `dev_nexus` server. Use `dev_nexus`, not
 `dev_nexus_pharo`, for generic `project_*`, `work_item_*`,

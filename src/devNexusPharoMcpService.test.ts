@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { devNexusPharoCliEntrypointPath } from "./config.js";
 import {
   buildDevNexusPharoMcpServiceArgs,
+  DevNexusPharoMcpServiceError,
   resolveDevNexusPharoMcpServiceCommand,
 } from "./devNexusPharoMcpService.js";
 
@@ -19,14 +20,10 @@ describe("DevNexus-Pharo MCP service", () => {
     ).toEqual([entrypoint, "mcp"]);
   });
 
-  it("resolves legacy bare dev-nexus-pharo commands to the current node entrypoint", () => {
-    expect(resolveDevNexusPharoMcpServiceCommand("dev-nexus-pharo", [])).toEqual({
-      command: process.execPath,
-      args: [devNexusPharoCliEntrypointPath(), "mcp"],
-    });
-    expect(resolveDevNexusPharoMcpServiceCommand("dev-nexus-pharo", ["mcp"])).toEqual({
-      command: process.execPath,
-      args: [devNexusPharoCliEntrypointPath(), "mcp"],
-    });
+  it("rejects bare dev-nexus-pharo commands with a regeneration error", () => {
+    expect(() => resolveDevNexusPharoMcpServiceCommand("dev-nexus-pharo", []))
+      .toThrow(DevNexusPharoMcpServiceError);
+    expect(() => resolveDevNexusPharoMcpServiceCommand("dev-nexus-pharo", []))
+      .toThrow(/obsolete bare command.*Regenerate/);
   });
 });

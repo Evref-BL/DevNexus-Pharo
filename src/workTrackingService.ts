@@ -1,13 +1,9 @@
-import type {
-  NexusProjectConfig,
-  NexusProjectKanbanConfig,
-} from "./config.js";
+import type { NexusProjectConfig } from "./config.js";
 import {
   createWorkTrackerProvider as createDevNexusWorkTrackerProvider,
   WorkTrackingProviderServiceError,
   type CreateWorkTrackerProviderOptions as DevNexusWorkTrackerProviderOptions,
   type VibeKanbanApiOptions,
-  VibeKanbanWorkTrackingConfig,
   WorkTrackingConfig,
   WorkTrackerProvider,
 } from "dev-nexus";
@@ -28,28 +24,6 @@ export class WorkTrackingServiceError extends Error {
   }
 }
 
-export function workTrackingFromLegacyKanban(
-  kanban: NexusProjectKanbanConfig,
-): VibeKanbanWorkTrackingConfig {
-  return {
-    provider: "vibe-kanban",
-    projectId: kanban.projectId,
-  };
-}
-
-export function legacyKanbanFromWorkTracking(
-  workTracking: WorkTrackingConfig,
-): NexusProjectKanbanConfig | undefined {
-  if (workTracking.provider !== "vibe-kanban") {
-    return undefined;
-  }
-
-  return {
-    provider: "vibe-kanban",
-    projectId: workTracking.projectId ?? null,
-  };
-}
-
 export function resolveProjectWorkTrackingConfig(
   config: Pick<NexusProjectConfig, "kanban" | "workTracking">,
 ): WorkTrackingConfig {
@@ -58,11 +32,13 @@ export function resolveProjectWorkTrackingConfig(
   }
 
   if (config.kanban) {
-    return workTrackingFromLegacyKanban(config.kanban);
+    throw new WorkTrackingServiceError(
+      'Project config uses obsolete "kanban" work tracking metadata without "workTracking". Regenerate this project through current DevNexus/DevNexus-Pharo setup or add an explicit workTracking block.',
+    );
   }
 
   throw new WorkTrackingServiceError(
-    "Project does not define workTracking or legacy kanban configuration",
+    'Project config must define an explicit "workTracking" block. Regenerate this project through current DevNexus/DevNexus-Pharo setup or add workTracking before using work-item tools.',
   );
 }
 

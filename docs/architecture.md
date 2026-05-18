@@ -38,7 +38,7 @@ DevNexus-Pharo does not own:
 Those belong to DevNexus core, pharo-launcher-mcp, PLexus, and the Pharo MCP
 worker respectively.
 DevNexus-Pharo may copy MCP-Pharo repo-local skills such as Pharo CI
-reproduction, image Git handoff, project loading, and version compatibility into
+reproduction, image Git handoff, project loading, and cross-version support into
 `.dev-nexus/skills` with upstream commit provenance. These copies are worker
 guidance only; they do not make DevNexus-Pharo the source of MCP-Pharo runtime
 behavior.
@@ -133,7 +133,7 @@ the local app's `/api/auth/local/login` endpoint when the app is not already
 signed in. That keeps the self-hosted path local and avoids asking the user to
 copy the bootstrap password from `.env.remote` into the browser.
 
-GitHub login is available when the user supplies Vibe-compatible GitHub OAuth
+GitHub login is available when the user supplies Vibe GitHub OAuth
 app credentials through `DEV_NEXUS_PHARO_GITHUB_OAUTH_CLIENT_ID` and
 `DEV_NEXUS_PHARO_GITHUB_OAUTH_CLIENT_SECRET` or the equivalent `GITHUB_OAUTH_*`
 environment variables. Existing Git config can provide an email identity hint

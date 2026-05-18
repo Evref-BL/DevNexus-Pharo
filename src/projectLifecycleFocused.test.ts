@@ -123,14 +123,34 @@ describe("DevNexus-Pharo focused project lifecycle contracts", () => {
     );
   });
 
-  it("validates the project config schema and fills legacy defaults", () => {
+  it("validates the project config schema for explicit project files", () => {
     expect(
       validateProjectConfig({
         version: 1,
         id: "validated",
         name: "Validated",
+        home: null,
+        repo: {
+          kind: "local",
+          remoteUrl: null,
+          defaultBranch: null,
+        },
+        components: [
+          {
+            id: "primary",
+            name: "Validated",
+            kind: "local",
+            role: "primary",
+            remoteUrl: null,
+            defaultBranch: null,
+            sourceRoot: ".",
+            relationships: [],
+          },
+        ],
+        worktreesRoot: "worktrees",
         kanban: {
           provider: "vibe-kanban",
+          projectId: null,
         },
       }),
     ).toEqual({

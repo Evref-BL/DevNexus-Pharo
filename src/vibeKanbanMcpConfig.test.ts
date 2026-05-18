@@ -12,6 +12,7 @@ import {
   VibeKanbanApiError,
 } from "dev-nexus";
 import {
+  devNexusPharoCliEntrypointPath,
   initNexusHome,
   loadHomeConfig,
   saveHomeConfig,
@@ -346,8 +347,8 @@ describe("Vibe Kanban MCP config adapter", () => {
     const homePath = initHome();
     const config = loadHomeConfig(homePath);
     config.tools.nexus = {
-      command: "dev-nexus-pharo",
-      args: ["mcp"],
+      command: process.execPath,
+      args: [devNexusPharoCliEntrypointPath(), "mcp"],
     };
     config.integrations.vibeKanban.nexusMcpServerName = "dev_nexus_pharo_local";
     config.integrations.vibeKanban.plexusMcpServerName = "plexus_local";

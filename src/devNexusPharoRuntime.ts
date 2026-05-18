@@ -14,11 +14,8 @@ import {
 } from "dev-nexus";
 import {
   ensureControlProject,
-  legacyControlProjectRootPath,
   loadHomeConfig,
-  devNexusPharoControlProjectId,
   devNexusPharoControlProjectName,
-  projectConfigPath,
   resolveNexusHome,
   saveHomeConfig,
   saveProjectConfig,
@@ -347,54 +344,6 @@ function samePath(left: string, right: string): boolean {
     : resolvedLeft === resolvedRight;
 }
 
-function migrateLegacyControlProject(
-  homePath: string,
-  config: NexusHomeConfig,
-): void {
-  if (config.controlProject.id !== devNexusPharoControlProjectId) {
-    return;
-  }
-
-  const legacyRoot = legacyControlProjectRootPath(homePath);
-  const currentRoot = path.resolve(config.controlProject.root);
-  const targetRoot = path.join(homePath, devNexusPharoControlProjectName);
-  const usesLegacyDefaultRoot = samePath(currentRoot, legacyRoot);
-  if (!usesLegacyDefaultRoot && config.controlProject.name === devNexusPharoControlProjectName) {
-    return;
-  }
-
-  if (usesLegacyDefaultRoot) {
-    if (
-      fs.existsSync(legacyRoot) &&
-      !fs.existsSync(projectConfigPath(targetRoot))
-    ) {
-      fs.mkdirSync(path.dirname(targetRoot), { recursive: true });
-      fs.renameSync(legacyRoot, targetRoot);
-    }
-
-    config.controlProject.root = targetRoot;
-    config.controlProject.vibeKanbanProjectId = null;
-    config.controlProject.vibeKanbanRepoId = null;
-  }
-
-  config.controlProject.name = devNexusPharoControlProjectName;
-  saveHomeConfig(homePath, config);
-
-  const migratedProjectConfigPath = projectConfigPath(config.controlProject.root);
-  if (fs.existsSync(migratedProjectConfigPath)) {
-    const migratedProject = ensureControlProject(homePath, config.controlProject);
-    const updatedProject: NexusProjectConfig = {
-      ...migratedProject.config,
-      name: devNexusPharoControlProjectName,
-      kanban: {
-        provider: "vibe-kanban",
-        projectId: config.controlProject.vibeKanbanProjectId,
-      },
-    };
-    saveProjectConfig(migratedProject.projectPath, updatedProject);
-  }
-}
-
 function projectPathMatchesRepo(
   projectPath: string,
   repo: { path?: string; name?: string; display_name?: string },
@@ -414,13 +363,11 @@ async function resolveControlProjectRepoId(
 ): Promise<{
   repoId: string | null;
   repos?: ListVibeKanbanProjectsResult;
-  migratedProjectIdFromRepo: boolean;
 }> {
   const configuredRepoId = config.controlProject.vibeKanbanRepoId;
   if (configuredRepoId) {
     return {
       repoId: configuredRepoId,
-      migratedProjectIdFromRepo: false,
     };
   }
 
@@ -428,7 +375,7 @@ async function resolveControlProjectRepoId(
     port: config.ports.vibeKanban,
   });
   const configuredProjectId = config.controlProject.vibeKanbanProjectId;
-  const legacyRepo =
+  const repoFromConfiguredProjectId =
     configuredProjectId
       ? repos.projects.find(
           (repo) =>
@@ -437,18 +384,17 @@ async function resolveControlProjectRepoId(
         )
       : undefined;
   const repo =
-    legacyRepo ??
+    repoFromConfiguredProjectId ??
     repos.projects.find((candidate) => projectPathMatchesRepo(projectPath, candidate));
   if (!repo) {
     return {
       repoId: null,
       repos,
-      migratedProjectIdFromRepo: false,
     };
   }
 
   config.controlProject.vibeKanbanRepoId = repo.id;
-  if (legacyRepo) {
+  if (repoFromConfiguredProjectId) {
     config.controlProject.vibeKanbanProjectId = null;
   }
   saveHomeConfig(homePath, config);
@@ -456,7 +402,6 @@ async function resolveControlProjectRepoId(
   return {
     repoId: repo.id,
     repos,
-    migratedProjectIdFromRepo: Boolean(legacyRepo),
   };
 }
 
@@ -464,7 +409,6 @@ async function ensureControlProjectLinked(
   homePath: string,
   config: NexusHomeConfig,
 ): Promise<DevNexusPharoControlProjectStartResult> {
-  migrateLegacyControlProject(homePath, config);
   const controlProject = ensureControlProject(homePath, config.controlProject);
   const git = ensureGitRepository(controlProject.projectPath);
 

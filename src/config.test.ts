@@ -173,12 +173,12 @@ describe("DevNexus-Pharo home config", () => {
 
   it("loads home configs with default Nexus MCP HTTP settings", () => {
     const config = createDefaultHomeConfig(makeTempDir("dev-nexus-pharo-home-"));
-    const legacyConfig = config as unknown as Record<string, unknown>;
-    delete (legacyConfig.ports as Record<string, unknown>).devNexusPharoMcp;
-    delete legacyConfig.mcp;
-    delete (legacyConfig.tools as Record<string, unknown>).nexus;
+    const partialConfig = config as unknown as Record<string, unknown>;
+    delete (partialConfig.ports as Record<string, unknown>).devNexusPharoMcp;
+    delete partialConfig.mcp;
+    delete (partialConfig.tools as Record<string, unknown>).nexus;
 
-    expect(validateHomeConfig(legacyConfig)).toMatchObject({
+    expect(validateHomeConfig(partialConfig)).toMatchObject({
       ports: {
         devNexusPharoMcp: 7330,
       },
@@ -189,6 +189,18 @@ describe("DevNexus-Pharo home config", () => {
         nexus: defaultNexusToolCommand(),
       },
     });
+  });
+
+  it("rejects obsolete bare DevNexus-Pharo MCP commands during validation", () => {
+    const config = createDefaultHomeConfig(makeTempDir("dev-nexus-pharo-home-"));
+    config.tools.nexus = {
+      command: "dev-nexus-pharo",
+      args: [],
+    };
+
+    expect(() => validateHomeConfig(config)).toThrow(
+      /obsolete bare command.*Regenerate/,
+    );
   });
 
   it("accepts optional home-level agent defaults", () => {
@@ -318,47 +330,6 @@ describe("DevNexus-Pharo home config", () => {
       executor: "CODEX",
       model: "gpt-5.4",
       reasoning: "high",
-    });
-  });
-
-  it("defaults legacy project configs to the current explicit JSON shape", () => {
-    const legacyConfig = {
-      version: 1,
-      id: "legacy-project",
-      name: "Legacy Project",
-      worktreesRoot: "worktrees",
-      kanban: {
-        provider: "vibe-kanban",
-      },
-    };
-
-    expect(validateProjectConfig(legacyConfig)).toEqual({
-      version: 1,
-      id: "legacy-project",
-      name: "Legacy Project",
-      home: null,
-      repo: {
-        kind: "local",
-        remoteUrl: null,
-        defaultBranch: null,
-      },
-      components: [
-        {
-          id: "primary",
-          name: "Legacy Project",
-          kind: "local",
-          role: "primary",
-          remoteUrl: null,
-          defaultBranch: null,
-          sourceRoot: ".",
-          relationships: [],
-        },
-      ],
-      worktreesRoot: "worktrees",
-      kanban: {
-        provider: "vibe-kanban",
-        projectId: null,
-      },
     });
   });
 
@@ -583,14 +554,26 @@ describe("DevNexus-Pharo home config", () => {
     });
   });
 
-  it("defaults integrations and the control project when loading older config files", () => {
+  it("rejects an obsolete default control project root without moving files", () => {
     const homePath = makeTempDir("dev-nexus-pharo-home-");
     const config = createDefaultHomeConfig(homePath);
-    const legacyConfig = { ...config } as Partial<typeof config>;
-    delete legacyConfig.integrations;
-    delete legacyConfig.controlProject;
+    const obsoleteRoot = path.join(homePath, "control");
+    config.controlProject.root = obsoleteRoot;
 
-    expect(validateHomeConfig(legacyConfig, homePath)).toMatchObject({
+    expect(() => validateHomeConfig(config, homePath)).toThrow(
+      /obsolete controlProject\.root.*Regenerate/,
+    );
+    expect(fs.existsSync(obsoleteRoot)).toBe(false);
+  });
+
+  it("defaults integrations and the control project when optional sections are absent", () => {
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
+    const config = createDefaultHomeConfig(homePath);
+    const partialConfig = { ...config } as Partial<typeof config>;
+    delete partialConfig.integrations;
+    delete partialConfig.controlProject;
+
+    expect(validateHomeConfig(partialConfig, homePath)).toMatchObject({
       integrations: {
         vibeKanban: {
           executor: "CODEX",

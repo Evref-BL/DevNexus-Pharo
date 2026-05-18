@@ -100,17 +100,18 @@ export class WorkItemService {
     }).project;
     const projectRoot = projectStatus.projectRoot;
     const projectConfig = loadProjectConfig(projectRoot);
-    const workTracking = resolveProjectWorkTrackingConfig(projectConfig);
-    const projectContext: NexusProjectContext = {
-      homePath: this.homePath,
-      projectRoot,
-      projectId: projectConfig.id,
-      projectName: projectConfig.name,
-      sourceRoot: resolveProjectSourceRoot(projectRoot, projectConfig),
-      workTracking,
-    };
 
     try {
+      const workTracking = resolveProjectWorkTrackingConfig(projectConfig);
+      const projectContext: NexusProjectContext = {
+        homePath: this.homePath,
+        projectRoot,
+        projectId: projectConfig.id,
+        projectName: projectConfig.name,
+        sourceRoot: resolveProjectSourceRoot(projectRoot, projectConfig),
+        workTracking,
+      };
+
       return {
         homePath: this.homePath,
         projectRoot,
@@ -126,8 +127,7 @@ export class WorkItemService {
     } catch (error) {
       if (error instanceof WorkTrackingServiceError) {
         throw new WorkItemServiceError(
-          `Project "${projectConfig.id}" uses work tracking provider ` +
-            `"${workTracking.provider}", but it is not available: ${error.message}`,
+          `Project "${projectConfig.id}" work tracking is not available: ${error.message}`,
         );
       }
 

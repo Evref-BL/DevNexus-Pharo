@@ -19,7 +19,7 @@ DevNexus-Pharo owns:
 
 The bundled Pharo skills include DevNexus-Pharo workflow guidance plus copied
 MCP-Pharo domain guidance for Pharo CI reproduction, image Git handoff, project
-loading, and Pharo version compatibility. The MCP-Pharo copies are support
+loading, and Pharo cross-version support. The MCP-Pharo copies are support
 material projected under `.dev-nexus/skills`; MCP-Pharo remains the source for
 image-side MCP server behavior and image-owned repository operations.
 
@@ -178,7 +178,7 @@ dev-nexus-pharo codex init C:\dev\code\dev-nexus-dogfood
 
 For roots whose `dev-nexus.project.json` has both a DevNexus `mcp` block and an
 enabled `dev-nexus-pharo` plugin, `project skills refresh` materializes only the
-plugin-declared Pharo skills. It does not require a legacy `kanban` block and it
+plugin-declared Pharo skills. It does not require a `kanban` block and it
 does not start PLexus, Pharo Launcher, images, or Docker.
 
 `codex init` also materializes the static `plexus.project.json` file required by
@@ -334,7 +334,7 @@ Open a fresh Codex chat from that workspace after `codex doctor` passes. A
 running chat may keep the MCP tool list it loaded at startup.
 
 `codex init` preserves unrelated Codex settings and unrelated MCP servers. For
-project-scoped DevNexus-Pharo roots it replaces legacy home-scoped `plexus`,
+project-scoped DevNexus-Pharo roots it removes obsolete home-scoped `plexus`,
 `vibe_kanban`, and `pharo` entries with clean `plexus_project`,
 `pharo_launcher`, `route_control`, and `gateway` entries. The gateway entries
 use the project-local PLexus gateway policy recorded in `plexus.project.json`;
@@ -343,7 +343,7 @@ opening images, or creating routes.
 For shared DevNexus plugin roots, `codex init` writes the root project surface
 instead: `dev_nexus`, `dev_nexus_pharo`, `plexus_project`, `pharo_launcher`,
 `route_control`, and the live `gateway` endpoint. In that mode it removes the
-older managed `plexus`, `vibe_kanban`, and `pharo` entries so fresh Codex
+obsolete managed `plexus`, `vibe_kanban`, and `pharo` entries so fresh Codex
 sessions load the intended project/plugin tool surface.
 
 Generic worktree preparation, status, execution handoff, and archival belong to

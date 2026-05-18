@@ -280,7 +280,7 @@ describe("DevNexus-Pharo MCP server tools", () => {
     }
   });
 
-  it("lists provider-compatible tool input schemas", () => {
+  it("lists provider-accepted tool input schemas", () => {
     const issues = listDevNexusPharoMcpTools().flatMap((tool) =>
       listMcpInputSchemaProviderIssues(tool.inputSchema).map((issue) => ({
         tool: tool.name,

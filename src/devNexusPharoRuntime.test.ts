@@ -4,14 +4,11 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
-  createControlProjectConfig,
   controlProjectRootPath,
   initNexusHome,
-  legacyControlProjectRootPath,
   loadHomeConfig,
   loadProjectConfig,
   saveHomeConfig,
-  saveProjectConfig,
 } from "./config.js";
 import {
   getDevNexusPharoStatus,
@@ -474,61 +471,6 @@ describe("DevNexus-Pharo runtime", () => {
     expect(progressMessages).toContain(
       "Signed into Vibe Kanban with self-hosted local auth as admin@example.test.",
     );
-  });
-
-  it("migrates the legacy control directory to DevNexus-Pharo and re-registers it", async () => {
-    const postFilePath = path.join(makeTempDir("dev-nexus-pharo-post-"), "post.json");
-    const { vibeKanbanPort, devNexusPharoMcpPort, plexusMcpPort } =
-      await freeServicePorts();
-
-    const homePath = initHomeWithTopLevelTools(
-      vibeKanbanPort,
-      devNexusPharoMcpPort,
-      plexusMcpPort,
-      postFilePath,
-    );
-    const legacyRoot = legacyControlProjectRootPath(homePath);
-    const targetRoot = controlProjectRootPath(homePath);
-    const homeConfig = loadHomeConfig(homePath);
-    fs.renameSync(targetRoot, legacyRoot);
-    homeConfig.controlProject.root = legacyRoot;
-    homeConfig.controlProject.vibeKanbanProjectId = "legacy-control-repo";
-    saveHomeConfig(homePath, homeConfig);
-    saveProjectConfig(legacyRoot, {
-      ...createControlProjectConfig(homeConfig.controlProject),
-      kanban: {
-        provider: "vibe-kanban",
-        projectId: "legacy-control-repo",
-      },
-    });
-
-    const result = await startDevNexusPharo({
-      homePath,
-      skipMcpConfig: true,
-      openBrowser: false,
-      vibeHealthTimeoutMs: 2_000,
-    });
-
-    expect(fs.existsSync(targetRoot)).toBe(true);
-    expect(fs.existsSync(legacyRoot)).toBe(false);
-    expect(result.controlProject).toMatchObject({
-      projectPath: targetRoot,
-      linked: true,
-      vibeKanbanProjectId: "control-board",
-      vibeKanbanRepoId: "control-repo",
-    });
-    expect(loadHomeConfig(homePath).controlProject).toMatchObject({
-      name: "DevNexus-Pharo",
-      root: targetRoot,
-      vibeKanbanProjectId: "control-board",
-      vibeKanbanRepoId: "control-repo",
-    });
-    expect(loadProjectConfig(targetRoot)).toMatchObject({
-      name: "DevNexus-Pharo",
-      kanban: {
-        projectId: "control-board",
-      },
-    });
   });
 
   it("reports top-level status and stops Vibe Kanban before PLexus gateway", async () => {

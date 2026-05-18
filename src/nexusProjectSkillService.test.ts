@@ -76,7 +76,7 @@ function sharedProjectConfig(): NexusProjectConfig {
 }
 
 describe("DevNexus-Pharo project skills", () => {
-  it("projects plugin-declared Pharo skills for shared projects without legacy kanban", () => {
+  it("projects plugin-declared Pharo skills for shared projects without Kanban metadata", () => {
     const homePath = makeTempDir("dev-nexus-pharo-home-");
     const projectRoot = makeTempDir("dev-nexus-pharo-shared-project-");
     initNexusHome({ homePath });

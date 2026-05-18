@@ -20,7 +20,7 @@ const projectedSkillDescriptions: Record<string, string> = {
   "pharo-project-load":
     "Project MCP-Pharo project loading and Metacello diagnostic guidance.",
   "pharo-version-compat":
-    "Project MCP-Pharo PharoCompatibility and version compatibility guidance.",
+    "Project MCP-Pharo PharoCompatibility and cross-version guidance.",
 };
 
 function projectedSkillCapabilities(): NexusProjectPluginConfig["capabilities"] {

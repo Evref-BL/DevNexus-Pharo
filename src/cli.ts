@@ -1219,7 +1219,7 @@ function printProjectStatus(project: NexusProjectStatus): void {
     `    Default branch: ${project.repo?.defaultBranch ?? "(unknown)"}`,
   );
   console.log(
-    `    Work tracker: ${project.workTracking?.provider ?? "(legacy/default)"}`,
+    `    Work tracker: ${project.workTracking?.provider ?? "(not configured)"}`,
   );
   console.log(
     `    Vibe Kanban project: ${project.vibeKanbanProjectId ?? "(unlinked)"}`,

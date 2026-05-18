@@ -175,10 +175,10 @@ describe("Codex config", () => {
         'args = ["keep.js"]',
         "",
         "[mcp_servers.dev_nexus_pharo]",
-        'command = "old-dev-nexus-pharo"',
+        'command = "stale-dev-nexus-pharo"',
         "",
         "[mcp_servers.dev_nexus_pharo.env]",
-        'DEV_NEXUS_PHARO_HOME = "old"',
+        'DEV_NEXUS_PHARO_HOME = "stale"',
       ].join("\n"),
       {
         dev_nexus_pharo: {
@@ -196,7 +196,7 @@ describe("Codex config", () => {
     expect(merged).toContain("[mcp_servers.dev_nexus_pharo]");
     expect(merged).toContain('type = "http"');
     expect(merged).toContain('url = "http://127.0.0.1:7330/mcp"');
-    expect(merged).not.toContain("old-dev-nexus-pharo");
+    expect(merged).not.toContain("stale-dev-nexus-pharo");
     expect(merged).not.toContain("DEV_NEXUS_PHARO_HOME");
   });
 

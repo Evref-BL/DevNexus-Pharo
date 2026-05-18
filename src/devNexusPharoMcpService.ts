@@ -2,7 +2,6 @@ import fs from "node:fs";
 import path from "node:path";
 import {
   loadHomeConfig,
-  devNexusPharoCliEntrypointPath,
   nexusLogsDirectoryName,
   resolveNexusHome,
   type NexusHomeConfig,
@@ -122,10 +121,6 @@ function normalizedCommandName(command: string): string {
 }
 
 function isDevNexusPharoEntrypoint(command: string, args: string[]): boolean {
-  if (normalizedCommandName(command) === "dev-nexus-pharo") {
-    return true;
-  }
-
   return args.some((arg) => {
     const normalizedArg = arg.replaceAll("\\", "/").toLowerCase();
     return normalizedArg.endsWith("/dist/cli.js");
@@ -155,13 +150,9 @@ export function resolveDevNexusPharoMcpServiceCommand(
   args: string[],
 ): DevNexusPharoMcpServiceCommand {
   if (normalizedCommandName(command) === "dev-nexus-pharo") {
-    return {
-      command: process.execPath,
-      args: [
-        devNexusPharoCliEntrypointPath(),
-        ...buildDevNexusPharoMcpServiceArgs(command, args),
-      ],
-    };
+    throw new DevNexusPharoMcpServiceError(
+      'DevNexus-Pharo MCP config uses obsolete bare command "dev-nexus-pharo". Regenerate the MCP config through current DevNexus/DevNexus-Pharo setup so it uses the current Node executable and CLI entrypoint.',
+    );
   }
 
   return {
