@@ -13,13 +13,11 @@ import {
   type CodexWorktreeVerificationStatus,
 } from "./codexWorktreeService.js";
 import { commentCodexWorktreeHandoff } from "./codexWorktreeTrackerHandoff.js";
-import { defaultNexusHomePath, loadProjectConfig } from "./config.js";
+import { defaultNexusHomePath } from "./config.js";
 import {
-  configureNexusProjectTracker,
   createNexusProject,
   getNexusProjectStatus,
   importNexusProject,
-  linkNexusProjectTracker,
   listNexusProjects,
   type GitRunner,
 } from "./nexusProjectService.js";
@@ -30,14 +28,11 @@ import {
 import {
   createDevNexusPharoProject,
   importDevNexusPharoProject,
-  syncDevNexusPharoProjectTracker,
-  type SyncDevNexusPharoProjectTrackerResult,
 } from "./devNexusPharoProjectService.js";
 import {
   providerCompatibleMcpTools,
   StdioJsonRpcTransport,
 } from "dev-nexus";
-import { legacyTrackerWrapperToolDescription } from "./trackerDeprecation.js";
 
 type JsonRpcId = string | number | null;
 
@@ -97,17 +92,7 @@ const tools: McpTool[] = [
         remoteUrl: { type: "string" },
         from: { type: "string" },
         gitInit: { type: "boolean" },
-        trackerProjectId: {
-          type: "string",
-          description: "Legacy Vibe Kanban board id compatibility.",
-        },
-        syncTracker: {
-          type: "boolean",
-          description: "Legacy Vibe Kanban repo/board registration compatibility.",
-        },
         generic: { type: "boolean" },
-        vibeHost: { type: "string" },
-        vibePort: { type: "number" },
       },
       required: ["name"],
       additionalProperties: false,
@@ -123,69 +108,9 @@ const tools: McpTool[] = [
         root: { type: "string" },
         projectRoot: { type: "string" },
         name: { type: "string" },
-        trackerProjectId: {
-          type: "string",
-          description: "Legacy Vibe Kanban board id compatibility.",
-        },
-        syncTracker: {
-          type: "boolean",
-          description: "Legacy Vibe Kanban repo/board registration compatibility.",
-        },
         generic: { type: "boolean" },
-        vibeHost: { type: "string" },
-        vibePort: { type: "number" },
       },
       required: ["root"],
-      additionalProperties: false,
-    },
-  },
-  {
-    name: "project_link_tracker",
-    description: legacyTrackerWrapperToolDescription("link-tracker"),
-    inputSchema: {
-      type: "object",
-      properties: {
-        homePath: { type: "string" },
-        project: { type: "string" },
-        trackerProjectId: { type: "string" },
-      },
-      required: ["project", "trackerProjectId"],
-      additionalProperties: false,
-    },
-  },
-  {
-    name: "project_configure_tracker",
-    description: legacyTrackerWrapperToolDescription("configure-tracker"),
-    inputSchema: {
-      type: "object",
-      properties: {
-        homePath: { type: "string" },
-        project: { type: "string" },
-        provider: { type: "string" },
-        host: { type: "string" },
-        repositoryOwner: { type: "string" },
-        repositoryName: { type: "string" },
-        repositoryId: { type: "string" },
-        projectKey: { type: "string" },
-        issueType: { type: "string" },
-        storePath: { type: "string" },
-      },
-      required: ["project", "provider"],
-      additionalProperties: false,
-    },
-  },
-  {
-    name: "project_sync_tracker",
-    description: legacyTrackerWrapperToolDescription("sync-tracker"),
-    inputSchema: {
-      type: "object",
-      properties: {
-        homePath: { type: "string" },
-        project: { type: "string" },
-        vibeHost: { type: "string" },
-        vibePort: { type: "number" },
-      },
-      required: ["project"],
       additionalProperties: false,
     },
   },
@@ -411,23 +336,6 @@ function optionalBoolean(
   return value;
 }
 
-function optionalNumber(
-  record: Record<string, unknown>,
-  key: string,
-  pathName: string,
-): number | undefined {
-  const value = record[key];
-  if (value === undefined || value === null) {
-    return undefined;
-  }
-
-  if (typeof value !== "number" || !Number.isFinite(value)) {
-    throw new Error(`${pathName}.${key} must be a number`);
-  }
-
-  return value;
-}
-
 function optionalNullableString(
   record: Record<string, unknown>,
   key: string,
@@ -481,22 +389,6 @@ function requiredString(
   }
 
   return value;
-}
-
-function trackerProviderFromArgs(
-  record: Record<string, unknown>,
-): "local" | "github" | "gitlab" | "jira" {
-  const value = requiredString(record, "provider", "arguments");
-  if (
-    value === "local" ||
-    value === "github" ||
-    value === "gitlab" ||
-    value === "jira"
-  ) {
-    return value;
-  }
-
-  throw new Error("arguments.provider must be local, github, gitlab, or jira");
 }
 
 function optionalCodexWorktreeState(
@@ -594,34 +486,6 @@ export function listDevNexusPharoMcpTools(): McpTool[] {
   return providerCompatibleMcpTools(tools);
 }
 
-function shouldSyncTracker(args: Record<string, unknown>): boolean {
-  const requested = optionalBoolean(args, "syncTracker", "arguments");
-  if (requested !== undefined) {
-    return requested;
-  }
-
-  return !optionalString(args, "trackerProjectId", "arguments");
-}
-
-async function syncProjectForMcp(
-  args: Record<string, unknown>,
-  context: DevNexusPharoMcpToolContext,
-  homePath: string,
-  projectRoot: string,
-): Promise<SyncDevNexusPharoProjectTrackerResult | undefined> {
-  if (!shouldSyncTracker(args)) {
-    return undefined;
-  }
-
-  return syncDevNexusPharoProjectTracker({
-    homePath,
-    project: projectRoot,
-    host: optionalString(args, "vibeHost", "arguments"),
-    port: optionalNumber(args, "vibePort", "arguments"),
-    fetch: context.fetch,
-  });
-}
-
 export async function callDevNexusPharoMcpTool(
   name: string,
   argsValue: unknown,
@@ -636,9 +500,6 @@ export async function callDevNexusPharoMcpTool(
       case "project_create": {
         const homePath = homePathFromArgs(args);
         if (optionalBoolean(args, "generic", "arguments")) {
-          if (optionalBoolean(args, "syncTracker", "arguments")) {
-            throw new Error("generic project_create does not support syncTracker");
-          }
           return toolResult({
             ok: true,
             ...createNexusProject({
@@ -647,11 +508,6 @@ export async function callDevNexusPharoMcpTool(
               root: optionalString(args, "root", "arguments"),
               from: remoteUrlFromCreateArgs(args),
               gitInit: optionalBoolean(args, "gitInit", "arguments"),
-              vibeKanbanProjectId: optionalString(
-                args,
-                "trackerProjectId",
-                "arguments",
-              ),
               gitRunner: context.gitRunner,
             }),
           });
@@ -663,46 +519,17 @@ export async function callDevNexusPharoMcpTool(
           root: optionalString(args, "root", "arguments"),
           from: remoteUrlFromCreateArgs(args),
           gitInit: optionalBoolean(args, "gitInit", "arguments"),
-          vibeKanbanProjectId: optionalString(
-            args,
-            "trackerProjectId",
-            "arguments",
-          ),
           gitRunner: context.gitRunner,
         });
-        let trackerSync: SyncDevNexusPharoProjectTrackerResult | undefined;
-        try {
-          trackerSync = await syncProjectForMcp(
-            args,
-            context,
-            homePath,
-            created.projectRoot,
-          );
-        } catch (error) {
-          throw new Error(
-            `Project was created locally at ${created.projectRoot}, but tracker sync failed: ${
-              error instanceof Error ? error.message : String(error)
-            }`,
-          );
-        }
 
         return toolResult({
           ok: true,
           ...created,
-          projectConfig: trackerSync
-            ? loadProjectConfig(created.projectRoot)
-            : created.projectConfig,
-          plexusProjectConfig:
-            trackerSync?.plexusProjectConfig ?? created.plexusProjectConfig,
-          ...(trackerSync ? { trackerSync } : {}),
         });
       }
       case "project_import": {
         const homePath = homePathFromArgs(args);
         if (optionalBoolean(args, "generic", "arguments")) {
-          if (optionalBoolean(args, "syncTracker", "arguments")) {
-            throw new Error("generic project_import does not support syncTracker");
-          }
           return toolResult({
             ok: true,
             ...importNexusProject({
@@ -710,11 +537,6 @@ export async function callDevNexusPharoMcpTool(
               root: requiredString(args, "root", "arguments"),
               projectRoot: optionalString(args, "projectRoot", "arguments"),
               name: optionalString(args, "name", "arguments"),
-              vibeKanbanProjectId: optionalString(
-                args,
-                "trackerProjectId",
-                "arguments",
-              ),
               gitRunner: context.gitRunner,
             }),
           });
@@ -725,88 +547,14 @@ export async function callDevNexusPharoMcpTool(
           root: requiredString(args, "root", "arguments"),
           projectRoot: optionalString(args, "projectRoot", "arguments"),
           name: optionalString(args, "name", "arguments"),
-          vibeKanbanProjectId: optionalString(
-            args,
-            "trackerProjectId",
-            "arguments",
-          ),
           gitRunner: context.gitRunner,
         });
-        let trackerSync: SyncDevNexusPharoProjectTrackerResult | undefined;
-        try {
-          trackerSync = await syncProjectForMcp(
-            args,
-            context,
-            homePath,
-            imported.projectRoot,
-          );
-        } catch (error) {
-          throw new Error(
-            `Project was imported locally at ${imported.projectRoot}, but tracker sync failed: ${
-              error instanceof Error ? error.message : String(error)
-            }`,
-          );
-        }
 
         return toolResult({
           ok: true,
           ...imported,
-          projectConfig: trackerSync
-            ? loadProjectConfig(imported.projectRoot)
-            : imported.projectConfig,
-          plexusProjectConfig:
-            trackerSync?.plexusProjectConfig ?? imported.plexusProjectConfig,
-          ...(trackerSync ? { trackerSync } : {}),
         });
       }
-      case "project_link_tracker":
-        return toolResult({
-          ok: true,
-          ...linkNexusProjectTracker({
-            homePath: homePathFromArgs(args),
-            project: requiredString(args, "project", "arguments"),
-            trackerProjectId: requiredString(
-              args,
-              "trackerProjectId",
-              "arguments",
-            ),
-          }),
-        });
-      case "project_configure_tracker":
-        return toolResult({
-          ok: true,
-          ...configureNexusProjectTracker({
-            homePath: homePathFromArgs(args),
-            project: requiredString(args, "project", "arguments"),
-            provider: trackerProviderFromArgs(args),
-            host: optionalString(args, "host", "arguments"),
-            repositoryOwner: optionalString(
-              args,
-              "repositoryOwner",
-              "arguments",
-            ),
-            repositoryName: optionalString(
-              args,
-              "repositoryName",
-              "arguments",
-            ),
-            repositoryId: optionalString(args, "repositoryId", "arguments"),
-            projectKey: optionalString(args, "projectKey", "arguments"),
-            issueType: optionalString(args, "issueType", "arguments"),
-            storePath: optionalString(args, "storePath", "arguments"),
-          }),
-        });
-      case "project_sync_tracker":
-        return toolResult({
-          ok: true,
-          ...(await syncDevNexusPharoProjectTracker({
-            homePath: homePathFromArgs(args),
-            project: requiredString(args, "project", "arguments"),
-            host: optionalString(args, "vibeHost", "arguments"),
-            port: optionalNumber(args, "vibePort", "arguments"),
-            fetch: context.fetch,
-          })),
-        });
       case "project_list":
         return toolResult({
           ok: true,

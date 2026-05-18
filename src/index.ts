@@ -10,7 +10,6 @@ export * from "./devNexusPharoMcpService.js";
 export * from "./devNexusPharoProjectService.js";
 export * from "./devNexusPharoRuntime.js";
 export * from "./plexusGatewayService.js";
-export * from "./trackerDeprecation.js";
 export * from "./nexusProjectService.js";
 export * from "./vibeKanbanAuth.js";
 export * from "./vibeKanbanBackendService.js";

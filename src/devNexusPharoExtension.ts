@@ -12,7 +12,6 @@ import {
 import { mcpPharoDomainSkillPack } from "./mcpPharoDomainSkills.js";
 import type {
   NexusProjectStatusExtensionContribution,
-  NexusProjectTrackerLinkExtensionContribution,
 } from "./nexusProjectService.js";
 
 export interface PlexusProjectConfig {
@@ -691,8 +690,7 @@ export function installDevNexusPharoProjectFiles(
 export const devNexusPharoExtension: NexusExtension<
   NexusProjectConfig,
   DevNexusPharoProjectFiles,
-  NexusProjectStatusExtensionContribution | undefined,
-  NexusProjectTrackerLinkExtensionContribution | undefined
+  NexusProjectStatusExtensionContribution | undefined
 > = {
   id: "dev-nexus-pharo",
   name: "DevNexus-Pharo",
@@ -715,23 +713,6 @@ export const devNexusPharoExtension: NexusExtension<
     return {
       plexusProjectConfigPath: plexusConfigPath,
       plexusProjectConfigExists: fs.existsSync(plexusConfigPath),
-    };
-  },
-  linkProjectTracker: ({ projectRoot, projectConfig, trackerProjectId }) => {
-    if (!projectUsesDevNexusPharoExtension(projectConfig)) {
-      return undefined;
-    }
-
-    const plexusConfigPath = projectPlexusConfigPath(projectRoot, projectConfig);
-    return {
-      plexusProjectConfigPath: plexusConfigPath,
-      plexusProjectConfig: updatePlexusProjectKanban(
-        plexusConfigPath,
-        projectConfig.name,
-        projectConfig.id,
-        trackerProjectId,
-        projectPlexusImageExecutionPolicy(projectConfig),
-      ),
     };
   },
 };

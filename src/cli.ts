@@ -36,7 +36,6 @@ import {
   defaultNexusHomePath,
   initNexusHome,
   loadHomeConfig,
-  loadProjectConfig,
   type InitNexusHomeOptions,
 } from "./config.js";
 import {
@@ -50,18 +49,13 @@ import {
   stopDevNexusPharo,
 } from "./devNexusPharoRuntime.js";
 import {
-  configureNexusProjectTracker,
   createNexusProject,
   getNexusProjectStatus,
   importNexusProject,
-  linkNexusProjectTracker,
   listNexusProjects,
-  type ConfigureNexusProjectTrackerProvider,
-  type ConfigureNexusProjectTrackerResult,
   type CreateNexusProjectResult,
   type GetNexusProjectStatusResult,
   type ImportNexusProjectResult,
-  type LinkNexusProjectTrackerResult,
   type ListNexusProjectsResult,
   type NexusProjectStatus,
   type GitRunner,
@@ -69,10 +63,8 @@ import {
 import {
   createDevNexusPharoProject,
   importDevNexusPharoProject,
-  syncDevNexusPharoProjectTracker,
   type CreateDevNexusPharoProjectResult,
   type ImportDevNexusPharoProjectResult,
-  type SyncDevNexusPharoProjectTrackerResult,
 } from "./devNexusPharoProjectService.js";
 import {
   getProjectSkillStatus,
@@ -85,10 +77,6 @@ import {
   runDevNexusPharoMcpServer,
   runDevNexusPharoMcpStdioServer,
 } from "./mcpServer.js";
-import {
-  legacyTrackerWrapperNotice,
-  type LegacyTrackerWrapperCommand,
-} from "./trackerDeprecation.js";
 import { installDevNexusPharoAndPlexusMcpForExecutor } from "./vibeKanbanMcpConfig.js";
 import {
   getVibeKanbanStatus,
@@ -121,9 +109,6 @@ export function usage(): string {
     "  dev-nexus-pharo codex worktree archive <id> [options]",
     "  dev-nexus-pharo project create <name> [--from <git-url> | --git-init] [--generic] [options]",
     "  dev-nexus-pharo project import <path> [--name <name>] [--generic] [options]",
-    "  dev-nexus-pharo project configure-tracker <id-or-path> --provider <local|github|gitlab|jira> [options]  (legacy; use dev-nexus project tracker configure)",
-    "  dev-nexus-pharo project link-tracker <id-or-path> --tracker-project-id <id> [options]  (legacy; use dev-nexus project tracker link)",
-    "  dev-nexus-pharo project sync-tracker <id-or-path> [options]  (legacy Vibe Kanban registration)",
     "  dev-nexus-pharo project skills status <id-or-path> [options]",
     "  dev-nexus-pharo project skills refresh <id-or-path> [options]",
     "  dev-nexus-pharo project list [options]",
@@ -232,10 +217,6 @@ export function usage(): string {
     "  --git-init",
     "  --generic",
     "  --root <path>",
-    "  --tracker-project-id <id>        legacy Vibe Kanban board id",
-    "  --sync-tracker                  legacy Vibe Kanban board/repo registration",
-    "  --vibe-host <host>",
-    "  --vibe-port <port>",
     "  --home <path>",
     "  --json",
     "",
@@ -243,36 +224,6 @@ export function usage(): string {
     "  --name <name>",
     "  --project-root <path>",
     "  --generic",
-    "  --tracker-project-id <id>        legacy Vibe Kanban board id",
-    "  --sync-tracker                  legacy Vibe Kanban board/repo registration",
-    "  --vibe-host <host>",
-    "  --vibe-port <port>",
-    "  --home <path>",
-    "  --json",
-    "",
-    "Options for project configure-tracker:",
-    "  Legacy compatibility wrapper. Prefer dev-nexus project tracker configure for generic work tracking.",
-    "  --provider <local|github|gitlab|jira>",
-    "  --repository-owner <owner>    required for GitHub",
-    "  --repository-name <name>      required for GitHub",
-    "  --repository-id <id-or-path>  required for GitLab",
-    "  --project-key <key>           required for Jira",
-    "  --issue-type <name>           optional Jira issue type, default Task",
-    "  --host <host>                 optional GitHub Enterprise/GitLab host, required for Jira",
-    "  --store-path <path>           optional local provider store path",
-    "  --home <path>",
-    "  --json",
-    "",
-    "Options for project link-tracker:",
-    "  Legacy compatibility wrapper. Prefer dev-nexus project tracker link for generic tracker links.",
-    "  --tracker-project-id <id>",
-    "  --home <path>",
-    "  --json",
-    "",
-    "Options for project sync-tracker:",
-    "  Legacy Vibe Kanban registration wrapper. Configure generic tracking through DevNexus core.",
-    "  --vibe-host <host>",
-    "  --vibe-port <port>",
     "  --home <path>",
     "  --json",
     "",
@@ -1552,11 +1503,7 @@ interface ParsedProjectCreateCommand {
   from?: string;
   gitInit?: boolean;
   root?: string;
-  trackerProjectId?: string;
-  syncTracker?: boolean;
   generic?: boolean;
-  vibeHost?: string;
-  vibePort?: number;
   json?: boolean;
 }
 
@@ -1565,40 +1512,7 @@ interface ParsedProjectImportCommand {
   root: string;
   projectRoot?: string;
   name?: string;
-  trackerProjectId?: string;
-  syncTracker?: boolean;
   generic?: boolean;
-  vibeHost?: string;
-  vibePort?: number;
-  json?: boolean;
-}
-
-interface ParsedProjectConfigureTrackerCommand {
-  homePath: string;
-  project: string;
-  provider: ConfigureNexusProjectTrackerProvider;
-  host?: string;
-  repositoryOwner?: string;
-  repositoryName?: string;
-  repositoryId?: string;
-  projectKey?: string;
-  issueType?: string;
-  storePath?: string;
-  json?: boolean;
-}
-
-interface ParsedProjectLinkTrackerCommand {
-  homePath: string;
-  project: string;
-  trackerProjectId: string;
-  json?: boolean;
-}
-
-interface ParsedProjectSyncTrackerCommand {
-  homePath: string;
-  project: string;
-  vibeHost?: string;
-  vibePort?: number;
   json?: boolean;
 }
 
@@ -1655,20 +1569,8 @@ function parseProjectCreateCommand(argv: string[]): ParsedProjectCreateCommand {
       case "--root":
         parsed.root = next();
         break;
-      case "--tracker-project-id":
-        parsed.trackerProjectId = next();
-        break;
-      case "--sync-tracker":
-        parsed.syncTracker = true;
-        break;
       case "--generic":
         parsed.generic = true;
-        break;
-      case "--vibe-host":
-        parsed.vibeHost = next();
-        break;
-      case "--vibe-port":
-        parsed.vibePort = parsePort(next(), arg);
         break;
       case "--home":
         parsed.homePath = next();
@@ -1679,13 +1581,6 @@ function parseProjectCreateCommand(argv: string[]): ParsedProjectCreateCommand {
       default:
         throw new Error(`Unknown project create option: ${arg}`);
     }
-  }
-
-  if (parsed.syncTracker && parsed.trackerProjectId) {
-    throw new Error("--sync-tracker and --tracker-project-id are mutually exclusive");
-  }
-  if (parsed.generic && parsed.syncTracker) {
-    throw new Error("--generic and --sync-tracker are mutually exclusive");
   }
 
   return parsed as ParsedProjectCreateCommand;
@@ -1723,20 +1618,8 @@ function parseProjectImportCommand(argv: string[]): ParsedProjectImportCommand {
       case "--project-root":
         parsed.projectRoot = next();
         break;
-      case "--tracker-project-id":
-        parsed.trackerProjectId = next();
-        break;
-      case "--sync-tracker":
-        parsed.syncTracker = true;
-        break;
       case "--generic":
         parsed.generic = true;
-        break;
-      case "--vibe-host":
-        parsed.vibeHost = next();
-        break;
-      case "--vibe-port":
-        parsed.vibePort = parsePort(next(), arg);
         break;
       case "--home":
         parsed.homePath = next();
@@ -1749,203 +1632,14 @@ function parseProjectImportCommand(argv: string[]): ParsedProjectImportCommand {
     }
   }
 
-  if (parsed.syncTracker && parsed.trackerProjectId) {
-    throw new Error("--sync-tracker and --tracker-project-id are mutually exclusive");
-  }
-  if (parsed.generic && parsed.syncTracker) {
-    throw new Error("--generic and --sync-tracker are mutually exclusive");
-  }
-
   return parsed as ParsedProjectImportCommand;
-}
-
-function parseProjectConfigureTrackerCommand(
-  argv: string[],
-): ParsedProjectConfigureTrackerCommand {
-  const [, command, project, ...rest] = argv;
-  if (command !== "configure-tracker") {
-    throw new Error("project requires configure-tracker");
-  }
-
-  if (!project || project.startsWith("--")) {
-    throw new Error("project configure-tracker requires a project id or path");
-  }
-
-  const parsed: Partial<ParsedProjectConfigureTrackerCommand> = {
-    homePath: defaultHomePath(),
-    project,
-  };
-  for (let index = 0; index < rest.length; index += 1) {
-    const arg = rest[index];
-    const next = (): string => {
-      index += 1;
-      if (index >= rest.length) {
-        throw new Error(`${arg} requires a value`);
-      }
-
-      return rest[index];
-    };
-
-    switch (arg) {
-      case "--provider":
-        parsed.provider = parseTrackerProvider(next());
-        break;
-      case "--repository-owner":
-        parsed.repositoryOwner = next();
-        break;
-      case "--repository-name":
-        parsed.repositoryName = next();
-        break;
-      case "--repository-id":
-        parsed.repositoryId = next();
-        break;
-      case "--project-key":
-        parsed.projectKey = next();
-        break;
-      case "--issue-type":
-        parsed.issueType = next();
-        break;
-      case "--host":
-        parsed.host = next();
-        break;
-      case "--store-path":
-        parsed.storePath = next();
-        break;
-      case "--home":
-        parsed.homePath = next();
-        break;
-      case "--json":
-        parsed.json = true;
-        break;
-      default:
-        throw new Error(`Unknown project configure-tracker option: ${arg}`);
-    }
-  }
-
-  if (!parsed.provider) {
-    throw new Error("--provider is required");
-  }
-
-  return parsed as ParsedProjectConfigureTrackerCommand;
-}
-
-function parseTrackerProvider(
-  value: string,
-): ConfigureNexusProjectTrackerProvider {
-  if (
-    value === "local" ||
-    value === "github" ||
-    value === "gitlab" ||
-    value === "jira"
-  ) {
-    return value;
-  }
-
-  throw new Error("--provider must be local, github, gitlab, or jira");
-}
-
-function parseProjectLinkTrackerCommand(
-  argv: string[],
-): ParsedProjectLinkTrackerCommand {
-  const [, command, project, ...rest] = argv;
-  if (command !== "link-tracker") {
-    throw new Error("project requires link-tracker");
-  }
-
-  if (!project || project.startsWith("--")) {
-    throw new Error("project link-tracker requires a project id or path");
-  }
-
-  const parsed: Partial<ParsedProjectLinkTrackerCommand> = {
-    homePath: defaultHomePath(),
-    project,
-  };
-  for (let index = 0; index < rest.length; index += 1) {
-    const arg = rest[index];
-    const next = (): string => {
-      index += 1;
-      if (index >= rest.length) {
-        throw new Error(`${arg} requires a value`);
-      }
-
-      return rest[index];
-    };
-
-    switch (arg) {
-      case "--tracker-project-id":
-        parsed.trackerProjectId = next();
-        break;
-      case "--home":
-        parsed.homePath = next();
-        break;
-      case "--json":
-        parsed.json = true;
-        break;
-      default:
-        throw new Error(`Unknown project link-tracker option: ${arg}`);
-    }
-  }
-
-  if (!parsed.trackerProjectId) {
-    throw new Error("--tracker-project-id is required");
-  }
-
-  return parsed as ParsedProjectLinkTrackerCommand;
-}
-
-function parseProjectSyncTrackerCommand(
-  argv: string[],
-): ParsedProjectSyncTrackerCommand {
-  const [, command, project, ...rest] = argv;
-  if (command !== "sync-tracker") {
-    throw new Error("project requires sync-tracker");
-  }
-
-  if (!project || project.startsWith("--")) {
-    throw new Error("project sync-tracker requires a project id or path");
-  }
-
-  const parsed: Partial<ParsedProjectSyncTrackerCommand> = {
-    homePath: defaultHomePath(),
-    project,
-  };
-  for (let index = 0; index < rest.length; index += 1) {
-    const arg = rest[index];
-    const next = (): string => {
-      index += 1;
-      if (index >= rest.length) {
-        throw new Error(`${arg} requires a value`);
-      }
-
-      return rest[index];
-    };
-
-    switch (arg) {
-      case "--vibe-host":
-        parsed.vibeHost = next();
-        break;
-      case "--vibe-port":
-        parsed.vibePort = parsePort(next(), arg);
-        break;
-      case "--home":
-        parsed.homePath = next();
-        break;
-      case "--json":
-        parsed.json = true;
-        break;
-      default:
-        throw new Error(`Unknown project sync-tracker option: ${arg}`);
-    }
-  }
-
-  return parsed as ParsedProjectSyncTrackerCommand;
 }
 
 function parseProjectSkillsCommand(argv: string[]): ParsedProjectSkillsCommand {
   const [, command, action, project, ...rest] = argv;
   if (command !== "skills") {
     throw new Error(
-      "project requires create, import, configure-tracker, link-tracker, sync-tracker, skills, list, or status",
+      "project requires create, import, skills, list, or status",
     );
   }
 
@@ -1992,7 +1686,7 @@ function parseProjectListCommand(argv: string[]): ParsedProjectListCommand {
   const [, command, ...rest] = argv;
   if (command !== "list") {
     throw new Error(
-      "project requires create, import, configure-tracker, link-tracker, sync-tracker, list, or status",
+      "project requires create, import, list, or status",
     );
   }
 
@@ -2029,7 +1723,7 @@ function parseProjectStatusCommand(argv: string[]): ParsedProjectStatusCommand {
   const [, command, project, ...rest] = argv;
   if (command !== "status") {
     throw new Error(
-      "project requires create, import, configure-tracker, link-tracker, sync-tracker, list, or status",
+      "project requires create, import, list, or status",
     );
   }
 
@@ -2069,13 +1763,11 @@ function parseProjectStatusCommand(argv: string[]): ParsedProjectStatusCommand {
 
 function printProjectCreateResult(
   result: CreateDevNexusPharoProjectResult,
-  syncResult: SyncDevNexusPharoProjectTrackerResult | undefined,
   json: boolean | undefined,
 ): void {
   const payload = {
     ok: true,
     ...result,
-    ...(syncResult ? { trackerSync: syncResult } : {}),
   };
   if (json) {
     console.log(JSON.stringify(payload, null, 2));
@@ -2099,10 +1791,6 @@ function printProjectCreateResult(
   if (result.projectConfig.kanban?.projectId) {
     console.log(`  Vibe Kanban project: ${result.projectConfig.kanban.projectId}`);
   }
-  if (syncResult) {
-    console.log(`  Synced tracker board: ${syncResult.vibeKanbanProjectId}`);
-    console.log(`  Synced tracker repo: ${syncResult.vibeKanbanRepoId}`);
-  }
   console.log("");
   console.log("JSON:");
   console.log(JSON.stringify(payload, null, 2));
@@ -2110,13 +1798,11 @@ function printProjectCreateResult(
 
 function printProjectImportResult(
   result: ImportDevNexusPharoProjectResult,
-  syncResult: SyncDevNexusPharoProjectTrackerResult | undefined,
   json: boolean | undefined,
 ): void {
   const payload = {
     ok: true,
     ...result,
-    ...(syncResult ? { trackerSync: syncResult } : {}),
   };
   if (json) {
     console.log(JSON.stringify(payload, null, 2));
@@ -2138,10 +1824,6 @@ function printProjectImportResult(
   }
   if (result.projectConfig.kanban?.projectId) {
     console.log(`  Vibe Kanban project: ${result.projectConfig.kanban.projectId}`);
-  }
-  if (syncResult) {
-    console.log(`  Synced tracker board: ${syncResult.vibeKanbanProjectId}`);
-    console.log(`  Synced tracker repo: ${syncResult.vibeKanbanRepoId}`);
   }
   console.log("");
   console.log("JSON:");
@@ -2210,101 +1892,6 @@ function printNexusProjectImportResult(
   if (result.projectConfig.kanban?.projectId) {
     console.log(`  Vibe Kanban project: ${result.projectConfig.kanban.projectId}`);
   }
-  console.log("");
-  console.log("JSON:");
-  console.log(JSON.stringify(payload, null, 2));
-}
-
-function printLegacyTrackerWrapperNotice(
-  command: LegacyTrackerWrapperCommand,
-  json: boolean | undefined,
-): void {
-  if (!json) {
-    console.error(legacyTrackerWrapperNotice(command));
-  }
-}
-
-function printProjectLinkTrackerResult(
-  result: LinkNexusProjectTrackerResult,
-  json: boolean | undefined,
-): void {
-  const payload = { ok: true, ...result };
-  if (json) {
-    console.log(JSON.stringify(payload, null, 2));
-    return;
-  }
-
-  printLegacyTrackerWrapperNotice("link-tracker", json);
-  console.log("Legacy DevNexus-Pharo tracker link wrapper completed.");
-  console.log(`  Project: ${result.project.id} (${result.project.name})`);
-  console.log(`  Tracker project: ${result.vibeKanbanProjectId}`);
-  if (result.vibeKanbanRepoId) {
-    console.log(`  Tracker repo: ${result.vibeKanbanRepoId}`);
-  }
-  console.log(`  Config: ${result.projectConfigPath}`);
-  console.log(`  PLexus config: ${result.plexusProjectConfigPath ?? "(not managed)"}`);
-  console.log("");
-  console.log("JSON:");
-  console.log(JSON.stringify(payload, null, 2));
-}
-
-function printProjectConfigureTrackerResult(
-  result: ConfigureNexusProjectTrackerResult,
-  json: boolean | undefined,
-): void {
-  const payload = { ok: true, ...result };
-  if (json) {
-    console.log(JSON.stringify(payload, null, 2));
-    return;
-  }
-
-  printLegacyTrackerWrapperNotice("configure-tracker", json);
-  console.log("Legacy DevNexus-Pharo tracker configuration wrapper completed.");
-  console.log(`  Project: ${result.project.id} (${result.project.name})`);
-  console.log(`  Provider: ${result.workTracking.provider}`);
-  if (result.workTracking.provider === "github") {
-    console.log(
-      `  Repository: ${result.workTracking.repository.owner}/${result.workTracking.repository.name}`,
-    );
-    console.log(`  Host: ${result.workTracking.host ?? "github.com"}`);
-  }
-  if (result.workTracking.provider === "gitlab") {
-    console.log(`  Repository: ${result.workTracking.repository.id}`);
-    console.log(`  Host: ${result.workTracking.host ?? "gitlab.com"}`);
-  }
-  if (result.workTracking.provider === "jira") {
-    console.log(`  Jira project: ${result.workTracking.projectKey}`);
-    console.log(`  Host: ${result.workTracking.host}`);
-    if (result.workTracking.issueType) {
-      console.log(`  Issue type: ${result.workTracking.issueType}`);
-    }
-  }
-  if (result.workTracking.provider === "local" && result.workTracking.storePath) {
-    console.log(`  Store: ${result.workTracking.storePath}`);
-  }
-  console.log(`  Config: ${result.projectConfigPath}`);
-  console.log("");
-  console.log("JSON:");
-  console.log(JSON.stringify(payload, null, 2));
-}
-
-function printProjectSyncTrackerResult(
-  result: SyncDevNexusPharoProjectTrackerResult,
-  json: boolean | undefined,
-): void {
-  const payload = { ok: true, ...result };
-  if (json) {
-    console.log(JSON.stringify(payload, null, 2));
-    return;
-  }
-
-  printLegacyTrackerWrapperNotice("sync-tracker", json);
-  console.log("Legacy DevNexus-Pharo tracker sync wrapper completed.");
-  console.log(`  Project: ${result.project.id} (${result.project.name})`);
-  console.log(`  Tracker board: ${result.vibeKanbanProjectId}`);
-  console.log(`  Tracker repo: ${result.vibeKanbanRepoId}`);
-  console.log(`  Config: ${result.projectConfigPath}`);
-  console.log(`  PLexus config: ${result.plexusProjectConfigPath ?? "(not managed)"}`);
   console.log("");
   console.log("JSON:");
   console.log(JSON.stringify(payload, null, 2));
@@ -2433,102 +2020,26 @@ async function handleProjectCommand(argv: string[]): Promise<number> {
   if (command === "create") {
     const parsed = parseProjectCreateCommand(argv);
     if (parsed.generic) {
-      const result = createNexusProject({
-        ...parsed,
-        vibeKanbanProjectId: parsed.trackerProjectId,
-      });
+      const result = createNexusProject(parsed);
       printNexusProjectCreateResult(result, parsed.json);
       return 0;
     }
 
-    const result = createDevNexusPharoProject({
-      ...parsed,
-      vibeKanbanProjectId: parsed.trackerProjectId,
-    });
-    let syncResult: SyncDevNexusPharoProjectTrackerResult | undefined;
-    if (parsed.syncTracker) {
-      try {
-        syncResult = await syncDevNexusPharoProjectTracker({
-          homePath: parsed.homePath,
-          project: result.projectRoot,
-          host: parsed.vibeHost,
-          port: parsed.vibePort,
-        });
-        result.projectConfig = loadProjectConfig(result.projectRoot);
-        result.plexusProjectConfig = syncResult.plexusProjectConfig;
-      } catch (error) {
-        throw new Error(
-          `Project was created locally at ${result.projectRoot}, but tracker sync failed: ${
-            error instanceof Error ? error.message : String(error)
-          }`,
-        );
-      }
-    }
-    printProjectCreateResult(result, syncResult, parsed.json);
+    const result = createDevNexusPharoProject(parsed);
+    printProjectCreateResult(result, parsed.json);
     return 0;
   }
 
   if (command === "import") {
     const parsed = parseProjectImportCommand(argv);
     if (parsed.generic) {
-      const result = importNexusProject({
-        ...parsed,
-        vibeKanbanProjectId: parsed.trackerProjectId,
-      });
+      const result = importNexusProject(parsed);
       printNexusProjectImportResult(result, parsed.json);
       return 0;
     }
 
-    const result = importDevNexusPharoProject({
-      ...parsed,
-      vibeKanbanProjectId: parsed.trackerProjectId,
-    });
-    let syncResult: SyncDevNexusPharoProjectTrackerResult | undefined;
-    if (parsed.syncTracker) {
-      try {
-        syncResult = await syncDevNexusPharoProjectTracker({
-          homePath: parsed.homePath,
-          project: result.projectRoot,
-          host: parsed.vibeHost,
-          port: parsed.vibePort,
-        });
-        result.projectConfig = loadProjectConfig(result.projectRoot);
-        result.plexusProjectConfig = syncResult.plexusProjectConfig;
-      } catch (error) {
-        throw new Error(
-          `Project was imported locally at ${result.projectRoot}, but tracker sync failed: ${
-            error instanceof Error ? error.message : String(error)
-          }`,
-        );
-      }
-    }
-    printProjectImportResult(result, syncResult, parsed.json);
-    return 0;
-  }
-
-  if (command === "link-tracker") {
-    const parsed = parseProjectLinkTrackerCommand(argv);
-    const result = linkNexusProjectTracker(parsed);
-    printProjectLinkTrackerResult(result, parsed.json);
-    return 0;
-  }
-
-  if (command === "configure-tracker") {
-    const parsed = parseProjectConfigureTrackerCommand(argv);
-    const result = configureNexusProjectTracker(parsed);
-    printProjectConfigureTrackerResult(result, parsed.json);
-    return 0;
-  }
-
-  if (command === "sync-tracker") {
-    const parsed = parseProjectSyncTrackerCommand(argv);
-    const result = await syncDevNexusPharoProjectTracker({
-      homePath: parsed.homePath,
-      project: parsed.project,
-      host: parsed.vibeHost,
-      port: parsed.vibePort,
-    });
-    printProjectSyncTrackerResult(result, parsed.json);
+    const result = importDevNexusPharoProject(parsed);
+    printProjectImportResult(result, parsed.json);
     return 0;
   }
 
@@ -2560,7 +2071,7 @@ async function handleProjectCommand(argv: string[]): Promise<number> {
   }
 
   throw new Error(
-    "project requires create, import, configure-tracker, link-tracker, sync-tracker, skills, list, or status",
+    "project requires create, import, skills, list, or status",
   );
 }
 

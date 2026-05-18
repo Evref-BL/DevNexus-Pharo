@@ -6,50 +6,33 @@ import {
 } from "./codexConfig.js";
 import {
   loadHomeConfig,
-  loadProjectConfig,
   resolveNexusHome,
   saveProjectConfig,
   saveHomeConfig,
   type NexusProjectConfig,
 } from "./config.js";
 import {
-  buildVibeKanbanWorkspaceSetupScript,
   createNexusProjectInRegistry,
-  createVibeWorkTrackerProvider,
   importNexusProjectInRegistry,
-  updateVibeKanbanProject,
-  type EnsureVibeKanbanBoardResult,
-  type NexusProjectContext,
-  type RegisterVibeKanbanProjectResult,
-  type UpdateVibeKanbanProjectResult,
 } from "dev-nexus";
 import {
-  assertNonEmptyString,
   defaultImportedProjectRoot,
-  getNexusProjectStatus,
-  linkNexusProjectTracker,
   loadProjectConfigIfExists,
   NexusProjectError,
   registerNexusProjectExtension,
-  resolveProjectSourceRoot,
   safeDirectoryName,
   samePath,
   slugify,
-  statusForProjectReference,
-  upsertProjectReference,
   type GitCommandResult,
   type GitRunner,
-  type LinkNexusProjectTrackerResult,
 } from "./nexusProjectService.js";
 import {
   devNexusPharoExtension,
   devNexusPharoProjectExtensionEntry,
   devNexusPharoProjectFilesFromExtensionResult,
-  projectUsesDevNexusPharoExtension,
   type PlexusProjectConfig,
 } from "./devNexusPharoExtension.js";
 import { devNexusPharoDevNexusPluginConfig } from "./devNexusPharoPlugin.js";
-import { legacyTrackerWrapperDeprecation } from "./trackerDeprecation.js";
 
 registerNexusProjectExtension(devNexusPharoExtension);
 
@@ -109,29 +92,6 @@ export interface ImportDevNexusPharoProjectResult {
     remoteUrl: string | null;
     defaultBranch: string | null;
     commands: GitCommandResult[];
-  };
-}
-
-export interface SyncDevNexusPharoProjectTrackerOptions {
-  homePath: string;
-  project: string;
-  host?: string;
-  port?: number;
-  fetch?: typeof fetch;
-}
-
-export interface SyncDevNexusPharoProjectTrackerResult
-  extends LinkNexusProjectTrackerResult {
-  plexusProjectConfigPath: string;
-  plexusProjectConfig: PlexusProjectConfig;
-  vibeKanbanRepoId: string;
-  vibeKanbanRepo: RegisterVibeKanbanProjectResult;
-  vibeKanbanRepoSetup: UpdateVibeKanbanProjectResult;
-  vibeKanbanBoard: EnsureVibeKanbanBoardResult;
-  vibeKanban: {
-    repo: RegisterVibeKanbanProjectResult;
-    repoSetup: UpdateVibeKanbanProjectResult;
-    board: EnsureVibeKanbanBoardResult;
   };
 }
 
@@ -323,107 +283,3 @@ export function importDevNexusPharoProject(
   };
 }
 
-/**
- * @deprecated Generic work tracking belongs to DevNexus core. This helper is
- * retained only for legacy Vibe Kanban repo/board registration for
- * DevNexus-Pharo-managed projects.
- */
-export async function syncDevNexusPharoProjectTracker(
-  options: SyncDevNexusPharoProjectTrackerOptions,
-): Promise<SyncDevNexusPharoProjectTrackerResult> {
-  assertNonEmptyString(options.project, "project");
-
-  const homePath = resolveNexusHome(options.homePath);
-  const homeConfig = loadHomeConfig(homePath);
-  const status = getNexusProjectStatus({
-    homePath,
-    project: options.project,
-  }).project;
-  const initialProjectConfig = loadProjectConfig(status.projectRoot);
-  if (!projectUsesDevNexusPharoExtension(initialProjectConfig)) {
-    throw new NexusProjectError(
-      "project sync-tracker requires a DevNexus-Pharo-managed project",
-    );
-  }
-  const sourceRoot = resolveProjectSourceRoot(
-    status.projectRoot,
-    initialProjectConfig,
-  );
-  const legacyVibeKanbanProjectId =
-    initialProjectConfig.kanban?.projectId ?? null;
-  const setupScript = buildVibeKanbanWorkspaceSetupScript(
-    status.projectRoot,
-    sourceRoot,
-  );
-  const vibeKanbanPort = options.port ?? homeConfig.ports.vibeKanban;
-  const vibeProvider = createVibeWorkTrackerProvider({
-    host: options.host,
-    port: vibeKanbanPort,
-    fetch: options.fetch,
-    config: {
-      provider: "vibe-kanban",
-      projectId: legacyVibeKanbanProjectId,
-    },
-  });
-  const trackerContext: NexusProjectContext = {
-    homePath,
-    projectRoot: status.projectRoot,
-    projectId: initialProjectConfig.id,
-    projectName: status.name,
-    sourceRoot,
-    workTracking: {
-      provider: "vibe-kanban",
-      projectId: legacyVibeKanbanProjectId,
-    },
-  };
-  const vibeKanbanProject = await vibeProvider.ensureProject(trackerContext);
-  const vibeKanban = vibeKanbanProject.vibeKanbanRepo;
-  const vibeKanbanRepoSetup = await updateVibeKanbanProject({
-    host: options.host,
-    port: vibeKanbanPort,
-    fetch: options.fetch,
-    projectId: vibeKanbanProject.id,
-    setupScript,
-  });
-  const vibeKanbanBoardRef = await vibeProvider.ensureBoard(trackerContext);
-  const vibeKanbanBoard = vibeKanbanBoardRef.vibeKanbanBoard;
-  const linked = linkNexusProjectTracker({
-    homePath,
-    project: status.projectRoot,
-    trackerProjectId: vibeKanbanBoardRef.id,
-  });
-  if (!linked.plexusProjectConfigPath || !linked.plexusProjectConfig) {
-    throw new NexusProjectError(
-      "project sync-tracker requires a DevNexus-Pharo-managed project",
-    );
-  }
-  const plexusProjectConfig = linked.plexusProjectConfig as PlexusProjectConfig;
-  const updatedHomeConfig = loadHomeConfig(homePath);
-  const projectConfig = loadProjectConfig(status.projectRoot);
-  const reference = upsertProjectReference(
-    updatedHomeConfig,
-    status.projectRoot,
-    projectConfig,
-    vibeKanbanBoardRef.id,
-    vibeKanbanProject.id,
-  );
-  saveHomeConfig(homePath, updatedHomeConfig);
-
-  return {
-    ...linked,
-    plexusProjectConfigPath: linked.plexusProjectConfigPath,
-    plexusProjectConfig,
-    vibeKanbanProjectId: vibeKanbanBoardRef.id,
-    vibeKanbanRepoId: vibeKanbanProject.id,
-    project: statusForProjectReference(reference),
-    vibeKanbanRepo: vibeKanban,
-    vibeKanbanRepoSetup,
-    vibeKanbanBoard,
-    vibeKanban: {
-      repo: vibeKanban,
-      repoSetup: vibeKanbanRepoSetup,
-      board: vibeKanbanBoard,
-    },
-    deprecation: legacyTrackerWrapperDeprecation("sync-tracker"),
-  };
-}

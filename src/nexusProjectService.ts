@@ -5,7 +5,6 @@ import {
   buildProjectConfig,
   buildNexusProjectStatus,
   buildNexusProjectStatusForPath,
-  configureNexusProjectTracker as configureNexusProjectTrackerFromHome,
   createNexusProject as createNexusProjectFromHome,
   defaultImportedProjectRoot,
   defaultProjectGitRunner,
@@ -20,7 +19,6 @@ import {
   getNexusProjectStatus as getNexusProjectStatusFromHome,
   importNexusProject as importNexusProjectFromHome,
   loadProjectConfigIfExists,
-  linkNexusProjectTrackerInRegistry,
   listNexusProjects as listNexusProjectsFromHome,
   NexusProjectError,
   optionalNonEmptyString,
@@ -34,7 +32,6 @@ import {
   slugify,
   statusForNexusProjectReference,
   upsertNexusProjectReference,
-  type ConfigureNexusProjectTrackerProvider,
   type NexusExtension,
   type NexusProjectHomeStore,
   type NexusProjectStatusBase,
@@ -50,10 +47,6 @@ import {
   type NexusProjectConfig,
   type NexusProjectReference,
 } from "./config.js";
-import {
-  legacyTrackerWrapperDeprecation,
-  type LegacyTrackerWrapperDeprecation,
-} from "./trackerDeprecation.js";
 
 const defaultGitRunner = defaultProjectGitRunner;
 const runGitCommand = runProjectGitCommand;
@@ -68,7 +61,6 @@ const nexusProjectHomeStore: NexusProjectHomeStore = {
 
 export type GitCommandResult = ProjectGitCommandResult;
 export type GitRunner = ProjectGitRunner;
-export type { ConfigureNexusProjectTrackerProvider };
 
 export {
   assertFileDoesNotExist,
@@ -183,61 +175,15 @@ export interface GetNexusProjectStatusResult {
   project: NexusProjectStatus;
 }
 
-export interface LinkNexusProjectTrackerOptions {
-  homePath: string;
-  project: string;
-  trackerProjectId: string;
-}
-
-export interface ConfigureNexusProjectTrackerOptions {
-  homePath: string;
-  project: string;
-  provider: ConfigureNexusProjectTrackerProvider;
-  host?: string;
-  repositoryOwner?: string;
-  repositoryName?: string;
-  repositoryId?: string;
-  projectKey?: string;
-  issueType?: string;
-  storePath?: string;
-}
-
-export interface ConfigureNexusProjectTrackerResult {
-  homePath: string;
-  project: NexusProjectStatus;
-  projectConfigPath: string;
-  plexusProjectConfigPath: string | null;
-  projectConfig: NexusProjectConfig;
-  workTracking: WorkTrackingConfig;
-  deprecation: LegacyTrackerWrapperDeprecation;
-}
-
-export interface LinkNexusProjectTrackerResult {
-  homePath: string;
-  vibeKanbanProjectId: string;
-  vibeKanbanRepoId: string | null;
-  project: NexusProjectStatus;
-  projectConfigPath: string;
-  plexusProjectConfigPath: string | null;
-  plexusProjectConfig: unknown | null;
-  deprecation: LegacyTrackerWrapperDeprecation;
-}
-
 export interface NexusProjectStatusExtensionContribution {
   plexusProjectConfigPath?: string | null;
   plexusProjectConfigExists?: boolean;
 }
 
-export interface NexusProjectTrackerLinkExtensionContribution {
-  plexusProjectConfigPath?: string | null;
-  plexusProjectConfig?: unknown | null;
-}
-
 export type NexusProjectServiceExtension = NexusExtension<
   NexusProjectConfig,
   unknown,
-  NexusProjectStatusExtensionContribution | undefined,
-  NexusProjectTrackerLinkExtensionContribution | undefined
+  NexusProjectStatusExtensionContribution | undefined
 >;
 
 const nexusProjectServiceExtensions: NexusProjectServiceExtension[] = [];
@@ -287,37 +233,6 @@ function projectStatusExtensionContribution(
     }
     if (result.plexusProjectConfigExists !== undefined) {
       contribution.plexusProjectConfigExists = result.plexusProjectConfigExists;
-    }
-  }
-
-  return contribution;
-}
-
-function projectTrackerLinkExtensionContribution(
-  projectRoot: string,
-  projectConfig: NexusProjectConfig,
-  trackerProjectId: string,
-): Required<NexusProjectTrackerLinkExtensionContribution> {
-  const contribution: Required<NexusProjectTrackerLinkExtensionContribution> = {
-    plexusProjectConfigPath: null,
-    plexusProjectConfig: null,
-  };
-
-  for (const extension of nexusProjectServiceExtensions) {
-    const result = extension.linkProjectTracker?.({
-      projectRoot,
-      projectConfig,
-      trackerProjectId,
-    });
-    if (!result) {
-      continue;
-    }
-
-    if (result.plexusProjectConfigPath !== undefined) {
-      contribution.plexusProjectConfigPath = result.plexusProjectConfigPath;
-    }
-    if (result.plexusProjectConfig !== undefined) {
-      contribution.plexusProjectConfig = result.plexusProjectConfig;
     }
   }
 
@@ -437,82 +352,6 @@ export function getNexusProjectStatus(
   return {
     homePath: result.homePath,
     project: statusForProjectStatusBase(result.project),
-  };
-}
-
-/**
- * @deprecated Generic tracker linking belongs to DevNexus core. This wrapper is
- * retained only for DevNexus-Pharo legacy compatibility.
- */
-export function linkNexusProjectTracker(
-  options: LinkNexusProjectTrackerOptions,
-): LinkNexusProjectTrackerResult {
-  assertNonEmptyString(options.project, "project");
-
-  const homePath = resolveNexusHome(options.homePath);
-  const homeConfig = loadHomeConfig(homePath);
-  const linked = linkNexusProjectTrackerInRegistry({
-    registry: homeConfig,
-    project: options.project,
-    trackerProjectId: options.trackerProjectId,
-  });
-  const trackerLinkContribution = projectTrackerLinkExtensionContribution(
-    linked.projectRoot,
-    linked.projectConfig,
-    linked.vibeKanbanProjectId,
-  );
-  saveHomeConfig(homePath, homeConfig);
-
-  return {
-    homePath,
-    vibeKanbanProjectId: linked.vibeKanbanProjectId,
-    vibeKanbanRepoId: linked.vibeKanbanRepoId,
-    project: statusForProjectReference(linked.reference),
-    projectConfigPath: linked.projectConfigPath,
-    plexusProjectConfigPath: trackerLinkContribution.plexusProjectConfigPath,
-    plexusProjectConfig: trackerLinkContribution.plexusProjectConfig,
-    deprecation: legacyTrackerWrapperDeprecation("link-tracker"),
-  };
-}
-
-/**
- * @deprecated Generic tracker configuration belongs to DevNexus core. This
- * wrapper is retained only for DevNexus-Pharo legacy compatibility.
- */
-export function configureNexusProjectTracker(
-  options: ConfigureNexusProjectTrackerOptions,
-): ConfigureNexusProjectTrackerResult {
-  const result = configureNexusProjectTrackerFromHome({
-    homePath: options.homePath,
-    homeStore: nexusProjectHomeStore,
-    project: options.project,
-    provider: options.provider,
-    ...(options.host !== undefined ? { host: options.host } : {}),
-    ...(options.repositoryOwner !== undefined
-      ? { repositoryOwner: options.repositoryOwner }
-      : {}),
-    ...(options.repositoryName !== undefined
-      ? { repositoryName: options.repositoryName }
-      : {}),
-    ...(options.repositoryId !== undefined
-      ? { repositoryId: options.repositoryId }
-      : {}),
-    ...(options.projectKey !== undefined ? { projectKey: options.projectKey } : {}),
-    ...(options.issueType !== undefined ? { issueType: options.issueType } : {}),
-    ...(options.storePath !== undefined ? { storePath: options.storePath } : {}),
-  });
-
-  return {
-    homePath: result.homePath,
-    project: statusForProjectStatusBase(result.project),
-    projectConfigPath: result.projectConfigPath,
-    plexusProjectConfigPath: projectStatusExtensionContribution(
-      result.projectRoot,
-      result.projectConfig,
-    ).plexusProjectConfigPath,
-    projectConfig: result.projectConfig,
-    workTracking: result.workTracking,
-    deprecation: legacyTrackerWrapperDeprecation("configure-tracker"),
   };
 }
 
