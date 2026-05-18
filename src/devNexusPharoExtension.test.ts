@@ -90,6 +90,15 @@ describe("DevNexus-Pharo extension", () => {
       },
       images: [],
       imageExecution: defaultPlexusImageExecutionPolicy,
+      runtime: {
+        gateway: {
+          mode: "project-local",
+          host: "127.0.0.1",
+          port: expect.any(Number),
+          agentMcpPath: "/mcp",
+          routeControlMcpPath: "/control-mcp",
+        },
+      },
     });
     expect(files.plexusProjectConfigPath).toBe(
       path.join(projectRoot, plexusProjectConfigFileName),
@@ -106,6 +115,15 @@ describe("DevNexus-Pharo extension", () => {
       },
       images: [],
       imageExecution: defaultPlexusImageExecutionPolicy,
+      runtime: {
+        gateway: {
+          mode: "project-local",
+          host: "127.0.0.1",
+          port: expect.any(Number),
+          agentMcpPath: "/mcp",
+          routeControlMcpPath: "/control-mcp",
+        },
+      },
     });
   });
 
@@ -374,6 +392,15 @@ describe("DevNexus-Pharo extension", () => {
         },
         images: [],
         imageExecution: defaultPlexusImageExecutionPolicy,
+        runtime: {
+          gateway: {
+            mode: "project-local",
+            host: "127.0.0.1",
+            port: expect.any(Number),
+            agentMcpPath: "/mcp",
+            routeControlMcpPath: "/control-mcp",
+          },
+        },
       },
     });
     expect(JSON.parse(fs.readFileSync(plexusPath, "utf8"))).toEqual(

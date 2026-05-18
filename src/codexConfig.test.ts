@@ -254,7 +254,7 @@ describe("Codex config", () => {
     expect(content).toContain('"--mcp"');
   });
 
-  it("writes a scoped Pharo MCP facade for DevNexus-Pharo project workspaces", () => {
+  it("writes scoped PLexus gateway MCP entries for DevNexus-Pharo project workspaces", () => {
     const homePath = makeTempDir("dev-nexus-pharo-home-");
     initNexusHome({ homePath });
     const projectRoot = makeTempDir("dev-nexus-pharo-project-");
@@ -279,14 +279,25 @@ describe("Codex config", () => {
     });
 
     const result = initCodexWorkspace({ homePath, workspacePath: projectRoot });
-    const pharoServer = result.servers.pharo;
+    const plexusProjectConfig = JSON.parse(
+      fs.readFileSync(path.join(projectRoot, "plexus.project.json"), "utf8"),
+    );
+    const gatewayPort = plexusProjectConfig.runtime.gateway.port;
 
-    expect(pharoServer).toMatchObject({
+    expect(result.servers.gateway).toMatchObject({
+      type: "http",
       enabled: true,
-      command: "plexus-gateway",
-      args: ["--stdio"],
+      url: `http://127.0.0.1:${gatewayPort}/mcp`,
+      defaultToolsApprovalMode: "approve",
+    });
+    expect(result.servers.route_control).toMatchObject({
+      type: "http",
+      enabled: true,
+      url: `http://127.0.0.1:${gatewayPort}/control-mcp`,
+      defaultToolsApprovalMode: "approve",
+    });
+    expect(result.servers.plexus_project).toMatchObject({
       env: {
-        PLEXUS_GATEWAY_SURFACE: "pharo",
         PLEXUS_PROJECT_ROOT: path.resolve(projectRoot),
         PLEXUS_PROJECT_ID: "pharo-project",
         PLEXUS_WORKSPACE_ID: path.basename(projectRoot),
@@ -294,13 +305,10 @@ describe("Codex config", () => {
         PLEXUS_TARGET_ID: `pharo-project--${path.basename(projectRoot)}`,
         PLEXUS_STATE_ROOT: path.join(homePath, "state", "plexus"),
       },
-      defaultToolsApprovalMode: "approve",
     });
-    expect(JSON.parse(pharoServer?.env?.PLEXUS_PHARO_TOOLS_JSON ?? "[]")).toEqual([
-      expect.objectContaining({ name: "pharo_eval" }),
-    ]);
-    expect(result.content).toContain("[mcp_servers.pharo]");
-    expect(result.content).toContain("[mcp_servers.pharo.env]");
+    expect(result.content).toContain("[mcp_servers.gateway]");
+    expect(result.content).toContain("[mcp_servers.route_control]");
+    expect(result.content).not.toContain("[mcp_servers.pharo]");
   });
 
   it("writes shared DevNexus project MCP entries for DevNexus-Pharo plugin roots", async () => {
@@ -347,8 +355,14 @@ describe("Codex config", () => {
     fs.writeFileSync(
       configPath,
       [
+        "[mcp_servers.keep]",
+        'command = "node"',
+        "",
         "[mcp_servers.plexus]",
         'url = "http://127.0.0.1:7331/mcp"',
+        "",
+        "[mcp_servers.pharo]",
+        'command = "plexus-gateway"',
         "",
         "[mcp_servers.vibe_kanban]",
         'command = "npx"',
@@ -368,9 +382,18 @@ describe("Codex config", () => {
       "dev_nexus_pharo",
       "plexus_project",
       "pharo_launcher",
-      "pharo",
+      "route_control",
+      "gateway",
     ]);
+    const plexusProjectConfig = JSON.parse(
+      fs.readFileSync(path.join(projectRoot, "plexus.project.json"), "utf8"),
+    );
+    const gatewayUrl =
+      `http://127.0.0.1:${plexusProjectConfig.runtime.gateway.port}/mcp`;
+    const routeControlUrl =
+      `http://127.0.0.1:${plexusProjectConfig.runtime.gateway.port}/control-mcp`;
     expect(result.content).toContain("[mcp_servers.dev_nexus]");
+    expect(result.content).toContain("[mcp_servers.keep]");
     expect(result.content).toContain('command = "dev-nexus"');
     expect(result.content).toContain('args = ["mcp-stdio"]');
     expect(result.content).toContain("[mcp_servers.dev_nexus_pharo]");
@@ -381,10 +404,13 @@ describe("Codex config", () => {
     expect(result.content).toContain("[mcp_servers.pharo_launcher]");
     expect(result.servers.pharo_launcher?.command).toBe("plexus");
     expect(result.content).toContain('args = ["mcp", "pharo-launcher", "--project-path"');
-    expect(result.content).toContain("[mcp_servers.pharo]");
-    expect(result.content).toContain('url = "http://127.0.0.1:7331/mcp"');
+    expect(result.content).toContain("[mcp_servers.route_control]");
+    expect(result.content).toContain(`url = "${routeControlUrl}"`);
+    expect(result.content).toContain("[mcp_servers.gateway]");
+    expect(result.content).toContain(`url = "${gatewayUrl}"`);
     expect(result.content).not.toContain('command = "plexus-gateway"');
     expect(result.content).not.toContain("[mcp_servers.plexus]");
+    expect(result.content).not.toContain("[mcp_servers.pharo]");
     expect(result.content).not.toContain("[mcp_servers.vibe_kanban]");
     expect(result.plexusProjectConfigPath).toBe(
       path.join(projectRoot, "plexus.project.json"),
@@ -399,7 +425,18 @@ describe("Codex config", () => {
         projectId: "shared-dogfood",
       },
       images: [],
+      runtime: {
+        gateway: {
+          mode: "project-local",
+          host: "127.0.0.1",
+          agentMcpPath: "/mcp",
+          routeControlMcpPath: "/control-mcp",
+        },
+      },
     });
+    expect(plexusProjectConfig.runtime.gateway.port).not.toBe(
+      loadHomeConfig(homePath).ports.plexusMcp,
+    );
 
     const doctor = await doctorCodexWorkspace({
       homePath,
@@ -412,9 +449,126 @@ describe("Codex config", () => {
         expect.objectContaining({ name: "config:dev_nexus", status: "ok" }),
         expect.objectContaining({ name: "plexus_project:config", status: "ok" }),
         expect.objectContaining({ name: "dev_nexus:command", status: "skipped" }),
-        expect.objectContaining({ name: "pharo:http", status: "skipped" }),
+        expect.objectContaining({ name: "gateway:http", status: "skipped" }),
+        expect.objectContaining({ name: "route_control:http", status: "skipped" }),
       ]),
     );
+  });
+
+  it("assigns unique project-local gateway ports across shared DevNexus project roots", () => {
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
+    initNexusHome({ homePath });
+    const firstRoot = path.join(makeTempDir("dev-nexus-pharo-shared-root-"), "First");
+    const secondRoot = path.join(makeTempDir("dev-nexus-pharo-shared-root-"), "Second");
+    const firstProject = {
+      version: 1 as const,
+      id: "same-hash-base",
+      name: "First",
+      home: null,
+      worktreesRoot: "worktrees",
+      mcp: {
+        command: "dev-nexus",
+        args: ["mcp-stdio"],
+        agentTargets: [{ agent: "codex" as const }],
+      },
+      plugins: [devNexusPharoDevNexusPluginConfig()],
+    };
+    const secondProject = {
+      ...firstProject,
+      id: "same-hash-base-two",
+      name: "Second",
+    };
+    saveProjectConfig(firstRoot, firstProject);
+    saveProjectConfig(secondRoot, secondProject);
+    const homeConfig = loadHomeConfig(homePath);
+    homeConfig.projects.push(
+      { id: firstProject.id, name: firstProject.name, projectRoot: firstRoot },
+      { id: secondProject.id, name: secondProject.name, projectRoot: secondRoot },
+    );
+    saveHomeConfig(homePath, homeConfig);
+
+    initCodexWorkspace({
+      homePath,
+      workspacePath: firstRoot,
+      config: loadHomeConfig(homePath),
+    });
+    initCodexWorkspace({
+      homePath,
+      workspacePath: secondRoot,
+      config: loadHomeConfig(homePath),
+    });
+
+    const firstPort = JSON.parse(
+      fs.readFileSync(path.join(firstRoot, "plexus.project.json"), "utf8"),
+    ).runtime.gateway.port;
+    const secondPort = JSON.parse(
+      fs.readFileSync(path.join(secondRoot, "plexus.project.json"), "utf8"),
+    ).runtime.gateway.port;
+
+    expect(firstPort).not.toBe(secondPort);
+    expect([homeConfig.ports.vibeKanban, homeConfig.ports.devNexusPharoMcp, homeConfig.ports.plexusMcp])
+      .not.toContain(firstPort);
+    expect([homeConfig.ports.vibeKanban, homeConfig.ports.devNexusPharoMcp, homeConfig.ports.plexusMcp])
+      .not.toContain(secondPort);
+  });
+
+  it("preserves existing images and image execution while adding missing runtime metadata", () => {
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
+    initNexusHome({ homePath });
+    const projectRoot = makeTempDir("dev-nexus-pharo-shared-root-");
+    saveProjectConfig(projectRoot, {
+      version: 1,
+      id: "existing-runtime",
+      name: "Existing Runtime",
+      home: null,
+      worktreesRoot: "worktrees",
+      mcp: {
+        command: "dev-nexus",
+        args: ["mcp-stdio"],
+        agentTargets: [{ agent: "codex" }],
+      },
+      plugins: [devNexusPharoDevNexusPluginConfig()],
+    });
+    const existingImages = [{ id: "image-1", template: "Pharo 12" }];
+    const existingImageExecution = {
+      mode: "docker",
+      requireDisposableImage: false,
+      requireCleanupPlan: false,
+      docker: {
+        image: "ghcr.io/example/pharo:test",
+        network: "bridge",
+        autoRemove: false,
+        mountProjectReadOnly: false,
+      },
+    };
+    fs.writeFileSync(
+      path.join(projectRoot, "plexus.project.json"),
+      `${JSON.stringify({
+        name: "Existing Runtime",
+        kanban: { provider: "vibe-kanban", projectId: "existing-runtime" },
+        images: existingImages,
+        imageExecution: existingImageExecution,
+      }, null, 2)}\n`,
+      "utf8",
+    );
+
+    initCodexWorkspace({
+      homePath,
+      workspacePath: projectRoot,
+      config: loadHomeConfig(homePath),
+    });
+
+    const updated = JSON.parse(
+      fs.readFileSync(path.join(projectRoot, "plexus.project.json"), "utf8"),
+    );
+    expect(updated.images).toEqual(existingImages);
+    expect(updated.imageExecution).toEqual(existingImageExecution);
+    expect(updated.runtime.gateway).toMatchObject({
+      mode: "project-local",
+      host: "127.0.0.1",
+      agentMcpPath: "/mcp",
+      routeControlMcpPath: "/control-mcp",
+    });
   });
 
   it("reports missing shared PLexus project config as a doctor failure", async () => {
@@ -654,8 +808,9 @@ describe("Codex config", () => {
     expect(result.ok).toBe(true);
     expect(result.checks).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ name: "config:pharo", status: "ok" }),
-        expect.objectContaining({ name: "pharo:command", status: "skipped" }),
+        expect.objectContaining({ name: "config:gateway", status: "ok" }),
+        expect.objectContaining({ name: "gateway:http", status: "skipped" }),
+        expect.objectContaining({ name: "route_control:http", status: "skipped" }),
       ]),
     );
   });

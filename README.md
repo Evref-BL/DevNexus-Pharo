@@ -350,21 +350,23 @@ dev-nexus-pharo codex doctor C:\dev\code\dev-nexus-pharo\MyProject
 Open a fresh Codex chat from that workspace after `codex doctor` passes. A
 running chat may keep the MCP tool list it loaded at startup.
 
-`codex init` preserves unrelated Codex settings and unrelated MCP servers. It
-replaces only the DevNexus-Pharo-managed `dev_nexus_pharo`, `plexus`, `vibe_kanban`,
-and, for DevNexus-Pharo-managed projects, `pharo` entries. The `pharo` entry is a
-command facade for the PLexus gateway; `codex doctor` verifies that it is
-projected without spawning the command, opening images, or creating routes.
+`codex init` preserves unrelated Codex settings and unrelated MCP servers. For
+project-scoped DevNexus-Pharo roots it replaces legacy home-scoped `plexus`,
+`vibe_kanban`, and `pharo` entries with clean `plexus_project`,
+`pharo_launcher`, `route_control`, and `gateway` entries. The gateway entries
+use the project-local PLexus gateway policy recorded in `plexus.project.json`;
+`codex doctor` verifies that they are projected without spawning commands,
+opening images, or creating routes.
 For shared DevNexus plugin roots, `codex init` writes the root project surface
-instead: `dev_nexus`, `dev_nexus_pharo`, `plexus_project`, `pharo_launcher`, and
-the live `pharo` gateway endpoint. In that mode it removes the older managed
-`plexus` and `vibe_kanban` entries so fresh Codex sessions load the intended
-project/plugin tool surface.
+instead: `dev_nexus`, `dev_nexus_pharo`, `plexus_project`, `pharo_launcher`,
+`route_control`, and the live `gateway` endpoint. In that mode it removes the
+older managed `plexus`, `vibe_kanban`, and `pharo` entries so fresh Codex
+sessions load the intended project/plugin tool surface.
 
 `worktree_prepare` creates component-scoped worktrees under
 `worktrees\<component-id>\...` and refreshes the worktree `.codex\config.toml`
-with the same projected Pharo MCP facade. Workers changing Pharo code should
-use the direct `pharo` MCP tools. If those tools are missing or unreachable,
+with the same projected PLexus gateway facade. Workers changing Pharo code should
+use the direct `gateway` MCP tools. If those tools are missing or unreachable,
 report the MCP infrastructure blocker and use read-only PLexus status or route
 discovery instead of editing Pharo code through files.
 

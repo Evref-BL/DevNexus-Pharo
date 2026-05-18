@@ -23,6 +23,19 @@ export interface PlexusProjectConfig {
   };
   images: unknown[];
   imageExecution: PlexusImageExecutionPolicy;
+  runtime: PlexusProjectRuntimeConfig;
+}
+
+export interface PlexusProjectRuntimeConfig {
+  gateway: PlexusProjectGatewayConfig;
+}
+
+export interface PlexusProjectGatewayConfig {
+  mode: "project-local";
+  host: string;
+  port: number;
+  agentMcpPath: string;
+  routeControlMcpPath: string;
 }
 
 export interface DevNexusPharoProjectFiles {
@@ -34,6 +47,11 @@ export interface DevNexusPharoProjectFiles {
 
 export const plexusProjectConfigFileName = "plexus.project.json";
 export const devNexusPharoProjectExtensionConfigKey = "dev-nexus-pharo";
+export const defaultPlexusGatewayHost = "127.0.0.1";
+export const defaultPlexusGatewayAgentPath = "/mcp";
+export const defaultPlexusGatewayRouteControlPath = "/control-mcp";
+export const defaultPlexusProjectGatewayPortBase = 17_340;
+export const defaultPlexusProjectGatewayPortSpan = 1_000;
 
 export type PlexusImageExecutionMode = "disabled" | "docker";
 export type PlexusImageExecutionDockerNetwork = "none" | "bridge";
@@ -89,6 +107,7 @@ export interface InstallDevNexusPharoProjectFilesOptions {
   projectRoot: string;
   projectConfig: NexusProjectConfig;
   vibeKanbanProjectId?: string | null;
+  reservedGatewayPorts?: readonly number[];
 }
 
 const suggestedFirstPromptFileName = "suggestedFirstPrompt.md";
@@ -428,6 +447,7 @@ export function buildPlexusProjectConfig(
   vibeKanbanProjectId: string | null = null,
   imageExecutionPolicy: PlexusImageExecutionPolicy =
     defaultPlexusImageExecutionPolicy,
+  reservedGatewayPorts: readonly number[] = [],
 ): PlexusProjectConfig {
   return {
     name,
@@ -437,7 +457,148 @@ export function buildPlexusProjectConfig(
     },
     images: [],
     imageExecution: clonePlexusImageExecutionPolicy(imageExecutionPolicy),
+    runtime: {
+      gateway: buildPlexusProjectGatewayConfig(projectId, reservedGatewayPorts),
+    },
   };
+}
+
+export function buildPlexusProjectGatewayConfig(
+  projectId: string,
+  reservedPorts: readonly number[] = [],
+): PlexusProjectGatewayConfig {
+  return {
+    mode: "project-local",
+    host: defaultPlexusGatewayHost,
+    port: allocatePlexusProjectGatewayPort(projectId, reservedPorts),
+    agentMcpPath: defaultPlexusGatewayAgentPath,
+    routeControlMcpPath: defaultPlexusGatewayRouteControlPath,
+  };
+}
+
+export function allocatePlexusProjectGatewayPort(
+  projectId: string,
+  reservedPorts: readonly number[] = [],
+): number {
+  const reserved = new Set(reservedPorts);
+  const start =
+    defaultPlexusProjectGatewayPortBase +
+    (stableHash(projectId) % defaultPlexusProjectGatewayPortSpan);
+  for (let offset = 0; offset < defaultPlexusProjectGatewayPortSpan; offset += 1) {
+    const candidate =
+      defaultPlexusProjectGatewayPortBase +
+      ((start - defaultPlexusProjectGatewayPortBase + offset) %
+        defaultPlexusProjectGatewayPortSpan);
+    if (!reserved.has(candidate)) {
+      return candidate;
+    }
+  }
+
+  throw new Error("No project-local PLexus gateway port is available in the configured policy range");
+}
+
+function stableHash(value: string): number {
+  let hash = 0;
+  for (const char of value) {
+    hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+  }
+  return hash;
+}
+
+function normalizeGatewayPath(value: unknown, fallback: string): string {
+  if (typeof value !== "string" || value.trim().length === 0) {
+    return fallback;
+  }
+  const trimmed = value.trim();
+  return trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+}
+
+function maybeExistingGateway(
+  value: Record<string, unknown>,
+): PlexusProjectGatewayConfig | undefined {
+  const runtime = value.runtime;
+  if (!runtime || typeof runtime !== "object" || Array.isArray(runtime)) {
+    return undefined;
+  }
+  const gateway = (runtime as Record<string, unknown>).gateway;
+  if (!gateway || typeof gateway !== "object" || Array.isArray(gateway)) {
+    return undefined;
+  }
+  const record = gateway as Record<string, unknown>;
+  const port = record.port;
+  if (
+    typeof port !== "number" ||
+    !Number.isInteger(port) ||
+    port < 1 ||
+    port > 65_535
+  ) {
+    return undefined;
+  }
+
+  return {
+    mode: "project-local",
+    host:
+      typeof record.host === "string" && record.host.trim().length > 0
+        ? record.host.trim()
+        : defaultPlexusGatewayHost,
+    port,
+    agentMcpPath: normalizeGatewayPath(
+      record.agentMcpPath ?? record.agentPath,
+      defaultPlexusGatewayAgentPath,
+    ),
+    routeControlMcpPath: normalizeGatewayPath(
+      record.routeControlMcpPath ?? record.routeControlPath,
+      defaultPlexusGatewayRouteControlPath,
+    ),
+  };
+}
+
+export function normalizePlexusProjectConfig(
+  existing: Record<string, unknown>,
+  projectName: string,
+  projectId: string,
+  vibeKanbanProjectId: string | null,
+  imageExecutionPolicy: PlexusImageExecutionPolicy =
+    defaultPlexusImageExecutionPolicy,
+  reservedGatewayPorts: readonly number[] = [],
+): PlexusProjectConfig {
+  const existingKanban =
+    existing.kanban && typeof existing.kanban === "object" && !Array.isArray(existing.kanban)
+      ? (existing.kanban as Record<string, unknown>)
+      : {};
+  const gateway = maybeExistingGateway(existing);
+  if (gateway && reservedGatewayPorts.includes(gateway.port)) {
+    throw new Error(
+      `PLexus project gateway port ${gateway.port} is already reserved by another project`,
+    );
+  }
+
+  return {
+    ...existing,
+    name: typeof existing.name === "string" ? existing.name : projectName,
+    kanban: {
+      ...existingKanban,
+      provider: "vibe-kanban",
+      projectId:
+        vibeKanbanProjectId ??
+        (typeof existingKanban.projectId === "string"
+          ? existingKanban.projectId
+          : projectId),
+    },
+    images: Array.isArray(existing.images) ? existing.images : [],
+    imageExecution:
+      existing.imageExecution === undefined
+        ? clonePlexusImageExecutionPolicy(imageExecutionPolicy)
+        : resolvePlexusImageExecutionPolicy(
+            existing.imageExecution,
+            "plexus.project.imageExecution",
+          ),
+    runtime: {
+      gateway:
+        gateway ??
+        buildPlexusProjectGatewayConfig(projectId, reservedGatewayPorts),
+    },
+  } as PlexusProjectConfig;
 }
 
 export function updatePlexusProjectKanban(
@@ -450,33 +611,20 @@ export function updatePlexusProjectKanban(
 ): PlexusProjectConfig {
   const existing = fs.existsSync(plexusConfigPath)
     ? readJsonFile<Record<string, unknown>>(plexusConfigPath)
-    : buildPlexusProjectConfig(
+    : (buildPlexusProjectConfig(
         projectName,
         projectId,
         vibeKanbanProjectId,
         imageExecutionPolicy,
-      );
-  const existingKanban =
-    existing.kanban && typeof existing.kanban === "object" && !Array.isArray(existing.kanban)
-      ? (existing.kanban as Record<string, unknown>)
-      : {};
-  const updated = {
-    ...existing,
-    name: typeof existing.name === "string" ? existing.name : projectName,
-    kanban: {
-      ...existingKanban,
-      provider: "vibe-kanban",
-      projectId: vibeKanbanProjectId,
-    },
-    images: Array.isArray(existing.images) ? existing.images : [],
-    imageExecution:
-      existing.imageExecution === undefined
-        ? clonePlexusImageExecutionPolicy(imageExecutionPolicy)
-        : resolvePlexusImageExecutionPolicy(
-            existing.imageExecution,
-            "plexus.project.imageExecution",
-          ),
-  } as unknown as PlexusProjectConfig;
+        [],
+      ) as unknown as Record<string, unknown>);
+  const updated = normalizePlexusProjectConfig(
+    existing,
+    projectName,
+    projectId,
+    vibeKanbanProjectId,
+    imageExecutionPolicy,
+  );
 
   saveJsonFile(plexusConfigPath, updated);
   return updated;
@@ -496,24 +644,20 @@ export function installDevNexusPharoProjectFiles(
     ? readJsonFile<Record<string, unknown>>(plexusConfigPath)
     : null;
   let plexusProjectConfig = existingPlexusProjectConfig
-    ? ({
-        ...existingPlexusProjectConfig,
-        images: Array.isArray(existingPlexusProjectConfig.images)
-          ? existingPlexusProjectConfig.images
-          : [],
-        imageExecution:
-          existingPlexusProjectConfig.imageExecution === undefined
-            ? clonePlexusImageExecutionPolicy(imageExecutionPolicy)
-            : resolvePlexusImageExecutionPolicy(
-                existingPlexusProjectConfig.imageExecution,
-                "plexus.project.imageExecution",
-              ),
-      } as PlexusProjectConfig)
+    ? normalizePlexusProjectConfig(
+        existingPlexusProjectConfig,
+        options.projectConfig.name,
+        options.projectConfig.id,
+        options.vibeKanbanProjectId ?? options.projectConfig.kanban?.projectId ?? null,
+        imageExecutionPolicy,
+        options.reservedGatewayPorts ?? [],
+      )
     : buildPlexusProjectConfig(
         options.projectConfig.name,
         options.projectConfig.id,
         options.vibeKanbanProjectId ?? options.projectConfig.kanban?.projectId ?? null,
         imageExecutionPolicy,
+        options.reservedGatewayPorts ?? [],
       );
 
   if (!existingPlexusProjectConfig) {
@@ -526,7 +670,10 @@ export function installDevNexusPharoProjectFiles(
       options.vibeKanbanProjectId,
       imageExecutionPolicy,
     );
-  } else if (existingPlexusProjectConfig.imageExecution === undefined) {
+  } else if (
+    existingPlexusProjectConfig.imageExecution === undefined ||
+    existingPlexusProjectConfig.runtime === undefined
+  ) {
     saveJsonFile(plexusConfigPath, plexusProjectConfig);
   }
 

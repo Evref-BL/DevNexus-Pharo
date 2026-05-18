@@ -93,8 +93,26 @@ export function devNexusPharoDevNexusPluginConfig(): NexusProjectPluginConfig {
       },
       {
         kind: "mcp_server",
-        id: "mcp-pharo",
-        serverName: "pharo",
+        id: "plexus-route-control-mcp",
+        serverName: "route_control",
+        description:
+          "Trusted PLexus gateway route-control surface for lifecycle route registration and diagnostics.",
+        tools: [
+          {
+            name: "plexus_project_status",
+            description: "Read gateway route status for the scoped project target.",
+          },
+          {
+            name: "plexus_route_to_image",
+            description:
+              "Route raw image MCP calls through explicit image and target identity.",
+          },
+        ],
+      },
+      {
+        kind: "mcp_server",
+        id: "mcp-gateway",
+        serverName: "gateway",
         description:
           "PLexus-projected direct Pharo MCP facade for the selected scoped image.",
         tools: [
@@ -115,7 +133,7 @@ export function devNexusPharoDevNexusPluginConfig(): NexusProjectPluginConfig {
         kind: "setup_obligation",
         id: "setup-direct-pharo-mcp",
         description:
-          "Verify direct pharo MCP availability before changing Pharo or MCP-Pharo code.",
+          "Verify direct gateway MCP availability before changing Pharo or MCP-Pharo code.",
         required: true,
       },
       {
@@ -151,7 +169,7 @@ export function devNexusPharoDevNexusPluginConfig(): NexusProjectPluginConfig {
         id: "env-plexus-pharo-tools-json",
         variable: "PLEXUS_PHARO_TOOLS_JSON",
         description:
-          "Projected Pharo MCP tool contract supplied to the PLexus pharo facade.",
+          "Projected Pharo MCP tool contract supplied to the PLexus gateway facade.",
         required: true,
       },
       {
@@ -172,7 +190,7 @@ export function devNexusPharoDevNexusPluginConfig(): NexusProjectPluginConfig {
         kind: "agent_affordance",
         id: "affordance-gateway-pharo-tools",
         description:
-          "Agents should use the projected pharo MCP facade for image-side Pharo work instead of editing Smalltalk files as a substitute.",
+          "Agents should use the projected gateway MCP facade for image-side Pharo work instead of editing Smalltalk files as a substitute.",
       },
       {
         kind: "worker_context_fragment",
@@ -181,7 +199,7 @@ export function devNexusPharoDevNexusPluginConfig(): NexusProjectPluginConfig {
         body: [
           "DevNexus-Pharo composes with DevNexus and does not choose or supervise implementation work.",
           "It contributes setup, skills, MCP projection, and scoped PLexus context only; the coordinator still chooses and supervises implementation work.",
-          "For Pharo or MCP-Pharo code work, use the direct pharo MCP tools.",
+          "For Pharo or MCP-Pharo code work, use the direct gateway MCP tools.",
           "If that surface is missing or unreachable, report the infrastructure blocker instead of editing Smalltalk source files from disk as a substitute.",
         ].join(" "),
         targetAgents: ["codex", "claude"],

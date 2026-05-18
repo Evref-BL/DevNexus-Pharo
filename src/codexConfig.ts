@@ -9,7 +9,12 @@ import {
 } from "./config.js";
 import {
   buildPlexusProjectConfig,
+  buildPlexusProjectGatewayConfig,
+  normalizePlexusProjectConfig,
+  projectPlexusConfigPath,
   plexusProjectConfigFileName,
+  type PlexusProjectConfig,
+  type PlexusProjectGatewayConfig,
 } from "./devNexusPharoExtension.js";
 import { devNexusPharoPluginId } from "./devNexusPharoPlugin.js";
 import { defaultDevNexusPharoMcpHealthPath } from "./mcpServer.js";
@@ -20,6 +25,8 @@ export const defaultDevNexusCodexMcpServerName = "dev_nexus";
 export const defaultDevNexusPharoCodexMcpServerName = "dev_nexus_pharo";
 export const defaultPlexusProjectCodexMcpServerName = "plexus_project";
 export const defaultPharoLauncherCodexMcpServerName = "pharo_launcher";
+export const defaultGatewayCodexMcpServerName = "gateway";
+export const defaultRouteControlCodexMcpServerName = "route_control";
 export const defaultVibeKanbanCodexMcpServerName = "vibe_kanban";
 export const defaultPharoCodexMcpServerName = "pharo";
 
@@ -123,6 +130,7 @@ export interface BuildCodexMcpServersOptions {
   targetId?: string;
   pharoTools?: readonly PharoMcpToolContract[];
   includePharo?: boolean;
+  plexusProjectConfig?: PlexusProjectConfig;
 }
 
 export function codexConfigPath(workspacePath: string): string {
@@ -309,36 +317,59 @@ function projectUsesDevNexusPharo(projectConfig: NexusProjectConfig | undefined)
 function projectUsesSharedDevNexusMcp(
   projectConfig: NexusProjectConfig | undefined,
 ): projectConfig is NexusProjectConfig {
-  return Boolean(projectConfig?.mcp && projectUsesDevNexusPharo(projectConfig));
+  return Boolean(projectUsesDevNexusPharo(projectConfig));
 }
 
-function sharedPlexusProjectConfigPath(workspacePath: string): string {
-  return path.join(path.resolve(workspacePath), plexusProjectConfigFileName);
+function sharedPlexusProjectConfigPath(
+  workspacePath: string,
+  projectConfig?: NexusProjectConfig,
+): string {
+  return projectConfig
+    ? projectPlexusConfigPath(path.resolve(workspacePath), projectConfig)
+    : path.join(path.resolve(workspacePath), plexusProjectConfigFileName);
 }
 
 function ensureSharedPlexusProjectConfig(
   workspacePath: string,
   projectConfig: NexusProjectConfig,
+  homeConfig: NexusHomeConfig,
   dryRun: boolean | undefined,
-): { configPath: string; created: boolean } {
-  const configPath = sharedPlexusProjectConfigPath(workspacePath);
-  if (fs.existsSync(configPath)) {
-    return { configPath, created: false };
-  }
-
+): { configPath: string; created: boolean; config: PlexusProjectConfig } {
+  const configPath = sharedPlexusProjectConfigPath(workspacePath, projectConfig);
+  const created = !fs.existsSync(configPath);
+  const reservedGatewayPorts = reservedPlexusGatewayPorts(
+    homeConfig,
+    workspacePath,
+  );
+  const existing = created
+    ? (buildPlexusProjectConfig(
+        projectConfig.name,
+        projectConfig.id,
+        projectConfig.kanban?.projectId ?? null,
+        undefined,
+        reservedGatewayPorts,
+      ) as unknown as Record<string, unknown>)
+    : JSON.parse(fs.readFileSync(configPath, "utf8").replace(/^\uFEFF/u, "")) as Record<string, unknown>;
+  const normalized = normalizePlexusProjectConfig(
+    existing,
+    projectConfig.name,
+    projectConfig.id,
+    projectConfig.kanban?.projectId ?? null,
+    undefined,
+    reservedGatewayPorts,
+  );
+  const nextContent = `${JSON.stringify(normalized, null, 2)}\n`;
+  const existingContent = created
+    ? ""
+    : fs.readFileSync(configPath, "utf8").replace(/^\uFEFF/u, "");
   if (!dryRun) {
-    fs.writeFileSync(
-      configPath,
-      `${JSON.stringify(
-        buildPlexusProjectConfig(projectConfig.name, projectConfig.id),
-        null,
-        2,
-      )}\n`,
-      "utf8",
-    );
+    if (created || existingContent !== nextContent) {
+      fs.mkdirSync(path.dirname(configPath), { recursive: true });
+      fs.writeFileSync(configPath, nextContent, "utf8");
+    }
   }
 
-  return { configPath, created: true };
+  return { configPath, created, config: normalized };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -347,8 +378,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function inspectSharedPlexusProjectConfig(
   workspacePath: string,
+  projectConfig?: NexusProjectConfig,
 ): CodexDoctorCheck {
-  const configPath = sharedPlexusProjectConfigPath(workspacePath);
+  const configPath = sharedPlexusProjectConfigPath(workspacePath, projectConfig);
   if (!fs.existsSync(configPath)) {
     return {
       name: "plexus_project:config",
@@ -383,6 +415,74 @@ function inspectSharedPlexusProjectConfig(
       }`,
     };
   }
+}
+
+function sameResolvedPath(left: string, right: string): boolean {
+  const resolvedLeft = path.resolve(left);
+  const resolvedRight = path.resolve(right);
+  return process.platform === "win32"
+    ? resolvedLeft.toLowerCase() === resolvedRight.toLowerCase()
+    : resolvedLeft === resolvedRight;
+}
+
+function gatewayPortFromPlexusProjectConfig(filePath: string): number | undefined {
+  if (!fs.existsSync(filePath)) {
+    return undefined;
+  }
+  try {
+    const parsed = JSON.parse(fs.readFileSync(filePath, "utf8").replace(/^\uFEFF/u, "")) as unknown;
+    if (!isRecord(parsed) || !isRecord(parsed.runtime) || !isRecord(parsed.runtime.gateway)) {
+      return undefined;
+    }
+    const port = parsed.runtime.gateway.port;
+    return typeof port === "number" && Number.isInteger(port) ? port : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function reservedPlexusGatewayPorts(
+  homeConfig: NexusHomeConfig,
+  currentProjectRoot: string,
+): number[] {
+  const ports = new Set([
+    homeConfig.ports.vibeKanban,
+    homeConfig.ports.devNexusPharoMcp,
+    homeConfig.ports.plexusMcp,
+  ]);
+  for (const project of homeConfig.projects) {
+    if (sameResolvedPath(project.projectRoot, currentProjectRoot)) {
+      continue;
+    }
+    const projectConfig = loadProjectConfigIfExists(project.projectRoot);
+    const configPath = sharedPlexusProjectConfigPath(
+      project.projectRoot,
+      projectConfig,
+    );
+    const port = gatewayPortFromPlexusProjectConfig(configPath);
+    if (port !== undefined) {
+      ports.add(port);
+    }
+  }
+
+  return [...ports];
+}
+
+function loadPlexusProjectConfigIfExists(
+  projectRoot: string,
+  projectConfig: NexusProjectConfig,
+): PlexusProjectConfig | undefined {
+  const configPath = sharedPlexusProjectConfigPath(projectRoot, projectConfig);
+  if (!fs.existsSync(configPath)) {
+    return undefined;
+  }
+  const parsed = JSON.parse(fs.readFileSync(configPath, "utf8").replace(/^\uFEFF/u, "")) as Record<string, unknown>;
+  return normalizePlexusProjectConfig(
+    parsed,
+    projectConfig.name,
+    projectConfig.id,
+    projectConfig.kanban?.projectId ?? null,
+  );
 }
 
 function workspaceProjectConfig(
@@ -543,6 +643,14 @@ function buildSharedDevNexusPharoMcpServers(
     plexusCoreCommandFromConfiguredPlexusCommand(config.tools.plexus.command),
     platform,
   );
+  const gateway =
+    options.plexusProjectConfig?.runtime.gateway ??
+    loadPlexusProjectConfigIfExists(projectRoot, projectConfig)?.runtime.gateway ??
+    buildPlexusProjectGatewayConfig(projectConfig.id, [
+      config.ports.vibeKanban,
+      config.ports.devNexusPharoMcp,
+      config.ports.plexusMcp,
+    ]);
 
   return {
     [
@@ -570,13 +678,23 @@ function buildSharedDevNexusPharoMcpServers(
       env: plexusEnv,
       defaultToolsApprovalMode: "approve",
     },
-    [defaultPharoCodexMcpServerName]: {
+    [defaultRouteControlCodexMcpServerName]: {
       type: "http",
       enabled: true,
-      url: `http://${config.mcp.host}:${config.ports.plexusMcp}/mcp`,
+      url: gatewayUrl(gateway, gateway.routeControlMcpPath),
+      defaultToolsApprovalMode: "approve",
+    },
+    [defaultGatewayCodexMcpServerName]: {
+      type: "http",
+      enabled: true,
+      url: gatewayUrl(gateway, gateway.agentMcpPath),
       defaultToolsApprovalMode: "approve",
     },
   };
+}
+
+function gatewayUrl(gateway: PlexusProjectGatewayConfig, gatewayPath: string): string {
+  return `http://${gateway.host}:${gateway.port}${gatewayPath}`;
 }
 
 export function buildCodexMcpServers(
@@ -593,7 +711,9 @@ export function buildCodexMcpServers(
   const nexusServerName = config.integrations.vibeKanban.nexusMcpServerName;
   const plexusServerName = config.integrations.vibeKanban.plexusMcpServerName;
   const vibeKanbanArgs = withVibeKanbanMcpMode(config.tools.vibeKanban.args);
-  const projectConfig = workspaceProjectConfig(options.workspacePath);
+  const projectConfig =
+    workspaceProjectConfig(options.workspacePath) ??
+    workspaceProjectConfig(options.projectRoot);
   if (projectUsesSharedDevNexusMcp(projectConfig)) {
     return buildSharedDevNexusPharoMcpServers(config, options, projectConfig);
   }
@@ -635,7 +755,18 @@ export function initCodexWorkspace(
   const homePath = resolveNexusHome(options.homePath);
   const config = options.config ?? loadHomeConfig(homePath);
   const configPath = codexConfigPath(workspacePath);
-  const projectConfig = workspaceProjectConfig(workspacePath);
+  const projectConfig =
+    workspaceProjectConfig(workspacePath) ??
+    workspaceProjectConfig(options.projectRoot);
+  const plexusProjectRoot = options.projectRoot ?? workspacePath;
+  const plexusProjectConfig = projectUsesSharedDevNexusMcp(projectConfig)
+    ? ensureSharedPlexusProjectConfig(
+        plexusProjectRoot,
+        projectConfig,
+        config,
+        options.dryRun,
+      )
+    : undefined;
   const existingToml = fs.existsSync(configPath)
     ? fs.readFileSync(configPath, "utf8").replace(/^\uFEFF/u, "")
     : "";
@@ -647,6 +778,7 @@ export function initCodexWorkspace(
     workspaceId: options.workspaceId,
     targetId: options.targetId,
     includePharo: options.includePharo,
+    plexusProjectConfig: plexusProjectConfig?.config,
   });
   const content = mergeCodexMcpServersIntoToml(
     existingToml,
@@ -655,16 +787,10 @@ export function initCodexWorkspace(
       ? [
           config.integrations.vibeKanban.plexusMcpServerName,
           defaultVibeKanbanCodexMcpServerName,
+          defaultPharoCodexMcpServerName,
         ]
       : [],
   );
-  const plexusProjectConfig = projectUsesSharedDevNexusMcp(projectConfig)
-    ? ensureSharedPlexusProjectConfig(
-        workspacePath,
-        projectConfig,
-        options.dryRun,
-      )
-    : undefined;
 
   if (!options.dryRun) {
     fs.mkdirSync(path.dirname(configPath), { recursive: true });
@@ -905,7 +1031,7 @@ export async function doctorCodexWorkspace(
   }
 
   if (projectUsesSharedDevNexusMcp(projectConfig)) {
-    checks.push(inspectSharedPlexusProjectConfig(workspacePath));
+    checks.push(inspectSharedPlexusProjectConfig(workspacePath, projectConfig));
 
     for (const [serverName, server] of Object.entries(servers)) {
       checks.push({

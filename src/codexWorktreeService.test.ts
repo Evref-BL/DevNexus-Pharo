@@ -186,7 +186,9 @@ describe("Codex worktree service", () => {
       codexConfigPath(expectedWorktreePath),
       "utf8",
     );
-    expect(worktreeCodexConfig).toContain("[mcp_servers.pharo]");
+    expect(worktreeCodexConfig).toContain("[mcp_servers.gateway]");
+    expect(worktreeCodexConfig).toContain("[mcp_servers.route_control]");
+    expect(worktreeCodexConfig).not.toContain("[mcp_servers.pharo]");
     expect(worktreeCodexConfig).toContain(
       `PLEXUS_PROJECT_ROOT = ${tomlString(projectRoot)}`,
     );
@@ -326,7 +328,9 @@ describe("Codex worktree service", () => {
       codexConfigPath(expectedWorktreePath),
       "utf8",
     );
-    expect(worktreeCodexConfig).toContain("[mcp_servers.pharo]");
+    expect(worktreeCodexConfig).toContain("[mcp_servers.gateway]");
+    expect(worktreeCodexConfig).toContain("[mcp_servers.route_control]");
+    expect(worktreeCodexConfig).not.toContain("[mcp_servers.pharo]");
     expect(worktreeCodexConfig).toContain(
       `PLEXUS_PROJECT_ROOT = ${tomlString(projectRoot)}`,
     );

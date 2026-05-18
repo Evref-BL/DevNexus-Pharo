@@ -213,6 +213,15 @@ describe("DevNexus-Pharo project service", () => {
       },
       images: [],
       imageExecution: defaultPlexusImageExecutionPolicy,
+      runtime: {
+        gateway: {
+          mode: "project-local",
+          host: "127.0.0.1",
+          port: expect.any(Number),
+          agentMcpPath: "/mcp",
+          routeControlMcpPath: "/control-mcp",
+        },
+      },
     });
     expect(fs.existsSync(result.worktreesRoot)).toBe(true);
     expect(
@@ -234,11 +243,15 @@ describe("DevNexus-Pharo project service", () => {
     expect(fs.readFileSync(result.agentsPath, "utf8")).toBe(defaultAgentsContent());
     expect(result.codexConfigPath).toBe(codexConfigPath(result.projectRoot));
     const codexConfig = fs.readFileSync(result.codexConfigPath, "utf8");
+    expect(codexConfig).toContain("[mcp_servers.dev_nexus]");
     expect(codexConfig).toContain("[mcp_servers.dev_nexus_pharo]");
-    expect(codexConfig).toContain("[mcp_servers.plexus]");
-    expect(codexConfig).toContain("[mcp_servers.vibe_kanban]");
-    expect(codexConfig).toContain("[mcp_servers.pharo]");
-    expect(codexConfig.match(/default_tools_approval_mode = "approve"/gu)).toHaveLength(4);
+    expect(codexConfig).toContain("[mcp_servers.plexus_project]");
+    expect(codexConfig).toContain("[mcp_servers.pharo_launcher]");
+    expect(codexConfig).toContain("[mcp_servers.route_control]");
+    expect(codexConfig).toContain("[mcp_servers.gateway]");
+    expect(codexConfig).not.toContain("[mcp_servers.plexus]");
+    expect(codexConfig).not.toContain("[mcp_servers.pharo]");
+    expect(codexConfig.match(/default_tools_approval_mode = "approve"/gu)).toHaveLength(6);
     const suggestedFirstPrompt = fs.readFileSync(
       result.suggestedFirstPromptPath,
       "utf8",
@@ -1150,7 +1163,7 @@ describe("DevNexus-Pharo project service", () => {
       "[mcp_servers.dev_nexus_pharo]",
     );
     expect(fs.readFileSync(codexConfigPath(projectRoot), "utf8")).toContain(
-      "[mcp_servers.pharo]",
+      "[mcp_servers.gateway]",
     );
     expect(loadHomeConfig(homePath).projects).toEqual([
       {
@@ -1263,10 +1276,13 @@ describe("DevNexus-Pharo project service", () => {
     expect(sourceCodexConfig).not.toContain("[mcp_servers.dev_nexus_pharo]");
     const managedCodexConfig = fs.readFileSync(codexConfigPath(projectRoot), "utf8");
     expect(managedCodexConfig).toContain("[mcp_servers.dev_nexus_pharo]");
-    expect(managedCodexConfig).toContain("[mcp_servers.plexus]");
-    expect(managedCodexConfig).toContain("[mcp_servers.vibe_kanban]");
-    expect(managedCodexConfig).toContain("[mcp_servers.pharo]");
-    expect(managedCodexConfig.match(/default_tools_approval_mode = "approve"/gu)).toHaveLength(4);
+    expect(managedCodexConfig).toContain("[mcp_servers.plexus_project]");
+    expect(managedCodexConfig).toContain("[mcp_servers.pharo_launcher]");
+    expect(managedCodexConfig).toContain("[mcp_servers.route_control]");
+    expect(managedCodexConfig).toContain("[mcp_servers.gateway]");
+    expect(managedCodexConfig).not.toContain("[mcp_servers.plexus]");
+    expect(managedCodexConfig).not.toContain("[mcp_servers.pharo]");
+    expect(managedCodexConfig.match(/default_tools_approval_mode = "approve"/gu)).toHaveLength(6);
     const suggestedFirstPrompt = fs.readFileSync(
       path.join(projectRoot, "suggestedFirstPrompt.md"),
       "utf8",

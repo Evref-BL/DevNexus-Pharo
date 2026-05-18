@@ -46,7 +46,8 @@ describe("DevNexusPharo DevNexus plugin", () => {
       "skill-pharo-version-compat",
       "plexus-mcp",
       "pharo-launcher-mcp",
-      "mcp-pharo",
+      "plexus-route-control-mcp",
+      "mcp-gateway",
       "setup-scoped-plexus-context",
       "setup-direct-pharo-mcp",
       "env-plexus-project-root",
@@ -179,8 +180,13 @@ describe("DevNexusPharo DevNexus plugin", () => {
         ],
       },
       {
-        id: "mcp-pharo",
-        serverName: "pharo",
+        id: "plexus-route-control-mcp",
+        serverName: "route_control",
+        tools: ["plexus_project_status", "plexus_route_to_image"],
+      },
+      {
+        id: "mcp-gateway",
+        serverName: "gateway",
         tools: ["pharo_eval"],
       },
     ]);
@@ -256,7 +262,7 @@ describe("DevNexusPharo DevNexus plugin", () => {
     expect(contextFragment.body).toContain(
       "DevNexus-Pharo composes with DevNexus and does not choose or supervise implementation work",
     );
-    expect(contextFragment.body).toContain("direct pharo MCP tools");
+    expect(contextFragment.body).toContain("direct gateway MCP tools");
     expect(contextFragment.body).toContain("report the infrastructure blocker");
     expect(contextFragment.body).toContain("Smalltalk source files from disk");
 

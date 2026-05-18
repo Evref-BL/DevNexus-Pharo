@@ -325,6 +325,15 @@ describe("DevNexus-Pharo focused project lifecycle contracts", () => {
       },
       images: [],
       imageExecution: defaultPlexusImageExecutionPolicy,
+      runtime: {
+        gateway: {
+          mode: "project-local",
+          host: "127.0.0.1",
+          port: expect.any(Number),
+          agentMcpPath: "/mcp",
+          routeControlMcpPath: "/control-mcp",
+        },
+      },
     });
   });
 

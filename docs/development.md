@@ -193,15 +193,15 @@ vibe_kanban
 pharo
 ```
 
-DevNexus-Pharo and PLexus entries use URL MCP connections to supervised local
-endpoints. `vibe_kanban` remains a pinned command entry for Vibe's own MCP
-mode. `pharo` is emitted only for DevNexus-Pharo-managed projects and prepared
-worktrees; it is a PLexus gateway command facade scoped with project, workspace,
-target, and state-root environment variables.
+Shared DevNexus-Pharo project roots emit command-based `plexus_project` and
+`pharo_launcher` entries plus separate URL MCP entries for `route_control` and
+the agent-facing `gateway`. The gateway URLs come from the project-local PLexus
+runtime policy in `plexus.project.json`; legacy home-scoped `plexus`,
+`vibe_kanban`, and `pharo` entries are removed during regeneration.
 
 `codex doctor` validates managed config sections, endpoint health, MCP
-`initialize`, `tools/list`, and expected tool names. For the `pharo` facade it
-performs only a read-only config check and records the command probe as skipped,
+`initialize`, `tools/list`, and expected tool names. For project-local
+`gateway` and `route_control` entries it performs only a read-only config check,
 so the check does not launch images or open PLexus routes.
 
 ## Agent Model Policy
