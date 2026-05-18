@@ -656,11 +656,8 @@ describe("DevNexus-Pharo MCP server tools", () => {
         },
       },
       plexusProjectConfig: {
+        id: "my-library",
         name: "MyLibrary",
-        kanban: {
-          provider: "vibe-kanban",
-          projectId: "my-library",
-        },
         images: [],
         imageExecution: defaultPlexusImageExecutionPolicy,
       },

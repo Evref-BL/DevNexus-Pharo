@@ -203,11 +203,8 @@ describe("DevNexus-Pharo project service", () => {
     expect(
       JSON.parse(fs.readFileSync(result.plexusProjectConfigPath, "utf8")),
     ).toEqual({
+      id: "my-project",
       name: "MyProject",
-      kanban: {
-        provider: "vibe-kanban",
-        projectId: "my-project",
-      },
       images: [],
       imageExecution: defaultPlexusImageExecutionPolicy,
       runtime: {

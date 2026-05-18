@@ -419,11 +419,8 @@ describe("Codex config", () => {
     expect(
       JSON.parse(fs.readFileSync(path.join(projectRoot, "plexus.project.json"), "utf8")),
     ).toMatchObject({
+      id: "shared-dogfood",
       name: "Shared Dogfood",
-      kanban: {
-        provider: "vibe-kanban",
-        projectId: "shared-dogfood",
-      },
       images: [],
       runtime: {
         gateway: {
@@ -561,6 +558,7 @@ describe("Codex config", () => {
     const updated = JSON.parse(
       fs.readFileSync(path.join(projectRoot, "plexus.project.json"), "utf8"),
     );
+    expect(updated.id).toBe("existing-runtime");
     expect(updated.images).toEqual(existingImages);
     expect(updated.imageExecution).toEqual(existingImageExecution);
     expect(updated.runtime.gateway).toMatchObject({

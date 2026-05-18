@@ -338,11 +338,8 @@ describe("DevNexus-Pharo focused project lifecycle contracts", () => {
     expect(
       JSON.parse(fs.readFileSync(result.plexusProjectConfigPath, "utf8")),
     ).toEqual({
+      id: "plexus-generated",
       name: "PlexusGenerated",
-      kanban: {
-        provider: "vibe-kanban",
-        projectId: "plexus-generated",
-      },
       images: [],
       imageExecution: defaultPlexusImageExecutionPolicy,
       runtime: {

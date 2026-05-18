@@ -391,20 +391,17 @@ function inspectSharedPlexusProjectConfig(
 
   try {
     const parsed = JSON.parse(fs.readFileSync(configPath, "utf8")) as unknown;
-    const kanban = isRecord(parsed) ? parsed.kanban : undefined;
     const valid =
       isRecord(parsed) &&
       typeof parsed.name === "string" &&
-      isRecord(kanban) &&
-      kanban.provider === "vibe-kanban" &&
-      typeof kanban.projectId === "string" &&
+      typeof parsed.id === "string" &&
       Array.isArray(parsed.images);
     return {
       name: "plexus_project:config",
       status: valid ? "ok" : "failed",
       message: valid
         ? `Found ${plexusProjectConfigFileName}`
-        : `${plexusProjectConfigFileName} is missing required name, kanban, or images fields.`,
+        : `${plexusProjectConfigFileName} is missing required id, name, or images fields.`,
     };
   } catch (error) {
     return {
@@ -541,7 +538,6 @@ function buildPharoMcpServer(
       PLEXUS_PROJECT_ID: projectId,
       PLEXUS_WORKSPACE_ID: workspaceId,
       PLEXUS_WORKSPACE_ROOT: workspaceRoot,
-      VIBE_KANBAN_WORKSPACE_ID: workspaceId,
       PLEXUS_TARGET_ID: targetId,
       PLEXUS_STATE_ROOT: config.paths.plexusStateRoot,
       PLEXUS_PHARO_TOOLS_JSON: JSON.stringify(
@@ -617,7 +613,6 @@ function plexusSharedEnvironment(
     PLEXUS_PROJECT_ID: projectConfig.id,
     PLEXUS_WORKSPACE_ID: workspaceId,
     PLEXUS_WORKSPACE_ROOT: workspaceRoot,
-    VIBE_KANBAN_WORKSPACE_ID: workspaceId,
     PLEXUS_TARGET_ID: targetId,
     PLEXUS_STATE_ROOT: config.paths.plexusStateRoot,
   };

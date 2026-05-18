@@ -15,8 +15,9 @@ import type {
 } from "./nexusProjectService.js";
 
 export interface PlexusProjectConfig {
+  id: string;
   name: string;
-  kanban: {
+  kanban?: {
     provider: "vibe-kanban";
     projectId: string;
   };
@@ -449,11 +450,16 @@ export function buildPlexusProjectConfig(
   reservedGatewayPorts: readonly number[] = [],
 ): PlexusProjectConfig {
   return {
+    id: projectId,
     name,
-    kanban: {
-      provider: "vibe-kanban",
-      projectId: vibeKanbanProjectId ?? projectId,
-    },
+    ...(vibeKanbanProjectId
+      ? {
+          kanban: {
+            provider: "vibe-kanban",
+            projectId: vibeKanbanProjectId,
+          },
+        }
+      : {}),
     images: [],
     imageExecution: clonePlexusImageExecutionPolicy(imageExecutionPolicy),
     runtime: {
@@ -571,19 +577,30 @@ export function normalizePlexusProjectConfig(
       `PLexus project gateway port ${gateway.port} is already reserved by another project`,
     );
   }
+  const configuredProjectId =
+    typeof existing.id === "string" && existing.id.trim().length > 0
+      ? existing.id
+      : projectId;
+  const configuredKanbanProjectId =
+    vibeKanbanProjectId ??
+    (typeof existingKanban.projectId === "string"
+      ? existingKanban.projectId
+      : null);
+  const { kanban: _kanban, ...existingWithoutKanban } = existing;
 
   return {
-    ...existing,
+    ...existingWithoutKanban,
+    id: configuredProjectId,
     name: typeof existing.name === "string" ? existing.name : projectName,
-    kanban: {
-      ...existingKanban,
-      provider: "vibe-kanban",
-      projectId:
-        vibeKanbanProjectId ??
-        (typeof existingKanban.projectId === "string"
-          ? existingKanban.projectId
-          : projectId),
-    },
+    ...(configuredKanbanProjectId
+      ? {
+          kanban: {
+            ...existingKanban,
+            provider: "vibe-kanban",
+            projectId: configuredKanbanProjectId,
+          },
+        }
+      : {}),
     images: Array.isArray(existing.images) ? existing.images : [],
     imageExecution:
       existing.imageExecution === undefined

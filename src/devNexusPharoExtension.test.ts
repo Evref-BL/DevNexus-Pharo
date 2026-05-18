@@ -83,6 +83,7 @@ describe("DevNexus-Pharo extension", () => {
     );
 
     expect(JSON.parse(fs.readFileSync(files.plexusProjectConfigPath, "utf8"))).toEqual({
+      id: "pharo-project",
       name: "Pharo Project",
       kanban: {
         provider: "vibe-kanban",
@@ -108,6 +109,7 @@ describe("DevNexus-Pharo extension", () => {
       `Inspect the source checkout at ${sourceRoot}.`,
     );
     expect(files.plexusProjectConfig).toEqual({
+      id: "pharo-project",
       name: "Pharo Project",
       kanban: {
         provider: "vibe-kanban",
