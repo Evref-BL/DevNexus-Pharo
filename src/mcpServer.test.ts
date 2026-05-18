@@ -26,7 +26,6 @@ import {
 import type { GitCommandResult, GitRunner } from "./nexusProjectService.js";
 
 const tempDirs: string[] = [];
-const expectedGenericSkillCount = defaultCoreSkillPack.length;
 const expectedDevNexusPharoSkillCount =
   defaultCoreSkillPack.length + devNexusPharoSkillPack.length;
 const removedGenericDevNexusToolNames = [
@@ -53,6 +52,14 @@ const removedWorktreeToolNames = [
   "worktree_status",
   "worktree_record_execution",
   "worktree_archive",
+];
+const removedUnqualifiedProjectToolNames = [
+  "project_create",
+  "project_import",
+  "project_list",
+  "project_status",
+  "project_skill_status",
+  "project_skill_refresh",
 ];
 
 function makeTempDir(prefix: string): string {
@@ -201,7 +208,7 @@ describe("DevNexus-Pharo MCP server tools", () => {
         id: 2,
       });
       expect(listPayload.result.tools.map((tool) => tool.name)).toContain(
-        "project_create",
+        "pharo_project_create",
       );
     } finally {
       await server.close();
@@ -236,17 +243,18 @@ describe("DevNexus-Pharo MCP server tools", () => {
     const tools = listDevNexusPharoMcpTools();
     const toolNames = tools.map((tool) => tool.name);
     expect(toolNames).toEqual([
-      "project_create",
-      "project_import",
-      "project_list",
-      "project_status",
-      "project_skill_status",
-      "project_skill_refresh",
+      "pharo_project_create",
+      "pharo_project_import",
+      "pharo_project_list",
+      "pharo_project_status",
+      "pharo_project_skill_status",
+      "pharo_project_skill_refresh",
     ]);
     for (const toolName of [
       ...removedGenericDevNexusToolNames,
       ...removedTrackerToolNames,
       ...removedWorktreeToolNames,
+      ...removedUnqualifiedProjectToolNames,
       "dev_nexus_pharo_work_item_create",
       "dev_nexus_pharo_codex_worktree_prepare",
       "codex_worktree_prepare",
@@ -260,6 +268,7 @@ describe("DevNexus-Pharo MCP server tools", () => {
       ...removedGenericDevNexusToolNames,
       ...removedTrackerToolNames,
       ...removedWorktreeToolNames,
+      ...removedUnqualifiedProjectToolNames,
     ]) {
       const result = await callDevNexusPharoMcpTool(toolName, {});
 
@@ -288,7 +297,7 @@ describe("DevNexus-Pharo MCP server tools", () => {
     initNexusHome({ homePath });
 
     const createResult = await callDevNexusPharoMcpTool(
-      "project_create",
+      "pharo_project_create",
       {
         homePath,
         name: "McpProject",
@@ -311,7 +320,7 @@ describe("DevNexus-Pharo MCP server tools", () => {
     });
 
     const listPayload = parseToolText(
-      await callDevNexusPharoMcpTool("project_list", { homePath }),
+      await callDevNexusPharoMcpTool("pharo_project_list", { homePath }),
     );
     expect(listPayload).toMatchObject({
       ok: true,
@@ -325,7 +334,7 @@ describe("DevNexus-Pharo MCP server tools", () => {
     });
 
     const statusPayload = parseToolText(
-      await callDevNexusPharoMcpTool("project_status", {
+      await callDevNexusPharoMcpTool("pharo_project_status", {
         homePath,
         project: "mcp-project",
       }),
@@ -339,96 +348,13 @@ describe("DevNexus-Pharo MCP server tools", () => {
     });
   });
 
-  it("creates a generic DevNexus project through MCP without DevNexus-Pharo files", async () => {
-    const homePath = makeTempDir("dev-nexus-pharo-home-");
-    const projectRoot = path.join(makeTempDir("dev-nexus-pharo-projects-"), "GenericMcp");
-    initNexusHome({ homePath });
-
-    const createResult = await callDevNexusPharoMcpTool(
-      "project_create",
-      {
-        homePath,
-        name: "GenericMcp",
-        root: projectRoot,
-        generic: true,
-        syncTracker: false,
-      },
-      { gitRunner: fakeGitRunner },
-    );
-    const createPayload = parseToolText(createResult);
-
-    expect(createResult.isError).toBeUndefined();
-    expect(createPayload).toMatchObject({
-      ok: true,
-      projectRoot,
-      projectConfig: {
-        id: "generic-mcp",
-        name: "GenericMcp",
-      },
-    });
-    expect(loadProjectConfig(projectRoot).extensions).toBeUndefined();
-    expect(fs.existsSync(path.join(projectRoot, plexusProjectConfigFileName))).toBe(
-      false,
-    );
-    expect(fs.existsSync(path.join(projectRoot, "AGENTS.md"))).toBe(false);
-    expect(
-      fs.existsSync(path.join(projectRoot, ".dev-nexus", "skills", "diagnose", "SKILL.md")),
-    ).toBe(true);
-    expect(
-      fs.existsSync(
-        path.join(projectRoot, ".dev-nexus", "skills", "dev-nexus-pharo-workflow", "SKILL.md"),
-      ),
-    ).toBe(false);
-
-    const statusPayload = parseToolText(
-      await callDevNexusPharoMcpTool("project_status", {
-        homePath,
-        project: "generic-mcp",
-      }),
-    );
-    expect(statusPayload).toMatchObject({
-      ok: true,
-      project: {
-        id: "generic-mcp",
-        plexusProjectConfigPath: null,
-        plexusProjectConfigExists: false,
-      },
-    });
-
-    const skillsPayload = parseToolText(
-      await callDevNexusPharoMcpTool("project_skill_status", {
-        homePath,
-        project: "generic-mcp",
-      }),
-    );
-    expect(skillsPayload).toMatchObject({
-      ok: true,
-      project: {
-        id: "generic-mcp",
-      },
-      skillStatus: {
-        summary: {
-          expected: expectedGenericSkillCount,
-          installed: expectedGenericSkillCount,
-          missing: 0,
-          stale: 0,
-        },
-      },
-    });
-    expect(
-      (skillsPayload as {
-        skillStatus: { skills: Array<{ id: string }> };
-      }).skillStatus.skills.map((skill) => skill.id),
-    ).not.toContain("dev-nexus-pharo-workflow");
-  });
-
   it("inspects and refreshes specialization skills through MCP", async () => {
     const homePath = makeTempDir("dev-nexus-pharo-home-");
     const projectRoot = path.join(makeTempDir("dev-nexus-pharo-projects-"), "SkillMcp");
     initNexusHome({ homePath });
 
     await callDevNexusPharoMcpTool(
-      "project_create",
+      "pharo_project_create",
       {
         homePath,
         name: "SkillMcp",
@@ -453,7 +379,7 @@ describe("DevNexus-Pharo MCP server tools", () => {
     );
 
     const statusPayload = parseToolText(
-      await callDevNexusPharoMcpTool("project_skill_status", {
+      await callDevNexusPharoMcpTool("pharo_project_skill_status", {
         homePath,
         project: "skill-mcp",
       }),
@@ -470,7 +396,7 @@ describe("DevNexus-Pharo MCP server tools", () => {
     });
 
     const refreshPayload = parseToolText(
-      await callDevNexusPharoMcpTool("project_skill_refresh", {
+      await callDevNexusPharoMcpTool("pharo_project_skill_refresh", {
         homePath,
         project: "skill-mcp",
       }),
@@ -515,7 +441,7 @@ describe("DevNexus-Pharo MCP server tools", () => {
     initNexusHome({ homePath });
 
     const createResult = await callDevNexusPharoMcpTool(
-      "project_create",
+      "pharo_project_create",
       {
         homePath,
         name: "pharo-launcher-mcp",
@@ -534,7 +460,7 @@ describe("DevNexus-Pharo MCP server tools", () => {
     });
 
     const statusPayload = parseToolText(
-      await callDevNexusPharoMcpTool("project_status", {
+      await callDevNexusPharoMcpTool("pharo_project_status", {
         homePath,
         project: "pharo-launcher-mcp",
       }),
@@ -557,7 +483,7 @@ describe("DevNexus-Pharo MCP server tools", () => {
     const projectRoot = path.join(homePath, "projects", "Imported");
 
     const result = await callDevNexusPharoMcpTool(
-      "project_import",
+      "pharo_project_import",
       {
         homePath,
         root: sourceRoot,
@@ -704,7 +630,7 @@ describe("DevNexus-Pharo MCP server tools", () => {
     });
 
     const result = await callDevNexusPharoMcpTool(
-      "project_create",
+      "pharo_project_create",
       {
         homePath,
         name: "MyLibrary",
@@ -765,7 +691,7 @@ describe("DevNexus-Pharo MCP server tools", () => {
   });
 
   it("returns tool errors as MCP error results", async () => {
-    const result = await callDevNexusPharoMcpTool("project_status", {});
+    const result = await callDevNexusPharoMcpTool("pharo_project_status", {});
 
     expect(result.isError).toBe(true);
     expect(parseToolText(result)).toMatchObject({

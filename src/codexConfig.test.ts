@@ -730,9 +730,9 @@ describe("Codex config", () => {
 
   it("checks configured HTTP MCP endpoints and expected tool names", async () => {
     const pharo = await startFakeMcpServer([
-      "project_create",
-      "project_import",
-      "project_status",
+      "pharo_project_create",
+      "pharo_project_import",
+      "pharo_project_status",
     ]);
     const plexus = await startFakeMcpServer([
       "plexus_project_open",
@@ -766,9 +766,9 @@ describe("Codex config", () => {
 
   it("checks Pharo MCP facade config without launching the command", async () => {
     const pharo = await startFakeMcpServer([
-      "project_create",
-      "project_import",
-      "project_status",
+      "pharo_project_create",
+      "pharo_project_import",
+      "pharo_project_status",
     ]);
     const plexus = await startFakeMcpServer([
       "plexus_project_open",

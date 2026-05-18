@@ -388,20 +388,20 @@ The control project should make this server available to agents alongside the
 generic `dev_nexus` server. The DevNexus-Pharo MCP tools are:
 
 ```text
-project_create
-project_import
-project_list
-project_status
-project_skill_status
-project_skill_refresh
+pharo_project_create
+pharo_project_import
+pharo_project_list
+pharo_project_status
+pharo_project_skill_status
+pharo_project_skill_refresh
 ```
 
 The MCP surface belongs to DevNexus-Pharo rather than PLexus because these tools
 create and register repositories. PLexus remains responsible for opening,
 closing, and routing runtime targets inside an already-created project.
 Generic DevNexus MCP tools such as `work_item_*`, `automation_status`,
-`target_cycle_*`, and `target_report` belong to `dev_nexus` and are not exposed
-through `dev_nexus_pharo`.
+`target_cycle_*`, `target_report`, and generic `project_*` operations belong to
+`dev_nexus` and are not exposed through `dev_nexus_pharo`.
 
 ## Control Board Prompt Contract
 
@@ -414,7 +414,8 @@ When the user writes a task like:
 Create a new Pharo project named MyLibrary from https://github.com/me/MyLibrary.git
 ```
 
-the agent should call `dev_nexus_pharo_project_create` with:
+the agent should call `pharo_project_create` on the `dev_nexus_pharo` MCP
+server with:
 
 ```json
 {
@@ -471,9 +472,9 @@ The agent calls:
 }
 ```
 
-on `dev_nexus_pharo_project_create`. `remoteUrl` is the MCP-facing name for the Git
-source URL. MCP create/import calls create DevNexus-Pharo project metadata and
-do not expose generic tracker or Vibe sync wrappers.
+on `dev_nexus_pharo`. `remoteUrl` is the MCP-facing name for the Git source URL.
+MCP create/import calls create DevNexus-Pharo project metadata and do not expose
+generic project, tracker, or Vibe sync wrappers.
 
 On start, DevNexus-Pharo installs two MCP server entries into the selected Vibe
 Kanban executor:

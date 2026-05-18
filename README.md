@@ -371,18 +371,18 @@ dev-nexus-pharo mcp-stdio
 DevNexus-Pharo exposes these Pharo-project tools:
 
 ```text
-project_create
-project_import
-project_list
-project_status
-project_skill_status
-project_skill_refresh
+pharo_project_create
+pharo_project_import
+pharo_project_list
+pharo_project_status
+pharo_project_skill_status
+pharo_project_skill_refresh
 ```
 
 Generic DevNexus MCP tools are intentionally exposed only by `dev_nexus`.
-Use `dev_nexus` for `work_item_*`, `automation_status`, `target_cycle_*`, and
-`target_report`; calls to those names through `dev_nexus_pharo` are unknown
-tools.
+Use `dev_nexus` for generic `project_*`, `work_item_*`, `automation_status`,
+`target_cycle_*`, and `target_report` operations; calls to those names through
+`dev_nexus_pharo` are unknown tools.
 
 ## Configuration Notes
 

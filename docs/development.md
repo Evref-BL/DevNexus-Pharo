@@ -195,8 +195,8 @@ the agent-facing `gateway`. The gateway URLs come from the project-local PLexus
 runtime policy in `plexus.project.json`; legacy home-scoped `plexus`,
 `vibe_kanban`, and `pharo` entries are removed during regeneration.
 Shared roots also include the generic `dev_nexus` server. Use `dev_nexus`, not
-`dev_nexus_pharo`, for `work_item_*`, `automation_status`, `target_cycle_*`,
-and `target_report`.
+`dev_nexus_pharo`, for generic `project_*`, `work_item_*`,
+`automation_status`, `target_cycle_*`, and `target_report`.
 
 `codex doctor` validates managed config sections, endpoint health, MCP
 `initialize`, `tools/list`, and expected tool names. For project-local

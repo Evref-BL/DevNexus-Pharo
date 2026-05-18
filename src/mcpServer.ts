@@ -3,9 +3,7 @@ import http from "node:http";
 import process from "node:process";
 import { defaultNexusHomePath } from "./config.js";
 import {
-  createNexusProject,
   getNexusProjectStatus,
-  importNexusProject,
   listNexusProjects,
   type GitRunner,
 } from "./nexusProjectService.js";
@@ -69,7 +67,7 @@ export interface DevNexusPharoMcpToolContext {
 
 const tools: McpTool[] = [
   {
-    name: "project_create",
+    name: "pharo_project_create",
     description: "Create a DevNexus-Pharo project from scratch or by cloning a Git repository.",
     inputSchema: {
       type: "object",
@@ -80,14 +78,13 @@ const tools: McpTool[] = [
         remoteUrl: { type: "string" },
         from: { type: "string" },
         gitInit: { type: "boolean" },
-        generic: { type: "boolean" },
       },
       required: ["name"],
       additionalProperties: false,
     },
   },
   {
-    name: "project_import",
+    name: "pharo_project_import",
     description: "Import an existing local Git repository as a DevNexus-Pharo project without writing DevNexus-Pharo metadata into the source checkout.",
     inputSchema: {
       type: "object",
@@ -96,14 +93,13 @@ const tools: McpTool[] = [
         root: { type: "string" },
         projectRoot: { type: "string" },
         name: { type: "string" },
-        generic: { type: "boolean" },
       },
       required: ["root"],
       additionalProperties: false,
     },
   },
   {
-    name: "project_list",
+    name: "pharo_project_list",
     description: "List registered DevNexus-Pharo projects.",
     inputSchema: {
       type: "object",
@@ -114,7 +110,7 @@ const tools: McpTool[] = [
     },
   },
   {
-    name: "project_status",
+    name: "pharo_project_status",
     description: "Show one DevNexus-Pharo project by registered id or filesystem path.",
     inputSchema: {
       type: "object",
@@ -127,7 +123,7 @@ const tools: McpTool[] = [
     },
   },
   {
-    name: "project_skill_status",
+    name: "pharo_project_skill_status",
     description: "Inspect installed DevNexus support skills for a DevNexus-Pharo project.",
     inputSchema: {
       type: "object",
@@ -140,7 +136,7 @@ const tools: McpTool[] = [
     },
   },
   {
-    name: "project_skill_refresh",
+    name: "pharo_project_skill_refresh",
     description: "Refresh selected DevNexus support skills for a DevNexus-Pharo project.",
     inputSchema: {
       type: "object",
@@ -253,22 +249,8 @@ export async function callDevNexusPharoMcpTool(
   try {
     const args = argsValue === undefined ? {} : asRecord(argsValue, "arguments");
     switch (name) {
-      case "project_create": {
+      case "pharo_project_create": {
         const homePath = homePathFromArgs(args);
-        if (optionalBoolean(args, "generic", "arguments")) {
-          return toolResult({
-            ok: true,
-            ...createNexusProject({
-              homePath,
-              name: requiredString(args, "name", "arguments"),
-              root: optionalString(args, "root", "arguments"),
-              from: remoteUrlFromCreateArgs(args),
-              gitInit: optionalBoolean(args, "gitInit", "arguments"),
-              gitRunner: context.gitRunner,
-            }),
-          });
-        }
-
         const created = createDevNexusPharoProject({
           homePath,
           name: requiredString(args, "name", "arguments"),
@@ -283,21 +265,8 @@ export async function callDevNexusPharoMcpTool(
           ...created,
         });
       }
-      case "project_import": {
+      case "pharo_project_import": {
         const homePath = homePathFromArgs(args);
-        if (optionalBoolean(args, "generic", "arguments")) {
-          return toolResult({
-            ok: true,
-            ...importNexusProject({
-              homePath,
-              root: requiredString(args, "root", "arguments"),
-              projectRoot: optionalString(args, "projectRoot", "arguments"),
-              name: optionalString(args, "name", "arguments"),
-              gitRunner: context.gitRunner,
-            }),
-          });
-        }
-
         const imported = importDevNexusPharoProject({
           homePath,
           root: requiredString(args, "root", "arguments"),
@@ -311,14 +280,14 @@ export async function callDevNexusPharoMcpTool(
           ...imported,
         });
       }
-      case "project_list":
+      case "pharo_project_list":
         return toolResult({
           ok: true,
           ...listNexusProjects({
             homePath: homePathFromArgs(args),
           }),
         });
-      case "project_status":
+      case "pharo_project_status":
         return toolResult({
           ok: true,
           ...getNexusProjectStatus({
@@ -326,7 +295,7 @@ export async function callDevNexusPharoMcpTool(
             project: requiredString(args, "project", "arguments"),
           }),
         });
-      case "project_skill_status":
+      case "pharo_project_skill_status":
         return toolResult({
           ok: true,
           ...getProjectSkillStatus({
@@ -334,7 +303,7 @@ export async function callDevNexusPharoMcpTool(
             project: requiredString(args, "project", "arguments"),
           }),
         });
-      case "project_skill_refresh":
+      case "pharo_project_skill_refresh":
         return toolResult({
           ok: true,
           ...refreshProjectSkills({
