@@ -60,10 +60,6 @@ dev-nexus project tracker configure MyProject --provider local --store-path .dev
 dev-nexus project tracker link MyProject --tracker-project-id <id>
 ```
 
-`dev-nexus-pharo project configure-tracker`, `link-tracker`, and
-`sync-tracker` remain only as legacy compatibility wrappers for older
-DevNexus-Pharo homes and Vibe Kanban board/repo registration.
-
 Project skill refresh materializes generic DevNexus skills, DevNexus-Pharo
 workflow/runtime-boundary skills, and copied MCP-Pharo domain skills:
 `pharo-ci-repro`, `pharo-image-git-handoff`, `pharo-project-load`, and
@@ -261,10 +257,10 @@ startup sets `DOCKER_BUILDKIT=1` and `COMPOSE_DOCKER_CLI_BUILD=1`.
 - stops the service by persisted pid
 - optionally checks HTTP health on the configured PLexus MCP port
 
-Prepared Codex worktrees depend on this gateway for direct Pharo MCP access.
-When a Pharo code task lacks the `pharo` MCP surface, agents should report the
-missing route/configuration as a blocker instead of editing Pharo code through
-files.
+Codex workspaces prepared through DevNexus core depend on this gateway for direct
+Pharo MCP access. When a Pharo code task lacks the `pharo` MCP surface, agents
+should report the missing route/configuration as a blocker instead of editing
+Pharo code through files.
 
 ## Vibe Kanban Backend Service
 

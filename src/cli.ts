@@ -12,26 +12,6 @@ import {
   type InitCodexWorkspaceResult,
 } from "./codexConfig.js";
 import {
-  buildCodexWorktreeGuide,
-  type CodexWorktreeGuideResult,
-} from "./codexWorktreeGuide.js";
-import {
-  archiveCodexWorktree,
-  getCodexWorktreeStatus,
-  listCodexWorktrees,
-  prepareCodexWorktree,
-  recordCodexWorktreeExecution,
-  type ArchiveCodexWorktreeResult,
-  type CodexWorktreePublicationDecisionType,
-  type CodexWorktreeState,
-  type CodexWorktreeVerificationStatus,
-  type GetCodexWorktreeStatusResult,
-  type ListCodexWorktreesResult,
-  type PrepareCodexWorktreeResult,
-  type RecordCodexWorktreeExecutionResult,
-} from "./codexWorktreeService.js";
-import { commentCodexWorktreeHandoff } from "./codexWorktreeTrackerHandoff.js";
-import {
   createDefaultHomeConfig,
   defaultNexusHomePath,
   initNexusHome,
@@ -58,7 +38,6 @@ import {
   type ImportNexusProjectResult,
   type ListNexusProjectsResult,
   type NexusProjectStatus,
-  type GitRunner,
 } from "./nexusProjectService.js";
 import {
   createDevNexusPharoProject,
@@ -72,7 +51,6 @@ import {
   type ProjectSkillRefreshResult,
   type ProjectSkillStatusResult,
 } from "./nexusProjectSkillService.js";
-import type { WorkComment } from "dev-nexus";
 import {
   runDevNexusPharoMcpServer,
   runDevNexusPharoMcpStdioServer,
@@ -101,12 +79,6 @@ export function usage(): string {
     "  dev-nexus-pharo mcp-stdio",
     "  dev-nexus-pharo codex init <workspace> [options]",
     "  dev-nexus-pharo codex doctor <workspace> [options]",
-    "  dev-nexus-pharo codex worktree guide [options]",
-    "  dev-nexus-pharo codex worktree list [options]",
-    "  dev-nexus-pharo codex worktree status <id> [options]",
-    "  dev-nexus-pharo codex worktree prepare <project> [options]",
-    "  dev-nexus-pharo codex worktree record <id> [options]",
-    "  dev-nexus-pharo codex worktree archive <id> [options]",
     "  dev-nexus-pharo project create <name> [--from <git-url> | --git-init] [--generic] [options]",
     "  dev-nexus-pharo project import <path> [--name <name>] [--generic] [options]",
     "  dev-nexus-pharo project skills status <id-or-path> [options]",
@@ -160,56 +132,6 @@ export function usage(): string {
     "Options for codex doctor:",
     "  --home <path>",
     "  --timeout-ms <ms>",
-    "  --json",
-    "",
-    "Options for codex worktree guide:",
-    "  --home <path>",
-    "  --id <worktree-id>",
-    "  --project <id-or-path>",
-    "  --work-item-id <id>",
-    "  --branch <name>",
-    "  --comment-work-item",
-    "  --remove-worktree",
-    "  --publication-decision <not_decided|local_only|direct_integration|review_handoff|blocked>",
-    "  --json",
-    "",
-    "Options for codex worktree list:",
-    "  --home <path>",
-    "  --project <id-or-path>",
-    "  --state <active|archived>",
-    "  --json",
-    "",
-    "Options for codex worktree status:",
-    "  --home <path>",
-    "  --json",
-    "",
-    "Options for codex worktree prepare:",
-    "  --home <path>",
-    "  --component-id <id>",
-    "  --branch <name>",
-    "  --worktree-name <name>",
-    "  --base-ref <ref>",
-    "  --work-item-id <id>",
-    "  --comment-work-item",
-    "  --json",
-    "",
-    "Options for codex worktree record:",
-    "  --home <path>",
-    "  --commit-id <sha>",
-    "  --verification-command <command>",
-    "  --verification-status <passed|failed|not_run>",
-    "  --verification-summary <text>",
-    "  --publication-decision <not_decided|local_only|direct_integration|review_handoff|blocked>",
-    "  --target-branch <branch>",
-    "  --remote <name>",
-    "  --pr-url <url>",
-    "  --reason <text>",
-    "  --json",
-    "",
-    "Options for codex worktree archive:",
-    "  --home <path>",
-    "  --remove-worktree",
-    "  --comment-work-item",
     "  --json",
     "",
     "Options for project create:",
@@ -518,89 +440,12 @@ interface ParsedCodexWorkspaceCommand {
   timeoutMs?: number;
 }
 
-interface ParsedCodexWorktreePrepareCommand {
-  command: "worktree_prepare";
-  project: string;
-  homePath: string;
-  componentId?: string;
-  branchName?: string;
-  worktreeName?: string;
-  baseRef?: string;
-  workItemId?: string;
-  commentWorkItem?: boolean;
-  json?: boolean;
-}
-
-interface ParsedCodexWorktreeArchiveCommand {
-  command: "worktree_archive";
-  id: string;
-  homePath: string;
-  removeWorktree?: boolean;
-  commentWorkItem?: boolean;
-  json?: boolean;
-}
-
-interface ParsedCodexWorktreeListCommand {
-  command: "worktree_list";
-  homePath: string;
-  project?: string;
-  state?: CodexWorktreeState;
-  json?: boolean;
-}
-
-interface ParsedCodexWorktreeStatusCommand {
-  command: "worktree_status";
-  id: string;
-  homePath: string;
-  json?: boolean;
-}
-
-interface ParsedCodexWorktreeRecordCommand {
-  command: "worktree_record";
-  id: string;
-  homePath: string;
-  commitIds: string[];
-  verificationCommand?: string;
-  verificationStatus?: CodexWorktreeVerificationStatus;
-  verificationSummary?: string;
-  publicationDecisionType?: CodexWorktreePublicationDecisionType;
-  targetBranch?: string;
-  remote?: string;
-  prUrl?: string;
-  reason?: string;
-  json?: boolean;
-}
-
-interface ParsedCodexWorktreeGuideCommand {
-  command: "worktree_guide";
-  homePath: string;
-  id?: string;
-  project?: string;
-  workItemId?: string;
-  branchName?: string;
-  commentWorkItem?: boolean;
-  removeWorktree?: boolean;
-  publicationDecision?: CodexWorktreePublicationDecisionType;
-  json?: boolean;
-}
-
-type ParsedCodexCommand =
-  | ParsedCodexWorkspaceCommand
-  | ParsedCodexWorktreePrepareCommand
-  | ParsedCodexWorktreeArchiveCommand
-  | ParsedCodexWorktreeListCommand
-  | ParsedCodexWorktreeStatusCommand
-  | ParsedCodexWorktreeRecordCommand
-  | ParsedCodexWorktreeGuideCommand;
+type ParsedCodexCommand = ParsedCodexWorkspaceCommand;
 
 function parseCodexCommand(argv: string[]): ParsedCodexCommand {
   const [, command, workspacePath, ...rest] = argv;
-  if (command === "worktree") {
-    return parseCodexWorktreeCommand(argv);
-  }
-
   if (command !== "init" && command !== "doctor") {
-    throw new Error("codex requires init, doctor, or worktree");
+    throw new Error("codex requires init or doctor");
   }
 
   if (!workspacePath || workspacePath.startsWith("--")) {
@@ -650,303 +495,6 @@ function parseCodexCommand(argv: string[]): ParsedCodexCommand {
   return parsed as ParsedCodexCommand;
 }
 
-function parseCodexWorktreeCommand(argv: string[]): ParsedCodexCommand {
-  const [, , action] = argv;
-  if (
-    action !== "prepare" &&
-    action !== "archive" &&
-    action !== "list" &&
-    action !== "status" &&
-    action !== "record" &&
-    action !== "guide"
-  ) {
-    throw new Error("codex worktree requires guide, list, status, prepare, record, or archive");
-  }
-
-  const remaining = argv.slice(3);
-  const takesPositional = action !== "list" && action !== "guide";
-  const target = takesPositional ? remaining[0] : undefined;
-  const rest = takesPositional ? remaining.slice(1) : remaining;
-  if (!takesPositional && remaining[0] && !remaining[0].startsWith("--")) {
-    throw new Error(`codex worktree ${action} does not accept a positional argument`);
-  }
-  if (takesPositional && (!target || target.startsWith("--"))) {
-    throw new Error(`codex worktree ${action} requires ${action === "prepare" ? "a project" : "an id"}`);
-  }
-  const targetValue = target ?? "";
-
-  const parsed:
-    | Partial<ParsedCodexWorktreePrepareCommand>
-    | Partial<ParsedCodexWorktreeArchiveCommand>
-    | Partial<ParsedCodexWorktreeListCommand>
-    | Partial<ParsedCodexWorktreeStatusCommand>
-    | Partial<ParsedCodexWorktreeRecordCommand>
-    | Partial<ParsedCodexWorktreeGuideCommand> =
-    action === "prepare"
-      ? {
-          command: "worktree_prepare",
-          project: targetValue,
-          homePath: defaultHomePath(),
-        }
-      : action === "archive"
-        ? {
-            command: "worktree_archive",
-            id: targetValue,
-            homePath: defaultHomePath(),
-          }
-        : action === "status"
-          ? {
-              command: "worktree_status",
-              id: targetValue,
-              homePath: defaultHomePath(),
-            }
-          : action === "record"
-            ? {
-                command: "worktree_record",
-                id: targetValue,
-                homePath: defaultHomePath(),
-                commitIds: [],
-              }
-            : {
-                command: action === "guide" ? "worktree_guide" : "worktree_list",
-                homePath: defaultHomePath(),
-              };
-
-  for (let index = 0; index < rest.length; index += 1) {
-    const arg = rest[index];
-    const next = (): string => {
-      index += 1;
-      if (index >= rest.length) {
-        throw new Error(`${arg} requires a value`);
-      }
-
-      return rest[index];
-    };
-
-    switch (arg) {
-      case "--home":
-        parsed.homePath = next();
-        break;
-      case "--project":
-        if (action !== "list" && action !== "guide") {
-          throw new Error("--project is only supported for codex worktree list or guide");
-        }
-        (
-          parsed as
-            | Partial<ParsedCodexWorktreeListCommand>
-            | Partial<ParsedCodexWorktreeGuideCommand>
-        ).project = next();
-        break;
-      case "--id":
-        if (action !== "guide") {
-          throw new Error("--id is only supported for codex worktree guide");
-        }
-        (parsed as Partial<ParsedCodexWorktreeGuideCommand>).id = next();
-        break;
-      case "--state":
-        if (action !== "list") {
-          throw new Error("--state is only supported for codex worktree list");
-        }
-        (parsed as Partial<ParsedCodexWorktreeListCommand>).state =
-          parseCodexWorktreeState(next(), arg);
-        break;
-      case "--branch":
-        if (action !== "prepare" && action !== "guide") {
-          throw new Error("--branch is only supported for codex worktree prepare or guide");
-        }
-        (
-          parsed as
-            | Partial<ParsedCodexWorktreePrepareCommand>
-            | Partial<ParsedCodexWorktreeGuideCommand>
-        ).branchName = next();
-        break;
-      case "--component-id":
-        if (action !== "prepare") {
-          throw new Error("--component-id is only supported for codex worktree prepare");
-        }
-        (parsed as Partial<ParsedCodexWorktreePrepareCommand>).componentId = next();
-        break;
-      case "--worktree-name":
-        if (action !== "prepare") {
-          throw new Error("--worktree-name is only supported for codex worktree prepare");
-        }
-        (parsed as Partial<ParsedCodexWorktreePrepareCommand>).worktreeName = next();
-        break;
-      case "--base-ref":
-        if (action !== "prepare") {
-          throw new Error("--base-ref is only supported for codex worktree prepare");
-        }
-        (parsed as Partial<ParsedCodexWorktreePrepareCommand>).baseRef = next();
-        break;
-      case "--work-item-id":
-        if (action !== "prepare" && action !== "guide") {
-          throw new Error("--work-item-id is only supported for codex worktree prepare or guide");
-        }
-        (
-          parsed as
-            | Partial<ParsedCodexWorktreePrepareCommand>
-            | Partial<ParsedCodexWorktreeGuideCommand>
-        ).workItemId = next();
-        break;
-      case "--comment-work-item":
-        if (action !== "prepare" && action !== "archive" && action !== "guide") {
-          throw new Error("--comment-work-item is only supported for codex worktree prepare, archive, or guide");
-        }
-        (
-          parsed as
-            | Partial<ParsedCodexWorktreePrepareCommand>
-            | Partial<ParsedCodexWorktreeArchiveCommand>
-            | Partial<ParsedCodexWorktreeGuideCommand>
-        ).commentWorkItem = true;
-        break;
-      case "--commit-id":
-        if (action !== "record") {
-          throw new Error("--commit-id is only supported for codex worktree record");
-        }
-        (parsed as Partial<ParsedCodexWorktreeRecordCommand>).commitIds?.push(next());
-        break;
-      case "--verification-command":
-        if (action !== "record") {
-          throw new Error("--verification-command is only supported for codex worktree record");
-        }
-        (parsed as Partial<ParsedCodexWorktreeRecordCommand>).verificationCommand = next();
-        break;
-      case "--verification-status":
-        if (action !== "record") {
-          throw new Error("--verification-status is only supported for codex worktree record");
-        }
-        (parsed as Partial<ParsedCodexWorktreeRecordCommand>).verificationStatus =
-          parseCodexWorktreeVerificationStatus(next(), arg);
-        break;
-      case "--verification-summary":
-        if (action !== "record") {
-          throw new Error("--verification-summary is only supported for codex worktree record");
-        }
-        (parsed as Partial<ParsedCodexWorktreeRecordCommand>).verificationSummary = next();
-        break;
-      case "--publication-decision":
-        if (action !== "record" && action !== "guide") {
-          throw new Error("--publication-decision is only supported for codex worktree record or guide");
-        }
-        if (action === "record") {
-          (parsed as Partial<ParsedCodexWorktreeRecordCommand>).publicationDecisionType =
-            parseCodexWorktreePublicationDecisionType(next(), arg);
-        } else {
-          (parsed as Partial<ParsedCodexWorktreeGuideCommand>).publicationDecision =
-            parseCodexWorktreePublicationDecisionType(next(), arg);
-        }
-        break;
-      case "--target-branch":
-        if (action !== "record") {
-          throw new Error("--target-branch is only supported for codex worktree record");
-        }
-        (parsed as Partial<ParsedCodexWorktreeRecordCommand>).targetBranch = next();
-        break;
-      case "--remote":
-        if (action !== "record") {
-          throw new Error("--remote is only supported for codex worktree record");
-        }
-        (parsed as Partial<ParsedCodexWorktreeRecordCommand>).remote = next();
-        break;
-      case "--pr-url":
-        if (action !== "record") {
-          throw new Error("--pr-url is only supported for codex worktree record");
-        }
-        (parsed as Partial<ParsedCodexWorktreeRecordCommand>).prUrl = next();
-        break;
-      case "--reason":
-        if (action !== "record") {
-          throw new Error("--reason is only supported for codex worktree record");
-        }
-        (parsed as Partial<ParsedCodexWorktreeRecordCommand>).reason = next();
-        break;
-      case "--remove-worktree":
-        if (action !== "archive" && action !== "guide") {
-          throw new Error("--remove-worktree is only supported for codex worktree archive or guide");
-        }
-        (
-          parsed as
-            | Partial<ParsedCodexWorktreeArchiveCommand>
-            | Partial<ParsedCodexWorktreeGuideCommand>
-        ).removeWorktree = true;
-        break;
-      case "--json":
-        parsed.json = true;
-        break;
-      default:
-        throw new Error(`Unknown codex worktree ${action} option: ${arg}`);
-    }
-  }
-
-  if (action === "record") {
-    validateParsedCodexWorktreeRecord(parsed as ParsedCodexWorktreeRecordCommand);
-  }
-
-  return parsed as ParsedCodexCommand;
-}
-
-function parseCodexWorktreeState(
-  value: string,
-  optionName: string,
-): CodexWorktreeState {
-  if (value === "active" || value === "archived") {
-    return value;
-  }
-
-  throw new Error(`${optionName} must be active or archived`);
-}
-
-function parseCodexWorktreeVerificationStatus(
-  value: string,
-  optionName: string,
-): CodexWorktreeVerificationStatus {
-  if (value === "passed" || value === "failed" || value === "not_run") {
-    return value;
-  }
-
-  throw new Error(`${optionName} must be passed, failed, or not_run`);
-}
-
-function parseCodexWorktreePublicationDecisionType(
-  value: string,
-  optionName: string,
-): CodexWorktreePublicationDecisionType {
-  if (
-    value === "not_decided" ||
-    value === "local_only" ||
-    value === "direct_integration" ||
-    value === "review_handoff" ||
-    value === "blocked"
-  ) {
-    return value;
-  }
-
-  throw new Error(
-    `${optionName} must be not_decided, local_only, direct_integration, review_handoff, or blocked`,
-  );
-}
-
-function validateParsedCodexWorktreeRecord(
-  parsed: ParsedCodexWorktreeRecordCommand,
-): void {
-  if (
-    (parsed.verificationStatus || parsed.verificationSummary) &&
-    !parsed.verificationCommand
-  ) {
-    throw new Error(
-      "--verification-status and --verification-summary require --verification-command",
-    );
-  }
-  if (
-    (parsed.targetBranch || parsed.remote || parsed.prUrl || parsed.reason) &&
-    !parsed.publicationDecisionType
-  ) {
-    throw new Error(
-      "publication detail options require --publication-decision",
-    );
-  }
-}
-
 function printCodexInitResult(
   result: InitCodexWorkspaceResult,
   json: boolean | undefined,
@@ -986,141 +534,10 @@ function printCodexDoctorResult(
   }
 }
 
-function printCodexWorktreePrepareResult(
-  result: PrepareCodexWorktreeResult,
-  json: boolean | undefined,
-  trackerComment?: WorkComment,
-): void {
-  const payload = { ok: true, ...result, ...(trackerComment ? { trackerComment } : {}) };
-  if (json) {
-    console.log(JSON.stringify(payload, null, 2));
-    return;
-  }
-
-  console.log("Codex worktree prepared.");
-  console.log(`  Project: ${result.metadataRecord.projectId}`);
-  console.log(`  Worktree: ${result.worktreePath}`);
-  console.log(`  Branch: ${result.branchName}`);
-  console.log(`  Metadata: ${result.metadataPath}`);
-  if (trackerComment) {
-    console.log(`  Tracker comment: ${trackerComment.id}`);
-  }
-}
-
-function printCodexWorktreeArchiveResult(
-  result: ArchiveCodexWorktreeResult,
-  json: boolean | undefined,
-  trackerComment?: WorkComment,
-): void {
-  const payload = { ok: true, ...result, ...(trackerComment ? { trackerComment } : {}) };
-  if (json) {
-    console.log(JSON.stringify(payload, null, 2));
-    return;
-  }
-
-  console.log("Codex worktree archived.");
-  console.log(`  Record: ${result.metadataRecord.id}`);
-  console.log(`  Worktree: ${result.metadataRecord.worktreePath}`);
-  console.log(`  Removed worktree: ${result.removedWorktree ? "yes" : "no"}`);
-  console.log(`  Metadata: ${result.metadataPath}`);
-  if (trackerComment) {
-    console.log(`  Tracker comment: ${trackerComment.id}`);
-  }
-}
-
-function printCodexWorktreeListResult(
-  result: ListCodexWorktreesResult,
-  json: boolean | undefined,
-): void {
-  const payload = { ok: true, ...result };
-  if (json) {
-    console.log(JSON.stringify(payload, null, 2));
-    return;
-  }
-
-  console.log(`Codex worktrees: ${result.worktrees.length}`);
-  console.log(`  Metadata: ${result.metadataPath}`);
-  for (const worktree of result.worktrees) {
-    const record = worktree.metadataRecord;
-    console.log(
-      `  ${record.id} [${record.state}] ${record.branchName} -> ${record.worktreePath} (${worktree.worktreeExists ? "present" : "missing"})`,
-    );
-  }
-}
-
-function printCodexWorktreeStatusResult(
-  result: GetCodexWorktreeStatusResult,
-  json: boolean | undefined,
-): void {
-  const payload = { ok: true, ...result };
-  if (json) {
-    console.log(JSON.stringify(payload, null, 2));
-    return;
-  }
-
-  const record = result.worktree.metadataRecord;
-  console.log("Codex worktree status.");
-  console.log(`  Record: ${record.id}`);
-  console.log(`  Project: ${record.projectId}`);
-  console.log(`  State: ${record.state}`);
-  console.log(`  Branch: ${record.branchName}`);
-  console.log(`  Worktree: ${record.worktreePath}`);
-  console.log(`  Worktree exists: ${result.worktree.worktreeExists ? "yes" : "no"}`);
-  console.log(`  Source exists: ${result.worktree.sourceRootExists ? "yes" : "no"}`);
-  console.log(`  Metadata: ${result.metadataPath}`);
-}
-
-function printCodexWorktreeRecordResult(
-  result: RecordCodexWorktreeExecutionResult,
-  json: boolean | undefined,
-): void {
-  const payload = { ok: true, ...result };
-  if (json) {
-    console.log(JSON.stringify(payload, null, 2));
-    return;
-  }
-
-  const execution = result.metadataRecord.execution;
-  console.log("Codex worktree execution recorded.");
-  console.log(`  Record: ${result.metadataRecord.id}`);
-  console.log(`  Commits: ${execution.commitIds.length}`);
-  console.log(`  Verification records: ${execution.verification.length}`);
-  console.log(
-    `  Publication decision: ${execution.publicationDecision?.type ?? "none"}`,
-  );
-  console.log(`  Metadata: ${result.metadataPath}`);
-}
-
-function printCodexWorktreeGuideResult(
-  result: CodexWorktreeGuideResult,
-  json: boolean | undefined,
-): void {
-  const payload = { ok: true, ...result };
-  if (json) {
-    console.log(JSON.stringify(payload, null, 2));
-    return;
-  }
-
-  console.log("Direct Codex worktree workflow.");
-  for (const [index, step] of result.steps.entries()) {
-    console.log(`${index + 1}. ${step.title}`);
-    if (step.command) {
-      console.log(`   ${step.command}`);
-    }
-    console.log(`   ${step.detail}`);
-  }
-  for (const note of result.notes) {
-    console.log(`Note: ${note}`);
-  }
-}
-
-export interface CliContext {
-  gitRunner?: GitRunner;
-}
+export interface CliContext {}
 
 async function handleCodexCommand(
   argv: string[],
-  context: CliContext = {},
 ): Promise<number> {
   const parsed = parseCodexCommand(argv);
   if (parsed.command === "init") {
@@ -1133,109 +550,6 @@ async function handleCodexCommand(
     return 0;
   }
 
-  if (parsed.command === "worktree_guide") {
-    const result = buildCodexWorktreeGuide({
-      homePath: parsed.homePath,
-      id: parsed.id,
-      project: parsed.project,
-      workItemId: parsed.workItemId,
-      branchName: parsed.branchName,
-      commentWorkItem: parsed.commentWorkItem,
-      removeWorktree: parsed.removeWorktree,
-      publicationDecision: parsed.publicationDecision,
-    });
-    printCodexWorktreeGuideResult(result, parsed.json);
-    return 0;
-  }
-
-  if (parsed.command === "worktree_prepare") {
-    const result = prepareCodexWorktree({
-      homePath: parsed.homePath,
-      project: parsed.project,
-      componentId: parsed.componentId,
-      branchName: parsed.branchName,
-      worktreeName: parsed.worktreeName,
-      baseRef: parsed.baseRef,
-      workItem: parsed.workItemId ? { id: parsed.workItemId } : undefined,
-      gitRunner: context.gitRunner,
-    });
-    const trackerComment = parsed.commentWorkItem
-      ? await commentCodexWorktreeHandoff({
-          homePath: parsed.homePath,
-          metadataPath: result.metadataPath,
-          metadataRecord: result.metadataRecord,
-          event: "prepared",
-        })
-      : undefined;
-    printCodexWorktreePrepareResult(result, parsed.json, trackerComment);
-    return 0;
-  }
-
-  if (parsed.command === "worktree_archive") {
-    const result = archiveCodexWorktree({
-      homePath: parsed.homePath,
-      id: parsed.id,
-      removeWorktree: parsed.removeWorktree,
-      gitRunner: context.gitRunner,
-    });
-    const trackerComment = parsed.commentWorkItem
-      ? await commentCodexWorktreeHandoff({
-          homePath: parsed.homePath,
-          metadataPath: result.metadataPath,
-          metadataRecord: result.metadataRecord,
-          event: "archived",
-          removedWorktree: result.removedWorktree,
-        })
-      : undefined;
-    printCodexWorktreeArchiveResult(result, parsed.json, trackerComment);
-    return 0;
-  }
-
-  if (parsed.command === "worktree_list") {
-    const result = listCodexWorktrees({
-      homePath: parsed.homePath,
-      project: parsed.project,
-      state: parsed.state,
-    });
-    printCodexWorktreeListResult(result, parsed.json);
-    return 0;
-  }
-
-  if (parsed.command === "worktree_status") {
-    const result = getCodexWorktreeStatus({
-      homePath: parsed.homePath,
-      id: parsed.id,
-    });
-    printCodexWorktreeStatusResult(result, parsed.json);
-    return 0;
-  }
-
-  if (parsed.command === "worktree_record") {
-    const result = recordCodexWorktreeExecution({
-      homePath: parsed.homePath,
-      id: parsed.id,
-      commitIds: parsed.commitIds,
-      verification: parsed.verificationCommand
-        ? {
-            command: parsed.verificationCommand,
-            status: parsed.verificationStatus,
-            summary: parsed.verificationSummary,
-          }
-        : undefined,
-      publicationDecision: parsed.publicationDecisionType
-        ? {
-            type: parsed.publicationDecisionType,
-            targetBranch: parsed.targetBranch,
-            remote: parsed.remote,
-            prUrl: parsed.prUrl,
-            reason: parsed.reason,
-          }
-        : undefined,
-    });
-    printCodexWorktreeRecordResult(result, parsed.json);
-    return 0;
-  }
-
   const result = await doctorCodexWorkspace({
     workspacePath: parsed.workspacePath,
     homePath: parsed.homePath,
@@ -1245,7 +559,7 @@ async function handleCodexCommand(
   return result.ok ? 0 : 1;
 }
 
-export async function main(argv: string[], context: CliContext = {}): Promise<number> {
+export async function main(argv: string[], _context: CliContext = {}): Promise<number> {
   if (argv.length === 0 || argv.includes("--help") || argv.includes("-h")) {
     console.log(usage());
     return 0;
@@ -1280,7 +594,7 @@ export async function main(argv: string[], context: CliContext = {}): Promise<nu
   }
 
   if (argv[0] === "codex") {
-    return handleCodexCommand(argv, context);
+    return handleCodexCommand(argv);
   }
 
   if (argv[0] === "project") {

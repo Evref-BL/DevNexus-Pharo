@@ -12,8 +12,7 @@ DevNexus-Pharo owns:
 - the PLexus gateway startup
 - Codex/Vibe MCP configuration for DevNexus-Pharo, PLexus, and the projected Pharo
   MCP facade
-- Pharo-oriented project creation/import helpers, home registry integration, and
-  compatibility wrappers around older local Codex worktree metadata
+- Pharo-oriented project creation/import helpers and home registry integration
 - the DevNexus plugin declaration that contributes Pharo skills, scoped PLexus
   setup obligations, Pharo MCP projection, worker briefing fragments, and
   cleanup expectations for Pharo-capable agents
@@ -222,11 +221,6 @@ dev-nexus project tracker configure C:\dev\code\MyProject --provider gitlab --ho
 dev-nexus project tracker configure C:\dev\code\MyProject --provider jira --host example.atlassian.net --project-key FCD
 ```
 
-`dev-nexus-pharo project configure-tracker` remains as a legacy convenience
-wrapper for projects registered in a DevNexus-Pharo home. It delegates to
-DevNexus core and returns a deprecation notice. New automation and documentation
-should prefer the DevNexus command above.
-
 The GitHub provider uses the GitHub Issues REST API. It reads credentials in
 this order: explicit provider token from code, `GITHUB_TOKEN`, `GH_TOKEN`, then
 `git credential fill`. If Git Credential Manager is configured as Git's
@@ -315,17 +309,6 @@ When no transition id is configured for a status, DevNexus still records the
 neutral status with a `status:<name>` Jira label and skips the workflow
 transition.
 
-Existing local Vibe Kanban installations can still be used through legacy
-DevNexus-Pharo compatibility wrappers for board/repo registration:
-
-```powershell
-dev-nexus-pharo project create MyProject --git-init --tracker-project-id <id>
-dev-nexus-pharo project create MyProject --git-init --sync-tracker
-dev-nexus-pharo project import C:\dev\code\git\ExistingProject --name ExistingProject --sync-tracker
-dev-nexus-pharo project link-tracker my-project --tracker-project-id <id>
-dev-nexus-pharo project sync-tracker my-project
-```
-
 List and inspect projects:
 
 ```powershell
@@ -363,12 +346,12 @@ instead: `dev_nexus`, `dev_nexus_pharo`, `plexus_project`, `pharo_launcher`,
 older managed `plexus`, `vibe_kanban`, and `pharo` entries so fresh Codex
 sessions load the intended project/plugin tool surface.
 
-`worktree_prepare` creates component-scoped worktrees under
-`worktrees\<component-id>\...` and refreshes the worktree `.codex\config.toml`
-with the same projected PLexus gateway facade. Workers changing Pharo code should
-use the direct `gateway` MCP tools. If those tools are missing or unreachable,
-report the MCP infrastructure blocker and use read-only PLexus status or route
-discovery instead of editing Pharo code through files.
+Generic worktree preparation, status, execution handoff, and archival belong to
+DevNexus core. DevNexus-Pharo keeps the Pharo-specific Codex and PLexus gateway
+projection intact for prepared workspaces. Workers changing Pharo code should use
+the direct `gateway` MCP tools. If those tools are missing or unreachable, report
+the MCP infrastructure blocker and use read-only PLexus status or route discovery
+instead of editing Pharo code through files.
 
 ## MCP Server
 
@@ -385,36 +368,21 @@ Compatibility mode for clients without URL MCP support:
 dev-nexus-pharo mcp-stdio
 ```
 
-DevNexus-Pharo exposes these Pharo-project and worktree tools:
+DevNexus-Pharo exposes these Pharo-project tools:
 
 ```text
 project_create
 project_import
-project_configure_tracker
-project_link_tracker
-project_sync_tracker
 project_list
 project_status
 project_skill_status
 project_skill_refresh
-worktree_prepare
-worktree_guide
-worktree_list
-worktree_status
-worktree_record_execution
-worktree_archive
 ```
 
 Generic DevNexus MCP tools are intentionally exposed only by `dev_nexus`.
 Use `dev_nexus` for `work_item_*`, `automation_status`, `target_cycle_*`, and
 `target_report`; calls to those names through `dev_nexus_pharo` are unknown
 tools.
-
-`project_configure_tracker`, `project_link_tracker`, and
-`project_sync_tracker` are legacy compatibility wrappers. Generic tracker
-configuration and linking belong to DevNexus core; use
-`dev-nexus project tracker configure` and `dev-nexus project tracker link` for
-new automation.
 
 ## Configuration Notes
 

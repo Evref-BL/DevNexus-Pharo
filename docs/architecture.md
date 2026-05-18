@@ -390,19 +390,10 @@ generic `dev_nexus` server. The DevNexus-Pharo MCP tools are:
 ```text
 project_create
 project_import
-project_link_tracker
-project_configure_tracker
-project_sync_tracker
 project_list
 project_status
 project_skill_status
 project_skill_refresh
-worktree_prepare
-worktree_guide
-worktree_list
-worktree_status
-worktree_record_execution
-worktree_archive
 ```
 
 The MCP surface belongs to DevNexus-Pharo rather than PLexus because these tools
@@ -481,9 +472,8 @@ The agent calls:
 ```
 
 on `dev_nexus_pharo_project_create`. `remoteUrl` is the MCP-facing name for the Git
-source URL; `from` remains accepted as a compatibility alias. When no explicit
-`vibeKanbanProjectId` is supplied, MCP create/import calls sync Vibe Kanban by
-default: they register the local repo and ensure the project board exists.
+source URL. MCP create/import calls create DevNexus-Pharo project metadata and
+do not expose generic tracker or Vibe sync wrappers.
 
 On start, DevNexus-Pharo installs two MCP server entries into the selected Vibe
 Kanban executor:

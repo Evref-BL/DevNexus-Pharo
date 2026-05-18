@@ -342,7 +342,7 @@ describe("DevNexus-Pharo extension", () => {
     );
   });
 
-  it("contributes PLexus status and tracker linking only for DevNexus-Pharo projects", () => {
+  it("contributes PLexus status only for DevNexus-Pharo projects", () => {
     const projectRoot = path.join(makeTempDir("dev-nexus-pharo-project-"), "Project");
     const plexusPath = path.join(projectRoot, plexusProjectConfigFileName);
     const unmanagedConfig = projectConfig();
@@ -353,14 +353,6 @@ describe("DevNexus-Pharo extension", () => {
         projectConfig: unmanagedConfig,
       }),
     ).toBeUndefined();
-    expect(
-      devNexusPharoExtension.linkProjectTracker?.({
-        projectRoot,
-        projectConfig: unmanagedConfig,
-        trackerProjectId: "vk-ignored",
-      }),
-    ).toBeUndefined();
-
     const managedConfig = projectConfig({
       extensions: {
         [devNexusPharoProjectExtensionConfigKey]: {},
@@ -375,37 +367,8 @@ describe("DevNexus-Pharo extension", () => {
       plexusProjectConfigPath: plexusPath,
       plexusProjectConfigExists: false,
     });
-
-    const linked = devNexusPharoExtension.linkProjectTracker?.({
-      projectRoot,
-      projectConfig: managedConfig,
-      trackerProjectId: "vk-linked",
-    });
-
-    expect(linked).toEqual({
-      plexusProjectConfigPath: plexusPath,
-      plexusProjectConfig: {
-        name: "Pharo Project",
-        kanban: {
-          provider: "vibe-kanban",
-          projectId: "vk-linked",
-        },
-        images: [],
-        imageExecution: defaultPlexusImageExecutionPolicy,
-        runtime: {
-          gateway: {
-            mode: "project-local",
-            host: "127.0.0.1",
-            port: expect.any(Number),
-            agentMcpPath: "/mcp",
-            routeControlMcpPath: "/control-mcp",
-          },
-        },
-      },
-    });
-    expect(JSON.parse(fs.readFileSync(plexusPath, "utf8"))).toEqual(
-      linked?.plexusProjectConfig,
-    );
+    fs.mkdirSync(projectRoot, { recursive: true });
+    fs.writeFileSync(plexusPath, "{}", "utf8");
     expect(
       devNexusPharoExtension.projectStatus?.({
         projectRoot,

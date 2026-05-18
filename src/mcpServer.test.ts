@@ -2,11 +2,10 @@ import fs from "node:fs";
 import http from "node:http";
 import os from "node:os";
 import path from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   defaultCoreSkillPack,
   listMcpInputSchemaProviderIssues,
-  type NexusProjectComponentConfig,
 } from "dev-nexus";
 import {
   initNexusHome,
@@ -25,7 +24,6 @@ import {
   startDevNexusPharoMcpHttpServer,
 } from "./mcpServer.js";
 import type { GitCommandResult, GitRunner } from "./nexusProjectService.js";
-import { createWorkItemService } from "./workItemService.js";
 
 const tempDirs: string[] = [];
 const expectedGenericSkillCount = defaultCoreSkillPack.length;
@@ -43,28 +41,19 @@ const removedGenericDevNexusToolNames = [
   "work_item_comment",
   "work_item_set_status",
 ];
-
-function localComponent(
-  id: string,
-  role: NexusProjectComponentConfig["role"],
-  storePath: string,
-  relationships: NexusProjectComponentConfig["relationships"] = [],
-): NexusProjectComponentConfig {
-  return {
-    id,
-    name: id,
-    kind: "local",
-    role,
-    remoteUrl: null,
-    defaultBranch: null,
-    sourceRoot: ".",
-    workTracking: {
-      provider: "local",
-      storePath,
-    },
-    relationships,
-  };
-}
+const removedTrackerToolNames = [
+  "project_link_tracker",
+  "project_configure_tracker",
+  "project_sync_tracker",
+];
+const removedWorktreeToolNames = [
+  "worktree_prepare",
+  "worktree_guide",
+  "worktree_list",
+  "worktree_status",
+  "worktree_record_execution",
+  "worktree_archive",
+];
 
 function makeTempDir(prefix: string): string {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
@@ -110,14 +99,6 @@ function fakeGitRunner(args: readonly string[], cwd?: string): GitCommandResult 
   const argsArray = [...args];
   if (argsArray[0] === "clone") {
     fs.mkdirSync(argsArray[2], { recursive: true });
-  }
-
-  if (argsArray[0] === "worktree" && argsArray[1] === "add") {
-    fs.mkdirSync(argsArray[4], { recursive: true });
-  }
-
-  if (argsArray[0] === "worktree" && argsArray[1] === "remove") {
-    fs.rmSync(argsArray[2], { recursive: true, force: true });
   }
 
   if (
@@ -253,48 +234,33 @@ describe("DevNexus-Pharo MCP server tools", () => {
 
   it("lists project management tools", () => {
     const tools = listDevNexusPharoMcpTools();
-    expect(tools.map((tool) => tool.name)).toEqual([
+    const toolNames = tools.map((tool) => tool.name);
+    expect(toolNames).toEqual([
       "project_create",
       "project_import",
-      "project_link_tracker",
-      "project_configure_tracker",
-      "project_sync_tracker",
       "project_list",
       "project_status",
       "project_skill_status",
       "project_skill_refresh",
-      "worktree_prepare",
-      "worktree_guide",
-      "worktree_list",
-      "worktree_status",
-      "worktree_record_execution",
-      "worktree_archive",
     ]);
-    for (const toolName of removedGenericDevNexusToolNames) {
-      expect(tools.map((tool) => tool.name)).not.toContain(toolName);
-    }
-    expect(listDevNexusPharoMcpTools().map((tool) => tool.name)).not.toContain(
-      "dev_nexus_pharo_work_item_create",
-    );
-    expect(listDevNexusPharoMcpTools().map((tool) => tool.name)).not.toContain(
-      "dev_nexus_pharo_codex_worktree_prepare",
-    );
-    expect(listDevNexusPharoMcpTools().map((tool) => tool.name)).not.toContain(
-      "codex_worktree_prepare",
-    );
     for (const toolName of [
-      "project_link_tracker",
-      "project_configure_tracker",
-      "project_sync_tracker",
+      ...removedGenericDevNexusToolNames,
+      ...removedTrackerToolNames,
+      ...removedWorktreeToolNames,
+      "dev_nexus_pharo_work_item_create",
+      "dev_nexus_pharo_codex_worktree_prepare",
+      "codex_worktree_prepare",
     ]) {
-      const tool = tools.find((entry) => entry.name === toolName);
-      expect(tool?.description).toContain("Legacy compatibility wrapper");
-      expect(tool?.description).toContain("DevNexus core");
+      expect(toolNames).not.toContain(toolName);
     }
   });
 
-  it("rejects removed generic DevNexus MCP tools as unknown", async () => {
-    for (const toolName of removedGenericDevNexusToolNames) {
+  it("rejects removed generic, tracker, and worktree tools as unknown", async () => {
+    for (const toolName of [
+      ...removedGenericDevNexusToolNames,
+      ...removedTrackerToolNames,
+      ...removedWorktreeToolNames,
+    ]) {
       const result = await callDevNexusPharoMcpTool(toolName, {});
 
       expect(result.isError).toBe(true);
@@ -358,58 +324,6 @@ describe("DevNexus-Pharo MCP server tools", () => {
       ],
     });
 
-    const linkPayload = parseToolText(
-      await callDevNexusPharoMcpTool("project_link_tracker", {
-        homePath,
-        project: "mcp-project",
-        trackerProjectId: "vk-mcp",
-      }),
-    );
-    expect(linkPayload).toMatchObject({
-      ok: true,
-      vibeKanbanProjectId: "vk-mcp",
-      project: {
-        id: "mcp-project",
-        vibeKanbanProjectId: "vk-mcp",
-      },
-      deprecation: {
-        status: "deprecated",
-        command: "dev-nexus-pharo project link-tracker",
-      },
-    });
-
-    const configurePayload = parseToolText(
-      await callDevNexusPharoMcpTool("project_configure_tracker", {
-        homePath,
-        project: "mcp-project",
-        provider: "github",
-        repositoryOwner: "example",
-        repositoryName: "project",
-      }),
-    );
-    expect(configurePayload).toMatchObject({
-      ok: true,
-      workTracking: {
-        provider: "github",
-        repository: {
-          owner: "example",
-          name: "project",
-        },
-      },
-      project: {
-        id: "mcp-project",
-        workTracking: {
-          provider: "github",
-        },
-        vibeKanbanProjectId: "vk-mcp",
-      },
-      deprecation: {
-        status: "deprecated",
-        command: "dev-nexus-pharo project configure-tracker",
-        replacement: "dev-nexus project tracker configure",
-      },
-    });
-
     const statusPayload = parseToolText(
       await callDevNexusPharoMcpTool("project_status", {
         homePath,
@@ -421,10 +335,6 @@ describe("DevNexus-Pharo MCP server tools", () => {
       project: {
         id: "mcp-project",
         projectRoot,
-        workTracking: {
-          provider: "github",
-        },
-        vibeKanbanProjectId: "vk-mcp",
       },
     });
   });
@@ -596,94 +506,6 @@ describe("DevNexus-Pharo MCP server tools", () => {
     ).toBe(true);
   });
 
-  it("configures GitLab work tracking through neutral MCP tool calls", async () => {
-    const homePath = makeTempDir("dev-nexus-pharo-home-");
-    const projectRoot = path.join(makeTempDir("dev-nexus-pharo-projects-"), "GitLabMcp");
-    initNexusHome({ homePath });
-    await callDevNexusPharoMcpTool(
-      "project_create",
-      {
-        homePath,
-        name: "GitLabMcp",
-        root: projectRoot,
-        gitInit: true,
-        syncTracker: false,
-      },
-      { gitRunner: fakeGitRunner },
-    );
-
-    const configurePayload = parseToolText(
-      await callDevNexusPharoMcpTool("project_configure_tracker", {
-        homePath,
-        project: "git-lab-mcp",
-        provider: "gitlab",
-        host: "gitlab.enterprise.test",
-        repositoryId: "example/project",
-      }),
-    );
-
-    expect(configurePayload).toMatchObject({
-      ok: true,
-      workTracking: {
-        provider: "gitlab",
-        host: "gitlab.enterprise.test",
-        repository: {
-          id: "example/project",
-        },
-      },
-      project: {
-        id: "git-lab-mcp",
-        workTracking: {
-          provider: "gitlab",
-        },
-      },
-    });
-  });
-
-  it("configures Jira work tracking through neutral MCP tool calls", async () => {
-    const homePath = makeTempDir("dev-nexus-pharo-home-");
-    const projectRoot = path.join(makeTempDir("dev-nexus-pharo-projects-"), "JiraMcp");
-    initNexusHome({ homePath });
-    await callDevNexusPharoMcpTool(
-      "project_create",
-      {
-        homePath,
-        name: "JiraMcp",
-        root: projectRoot,
-        gitInit: true,
-        syncTracker: false,
-      },
-      { gitRunner: fakeGitRunner },
-    );
-
-    const configurePayload = parseToolText(
-      await callDevNexusPharoMcpTool("project_configure_tracker", {
-        homePath,
-        project: "jira-mcp",
-        provider: "jira",
-        host: "example.atlassian.net",
-        projectKey: "FCD",
-        issueType: "Bug",
-      }),
-    );
-
-    expect(configurePayload).toMatchObject({
-      ok: true,
-      workTracking: {
-        provider: "jira",
-        host: "example.atlassian.net",
-        projectKey: "FCD",
-        issueType: "Bug",
-      },
-      project: {
-        id: "jira-mcp",
-        workTracking: {
-          provider: "jira",
-        },
-      },
-    });
-  });
-
   it("resolves project status by managed config id before MCP path fallback", async () => {
     const homePath = makeTempDir("dev-nexus-pharo-home-");
     const projectRoot = path.join(
@@ -795,7 +617,7 @@ describe("DevNexus-Pharo MCP server tools", () => {
       };
     };
 
-    const fetchMock = async (input: string | URL | Request, init?: RequestInit) => {
+    const fetchMock = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
       const url = String(input);
       if (url === "http://127.0.0.1:3000/api/repos") {
         return new Response(
@@ -879,7 +701,7 @@ describe("DevNexus-Pharo MCP server tools", () => {
       }
 
       throw new Error(`Unexpected Vibe Kanban request: ${url}`);
-    };
+    });
 
     const result = await callDevNexusPharoMcpTool(
       "project_create",
@@ -906,24 +728,18 @@ describe("DevNexus-Pharo MCP server tools", () => {
           defaultBranch: "main",
           sourceRoot: "git",
         },
-        kanban: {
-          projectId: "board-my-library",
-        },
       },
       plexusProjectConfig: {
         name: "MyLibrary",
         kanban: {
           provider: "vibe-kanban",
-          projectId: "board-my-library",
+          projectId: "my-library",
         },
         images: [],
         imageExecution: defaultPlexusImageExecutionPolicy,
       },
-      trackerSync: {
-        vibeKanbanProjectId: "board-my-library",
-        vibeKanbanRepoId: "repo-my-library",
-      },
     });
+    expect(fetchMock).not.toHaveBeenCalled();
     expect(gitCalls[0]).toEqual(["init", projectRoot]);
     expect(gitCalls[1]).toEqual([
       "clone",
@@ -938,17 +754,12 @@ describe("DevNexus-Pharo MCP server tools", () => {
     expect(loadProjectConfig(projectRoot)).toMatchObject({
       id: "my-library",
       name: "MyLibrary",
-      kanban: {
-        projectId: "board-my-library",
-      },
     });
     expect(loadHomeConfig(homePath).projects).toEqual([
       {
         id: "my-library",
         name: "MyLibrary",
         projectRoot: projectRoot,
-        vibeKanbanProjectId: "board-my-library",
-        vibeKanbanRepoId: "repo-my-library",
       },
     ]);
   });
@@ -963,242 +774,4 @@ describe("DevNexus-Pharo MCP server tools", () => {
     });
   });
 
-  it("prepares and archives Codex worktrees through neutral MCP tool calls", async () => {
-    const homePath = makeTempDir("dev-nexus-pharo-home-");
-    const projectRoot = path.join(makeTempDir("dev-nexus-pharo-projects-"), "CodexMcp");
-    initNexusHome({ homePath });
-    const calls: Array<{ args: string[]; cwd?: string }> = [];
-    const gitRunner: GitRunner = (args: readonly string[], cwd?: string) => {
-      calls.push({ args: [...args], cwd });
-      return fakeGitRunner(args, cwd);
-    };
-
-    const createResult = await callDevNexusPharoMcpTool(
-      "project_create",
-      {
-        homePath,
-        name: "CodexMcp",
-        root: projectRoot,
-        gitInit: true,
-        syncTracker: false,
-      },
-      { gitRunner },
-    );
-    expect(createResult.isError).toBeUndefined();
-    saveProjectConfig(projectRoot, {
-      ...loadProjectConfig(projectRoot),
-      workTracking: {
-        provider: "local",
-        storePath: path.join(".tracker", "items.json"),
-      },
-      components: [
-        localComponent("primary", "primary", path.join(".tracker", "items.json")),
-      ],
-    });
-    const createdWorkItem = await createWorkItemService({
-      homePath,
-    }).createWorkItem({
-      project: "codex-mcp",
-      title: "FCD-900",
-    });
-
-    const preparePayload = parseToolText(
-      await callDevNexusPharoMcpTool(
-        "worktree_prepare",
-        {
-          homePath,
-          project: "codex-mcp",
-          branchName: "codex/fcd-900",
-          baseRef: "main",
-          workItemId: createdWorkItem.id,
-          commentWorkItem: true,
-        },
-        { gitRunner },
-      ),
-    );
-    const worktreePath = path.join(projectRoot, "worktrees", "primary", "codex-fcd-900");
-    expect(preparePayload).toMatchObject({
-      ok: true,
-      projectRoot,
-      componentId: "primary",
-      sourceRoot: projectRoot,
-      worktreePath,
-      branchName: "codex/fcd-900",
-      baseRef: "main",
-      metadataRecord: {
-        id: "codex-mcp:codex/fcd-900",
-        componentId: "primary",
-        workItem: {
-          id: createdWorkItem.id,
-        },
-      },
-      trackerComment: {
-        id: "local-comment-1",
-        body: expect.stringContaining("Codex worktree prepared."),
-      },
-    });
-
-    const listPayload = parseToolText(
-      await callDevNexusPharoMcpTool(
-        "worktree_list",
-        {
-          homePath,
-          project: "codex-mcp",
-          state: "active",
-        },
-        { gitRunner },
-      ),
-    );
-    expect(listPayload).toMatchObject({
-      ok: true,
-      worktrees: [
-        {
-          metadataRecord: {
-            id: "codex-mcp:codex/fcd-900",
-            state: "active",
-          },
-          projectRootExists: true,
-          sourceRootExists: true,
-          worktreeExists: true,
-        },
-      ],
-    });
-
-    const statusPayload = parseToolText(
-      await callDevNexusPharoMcpTool(
-        "worktree_status",
-        {
-          homePath,
-          id: "codex-mcp:codex/fcd-900",
-        },
-        { gitRunner },
-      ),
-    );
-    expect(statusPayload).toMatchObject({
-      ok: true,
-      worktree: {
-        metadataRecord: {
-          id: "codex-mcp:codex/fcd-900",
-          branchName: "codex/fcd-900",
-        },
-        worktreeExists: true,
-      },
-    });
-
-    const guidePayload = parseToolText(
-      await callDevNexusPharoMcpTool("worktree_guide", {
-        homePath,
-        id: "codex-mcp:codex/fcd-900",
-        commentWorkItem: true,
-        removeWorktree: true,
-      }),
-    );
-    expect(guidePayload).toMatchObject({
-      ok: true,
-      id: "codex-mcp:codex/fcd-900",
-      project: "codex-mcp",
-    });
-    expect((guidePayload as { steps: unknown[] }).steps).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          title: "Record execution metadata",
-          command: expect.stringContaining("codex worktree record"),
-        }),
-        expect.objectContaining({
-          title: "Archive worktree",
-          command: expect.stringContaining("--remove-worktree"),
-        }),
-      ]),
-    );
-    expect((guidePayload as { notes: unknown[] }).notes).toEqual(
-      expect.arrayContaining([expect.stringContaining("Vibe")]),
-    );
-
-    const recordPayload = parseToolText(
-      await callDevNexusPharoMcpTool(
-        "worktree_record_execution",
-        {
-          homePath,
-          id: "codex-mcp:codex/fcd-900",
-          commitIds: ["abc123"],
-          verificationCommand: "npm test",
-          verificationStatus: "passed",
-          verificationSummary: "164 tests passed",
-          publicationDecision: {
-            type: "review_handoff",
-            prUrl: "https://example.test/pr/1",
-          },
-        },
-        { gitRunner },
-      ),
-    );
-    expect(recordPayload).toMatchObject({
-      ok: true,
-      metadataRecord: {
-        id: "codex-mcp:codex/fcd-900",
-        execution: {
-          commitIds: ["abc123"],
-          verification: [
-            {
-              command: "npm test",
-              status: "passed",
-              summary: "164 tests passed",
-            },
-          ],
-          publicationDecision: {
-            type: "review_handoff",
-            prUrl: "https://example.test/pr/1",
-          },
-        },
-      },
-    });
-
-    const archivePayload = parseToolText(
-      await callDevNexusPharoMcpTool(
-        "worktree_archive",
-        {
-          homePath,
-          id: "codex-mcp:codex/fcd-900",
-          removeWorktree: true,
-          commentWorkItem: true,
-        },
-        { gitRunner },
-      ),
-    );
-    expect(archivePayload).toMatchObject({
-      ok: true,
-      removedWorktree: true,
-      metadataRecord: {
-        id: "codex-mcp:codex/fcd-900",
-        state: "archived",
-      },
-      trackerComment: {
-        id: "local-comment-2",
-        body: expect.stringContaining("Codex worktree archived."),
-      },
-    });
-    expect(calls).toEqual(
-      expect.arrayContaining([
-        {
-          cwd: projectRoot,
-          args: [
-            "worktree",
-            "add",
-            "-b",
-            "codex/fcd-900",
-            worktreePath,
-            "main",
-          ],
-        },
-        {
-          cwd: worktreePath,
-          args: ["rev-parse", "--git-path", "info/exclude"],
-        },
-        {
-          cwd: projectRoot,
-          args: ["worktree", "remove", worktreePath],
-        },
-      ]),
-    );
-  });
 });
