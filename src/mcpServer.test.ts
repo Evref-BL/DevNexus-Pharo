@@ -5,7 +5,6 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   defaultCoreSkillPack,
-  defaultNexusAutomationConfig,
   listMcpInputSchemaProviderIssues,
   type NexusProjectComponentConfig,
 } from "dev-nexus";
@@ -26,11 +25,24 @@ import {
   startDevNexusPharoMcpHttpServer,
 } from "./mcpServer.js";
 import type { GitCommandResult, GitRunner } from "./nexusProjectService.js";
+import { createWorkItemService } from "./workItemService.js";
 
 const tempDirs: string[] = [];
 const expectedGenericSkillCount = defaultCoreSkillPack.length;
 const expectedDevNexusPharoSkillCount =
   defaultCoreSkillPack.length + devNexusPharoSkillPack.length;
+const removedGenericDevNexusToolNames = [
+  "automation_status",
+  "target_cycle_list",
+  "target_cycle_record",
+  "target_report",
+  "work_item_create",
+  "work_item_list",
+  "work_item_get",
+  "work_item_update",
+  "work_item_comment",
+  "work_item_set_status",
+];
 
 function localComponent(
   id: string,
@@ -257,17 +269,10 @@ describe("DevNexus-Pharo MCP server tools", () => {
       "worktree_status",
       "worktree_record_execution",
       "worktree_archive",
-      "automation_status",
-      "target_cycle_list",
-      "target_cycle_record",
-      "target_report",
-      "work_item_create",
-      "work_item_list",
-      "work_item_get",
-      "work_item_update",
-      "work_item_comment",
-      "work_item_set_status",
     ]);
+    for (const toolName of removedGenericDevNexusToolNames) {
+      expect(tools.map((tool) => tool.name)).not.toContain(toolName);
+    }
     expect(listDevNexusPharoMcpTools().map((tool) => tool.name)).not.toContain(
       "dev_nexus_pharo_work_item_create",
     );
@@ -285,6 +290,18 @@ describe("DevNexus-Pharo MCP server tools", () => {
       const tool = tools.find((entry) => entry.name === toolName);
       expect(tool?.description).toContain("Legacy compatibility wrapper");
       expect(tool?.description).toContain("DevNexus core");
+    }
+  });
+
+  it("rejects removed generic DevNexus MCP tools as unknown", async () => {
+    for (const toolName of removedGenericDevNexusToolNames) {
+      const result = await callDevNexusPharoMcpTool(toolName, {});
+
+      expect(result.isError).toBe(true);
+      expect(parseToolText(result)).toEqual({
+        ok: false,
+        error: `Unknown DevNexus-Pharo MCP tool: ${toolName}`,
+      });
     }
   });
 
@@ -579,339 +596,6 @@ describe("DevNexus-Pharo MCP server tools", () => {
     ).toBe(true);
   });
 
-  it("manages local work items through neutral MCP tool calls", async () => {
-    const homePath = makeTempDir("dev-nexus-pharo-home-");
-    const projectRoot = path.join(makeTempDir("dev-nexus-pharo-projects-"), "Tracked");
-    initNexusHome({ homePath });
-    const createProject = await callDevNexusPharoMcpTool(
-      "project_create",
-      {
-        homePath,
-        name: "Tracked",
-        root: projectRoot,
-        gitInit: true,
-        syncTracker: false,
-      },
-      { gitRunner: fakeGitRunner },
-    );
-    expect(createProject.isError).toBeUndefined();
-    saveProjectConfig(projectRoot, {
-      ...loadProjectConfig(projectRoot),
-      workTracking: undefined,
-      components: [
-        localComponent("primary", "primary", path.join(".tracker", "items.json")),
-        localComponent(
-          "addon",
-          "extension",
-          path.join(".tracker", "addon-items.json"),
-          [{ kind: "related", componentId: "primary" }],
-        ),
-      ],
-    });
-
-    const createPayload = parseToolText(
-      await callDevNexusPharoMcpTool("work_item_create", {
-        homePath,
-        project: "tracked",
-        title: "Local MCP item",
-        description: "Created through neutral MCP",
-        labels: ["mcp", "local"],
-      }),
-    );
-    expect(createPayload).toMatchObject({
-      ok: true,
-      workItem: {
-        id: "local-1",
-        title: "Local MCP item",
-        provider: "local",
-        labels: ["mcp", "local"],
-      },
-    });
-
-    const addonCreatePayload = parseToolText(
-      await callDevNexusPharoMcpTool("work_item_create", {
-        homePath,
-        project: "tracked",
-        componentId: "addon",
-        title: "Component MCP item",
-        labels: ["component"],
-      }),
-    );
-    expect(addonCreatePayload).toMatchObject({
-      ok: true,
-      workItem: {
-        id: "local-1",
-        title: "Component MCP item",
-        labels: ["component"],
-      },
-    });
-
-    const listPayload = parseToolText(
-      await callDevNexusPharoMcpTool("work_item_list", {
-        homePath,
-        project: "tracked",
-        labels: ["mcp"],
-      }),
-    );
-    expect(listPayload).toMatchObject({
-      ok: true,
-      workItems: [
-        {
-          id: "local-1",
-          title: "Local MCP item",
-        },
-      ],
-    });
-
-    const addonListPayload = parseToolText(
-      await callDevNexusPharoMcpTool("work_item_list", {
-        homePath,
-        project: "tracked",
-        componentId: "addon",
-        labels: ["component"],
-      }),
-    );
-    expect(addonListPayload).toMatchObject({
-      ok: true,
-      workItems: [
-        {
-          id: "local-1",
-          title: "Component MCP item",
-        },
-      ],
-    });
-
-    const updatePayload = parseToolText(
-      await callDevNexusPharoMcpTool("work_item_update", {
-        homePath,
-        project: "tracked",
-        id: "local-1",
-        status: "in_progress",
-        assignees: ["alice"],
-      }),
-    );
-    expect(updatePayload).toMatchObject({
-      ok: true,
-      workItem: {
-        id: "local-1",
-        status: "in_progress",
-        assignees: ["alice"],
-      },
-    });
-
-    const commentPayload = parseToolText(
-      await callDevNexusPharoMcpTool("work_item_comment", {
-        homePath,
-        project: "tracked",
-        ref: {
-          id: "local-1",
-        },
-        body: "Commented through MCP",
-      }),
-    );
-    expect(commentPayload).toMatchObject({
-      ok: true,
-      comment: {
-        id: "local-comment-1",
-        body: "Commented through MCP",
-      },
-    });
-
-    const statusPayload = parseToolText(
-      await callDevNexusPharoMcpTool("work_item_set_status", {
-        homePath,
-        project: "tracked",
-        externalRef: {
-          provider: "local",
-          itemId: "local-1",
-        },
-        status: "done",
-      }),
-    );
-    expect(statusPayload).toMatchObject({
-      ok: true,
-      workItem: {
-        id: "local-1",
-        status: "done",
-      },
-    });
-
-    const getPayload = parseToolText(
-      await callDevNexusPharoMcpTool("work_item_get", {
-        homePath,
-        project: "tracked",
-        id: "local-1",
-      }),
-    );
-    expect(getPayload).toMatchObject({
-      ok: true,
-      workItem: {
-        id: "local-1",
-        status: "done",
-      },
-    });
-    expect(fs.existsSync(path.join(projectRoot, ".tracker", "items.json"))).toBe(
-      true,
-    );
-    expect(
-      fs.existsSync(path.join(projectRoot, ".tracker", "addon-items.json")),
-    ).toBe(true);
-  });
-
-  it("delegates automation target tools to the native DevNexus MCP surface", async () => {
-    const homePath = makeTempDir("dev-nexus-pharo-home-");
-    const projectRoot = path.join(makeTempDir("dev-nexus-pharo-projects-"), "Automated");
-    initNexusHome({ homePath });
-    const createProject = await callDevNexusPharoMcpTool(
-      "project_create",
-      {
-        homePath,
-        name: "Automated",
-        root: projectRoot,
-        gitInit: true,
-        syncTracker: false,
-      },
-      { gitRunner: fakeGitRunner },
-    );
-    expect(createProject.isError).toBeUndefined();
-    saveProjectConfig(projectRoot, {
-      ...loadProjectConfig(projectRoot),
-      workTracking: undefined,
-      components: [
-        localComponent("primary", "primary", path.join(".tracker", "primary.json")),
-        localComponent(
-          "addon",
-          "extension",
-          path.join(".tracker", "addon.json"),
-          [{ kind: "related", componentId: "primary" }],
-        ),
-      ],
-      automation: {
-        ...defaultNexusAutomationConfig,
-        mode: "agent_launch",
-        selector: {
-          ...defaultNexusAutomationConfig.selector,
-          statuses: ["ready"],
-          labels: ["dogfood"],
-        },
-        target: {
-          ...defaultNexusAutomationConfig.target,
-          id: "adapter-alignment",
-          objective: "Verify DevNexus-Pharo can expose DevNexus target facts.",
-        },
-      },
-    });
-
-    await callDevNexusPharoMcpTool(
-      "work_item_create",
-      {
-        homePath,
-        project: "automated",
-        componentId: "addon",
-        title: "Component work",
-        status: "ready",
-        labels: ["dogfood"],
-      },
-      { now: () => "2026-05-16T10:00:00.000Z" },
-    );
-
-    const automationStatus = parseToolText(
-      await callDevNexusPharoMcpTool(
-        "automation_status",
-        {
-          homePath,
-          project: "automated",
-        },
-        { now: () => "2026-05-16T10:05:00.000Z" },
-      ),
-    );
-    expect(automationStatus).toMatchObject({
-      ok: true,
-      status: "ready",
-      target: {
-        id: "adapter-alignment",
-      },
-      componentEligibleWorkItems: [
-        {
-          componentId: "primary",
-          workItems: [],
-        },
-        {
-          componentId: "addon",
-          workItems: [
-            {
-              id: "local-1",
-              title: "Component work",
-            },
-          ],
-        },
-      ],
-    });
-
-    const recorded = parseToolText(
-      await callDevNexusPharoMcpTool(
-        "target_cycle_record",
-        {
-          homePath,
-          project: "automated",
-          cycleId: "cycle-1",
-          status: "completed",
-          summary: "Native target cycle recorded through DevNexus-Pharo.",
-          eligibleWorkItemCount: 1,
-          workItems: [
-            {
-              componentId: "addon",
-              id: "local-1",
-              cycleStatus: "completed",
-            },
-          ],
-        },
-        { now: () => "2026-05-16T10:10:00.000Z" },
-      ),
-    );
-    expect(recorded).toMatchObject({
-      ok: true,
-      record: {
-        id: "cycle-1",
-        targetId: "adapter-alignment",
-        status: "completed",
-        workItems: [
-          {
-            componentId: "addon",
-            id: "local-1",
-            cycleStatus: "completed",
-          },
-        ],
-      },
-    });
-
-    const report = parseToolText(
-      await callDevNexusPharoMcpTool(
-        "target_report",
-        {
-          homePath,
-          project: "automated",
-        },
-        { now: () => "2026-05-16T10:15:00.000Z" },
-      ),
-    );
-    expect(report).toMatchObject({
-      ok: true,
-      report: {
-        status: "completed",
-        workItemSummary: {
-          uniqueReferences: [
-            {
-              componentId: "addon",
-              id: "local-1",
-              latestCycleStatus: "completed",
-            },
-          ],
-        },
-      },
-    });
-  });
-
   it("configures GitLab work tracking through neutral MCP tool calls", async () => {
     const homePath = makeTempDir("dev-nexus-pharo-home-");
     const projectRoot = path.join(makeTempDir("dev-nexus-pharo-projects-"), "GitLabMcp");
@@ -998,38 +682,6 @@ describe("DevNexus-Pharo MCP server tools", () => {
         },
       },
     });
-  });
-
-  it("reports unsupported work tracking providers through neutral MCP tools", async () => {
-    const homePath = makeTempDir("dev-nexus-pharo-home-");
-    const projectRoot = path.join(makeTempDir("dev-nexus-pharo-projects-"), "Legacy");
-    initNexusHome({ homePath });
-    const createProject = await callDevNexusPharoMcpTool(
-      "project_create",
-      {
-        homePath,
-        name: "Legacy",
-        root: projectRoot,
-        gitInit: true,
-        syncTracker: false,
-      },
-      { gitRunner: fakeGitRunner },
-    );
-    expect(createProject.isError).toBeUndefined();
-
-    const result = await callDevNexusPharoMcpTool("work_item_create", {
-      homePath,
-      project: "legacy",
-      title: "Cannot route to Vibe yet",
-    });
-
-    expect(result.isError).toBe(true);
-    expect(parseToolText(result)).toMatchObject({
-      ok: false,
-    });
-    expect(JSON.stringify(parseToolText(result))).toContain(
-      "work tracking is not configured",
-    );
   });
 
   it("resolves project status by managed config id before MCP path fallback", async () => {
@@ -1343,13 +995,12 @@ describe("DevNexus-Pharo MCP server tools", () => {
         localComponent("primary", "primary", path.join(".tracker", "items.json")),
       ],
     });
-    const createWorkItemPayload = parseToolText(
-      await callDevNexusPharoMcpTool("work_item_create", {
-        homePath,
-        project: "codex-mcp",
-        title: "FCD-900",
-      }),
-    ) as { workItem: { id: string } };
+    const createdWorkItem = await createWorkItemService({
+      homePath,
+    }).createWorkItem({
+      project: "codex-mcp",
+      title: "FCD-900",
+    });
 
     const preparePayload = parseToolText(
       await callDevNexusPharoMcpTool(
@@ -1359,7 +1010,7 @@ describe("DevNexus-Pharo MCP server tools", () => {
           project: "codex-mcp",
           branchName: "codex/fcd-900",
           baseRef: "main",
-          workItemId: createWorkItemPayload.workItem.id,
+          workItemId: createdWorkItem.id,
           commentWorkItem: true,
         },
         { gitRunner },
@@ -1378,7 +1029,7 @@ describe("DevNexus-Pharo MCP server tools", () => {
         id: "codex-mcp:codex/fcd-900",
         componentId: "primary",
         workItem: {
-          id: createWorkItemPayload.workItem.id,
+          id: createdWorkItem.id,
         },
       },
       trackerComment: {

@@ -384,21 +384,33 @@ HTTP MCP server:
 dev-nexus-pharo mcp
 ```
 
-The control project should make this server available to agents. The first MCP
-tools are:
+The control project should make this server available to agents alongside the
+generic `dev_nexus` server. The DevNexus-Pharo MCP tools are:
 
 ```text
-dev_nexus_pharo_project_create
-dev_nexus_pharo_project_import
-dev_nexus_pharo_project_link_kanban
-dev_nexus_pharo_project_sync_kanban
-dev_nexus_pharo_project_list
-dev_nexus_pharo_project_status
+project_create
+project_import
+project_link_tracker
+project_configure_tracker
+project_sync_tracker
+project_list
+project_status
+project_skill_status
+project_skill_refresh
+worktree_prepare
+worktree_guide
+worktree_list
+worktree_status
+worktree_record_execution
+worktree_archive
 ```
 
 The MCP surface belongs to DevNexus-Pharo rather than PLexus because these tools
 create and register repositories. PLexus remains responsible for opening,
 closing, and routing runtime targets inside an already-created project.
+Generic DevNexus MCP tools such as `work_item_*`, `automation_status`,
+`target_cycle_*`, and `target_report` belong to `dev_nexus` and are not exposed
+through `dev_nexus_pharo`.
 
 ## Control Board Prompt Contract
 

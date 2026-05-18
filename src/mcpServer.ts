@@ -34,11 +34,8 @@ import {
   type SyncDevNexusPharoProjectTrackerResult,
 } from "./devNexusPharoProjectService.js";
 import {
-  callDevNexusMcpTool,
-  listDevNexusMcpTools,
   providerCompatibleMcpTools,
   StdioJsonRpcTransport,
-  type DevNexusMcpToolContext,
 } from "dev-nexus";
 import { legacyTrackerWrapperToolDescription } from "./trackerDeprecation.js";
 
@@ -85,24 +82,6 @@ interface McpTool {
 export interface DevNexusPharoMcpToolContext {
   gitRunner?: GitRunner;
   fetch?: typeof fetch;
-  now?: DevNexusMcpToolContext["now"];
-}
-
-const delegatedDevNexusToolNames = new Set([
-  "automation_status",
-  "target_cycle_list",
-  "target_cycle_record",
-  "target_report",
-  "work_item_create",
-  "work_item_list",
-  "work_item_get",
-  "work_item_update",
-  "work_item_comment",
-  "work_item_set_status",
-]);
-
-function isDelegatedDevNexusTool(name: string): boolean {
-  return delegatedDevNexusToolNames.has(name);
 }
 
 const tools: McpTool[] = [
@@ -612,12 +591,7 @@ function toolResult(value: unknown, isError = false): {
 }
 
 export function listDevNexusPharoMcpTools(): McpTool[] {
-  const delegatedTools = listDevNexusMcpTools().filter((tool) =>
-    isDelegatedDevNexusTool(tool.name),
-  );
-  const localTools = tools.filter((tool) => !isDelegatedDevNexusTool(tool.name));
-
-  return providerCompatibleMcpTools([...localTools, ...delegatedTools]);
+  return providerCompatibleMcpTools(tools);
 }
 
 function shouldSyncTracker(args: Record<string, unknown>): boolean {
@@ -657,12 +631,6 @@ export async function callDevNexusPharoMcpTool(
   isError?: boolean;
 }> {
   try {
-    if (isDelegatedDevNexusTool(name)) {
-      return callDevNexusMcpTool(name, argsValue, {
-        now: context.now,
-      });
-    }
-
     const args = argsValue === undefined ? {} : asRecord(argsValue, "arguments");
     switch (name) {
       case "project_create": {

@@ -385,7 +385,7 @@ Compatibility mode for clients without URL MCP support:
 dev-nexus-pharo mcp-stdio
 ```
 
-DevNexus-Pharo exposes these project-management tools:
+DevNexus-Pharo exposes these Pharo-project and worktree tools:
 
 ```text
 project_create
@@ -397,12 +397,6 @@ project_list
 project_status
 project_skill_status
 project_skill_refresh
-work_item_create
-work_item_list
-work_item_get
-work_item_update
-work_item_comment
-work_item_set_status
 worktree_prepare
 worktree_guide
 worktree_list
@@ -410,6 +404,11 @@ worktree_status
 worktree_record_execution
 worktree_archive
 ```
+
+Generic DevNexus MCP tools are intentionally exposed only by `dev_nexus`.
+Use `dev_nexus` for `work_item_*`, `automation_status`, `target_cycle_*`, and
+`target_report`; calls to those names through `dev_nexus_pharo` are unknown
+tools.
 
 `project_configure_tracker`, `project_link_tracker`, and
 `project_sync_tracker` are legacy compatibility wrappers. Generic tracker
