@@ -1101,9 +1101,9 @@ describe("DevNexus-Pharo project service", () => {
       .setup_script as string;
     expect(setupScript).toContain(projectRoot);
     expect(setupScript).toContain(sourceRoot);
-    expect(setupScript).toContain("Add-GitInfoExclude 'AGENTS.md'");
-    expect(setupScript).toContain("Add-GitInfoExclude '.codex/'");
-    expect(setupScript).toContain("Add-GitInfoExclude 'node_modules/'");
+    expect(setupScript).toMatch(/(?:Add-GitInfoExclude|add_git_info_exclude) 'AGENTS\.md'/u);
+    expect(setupScript).toMatch(/(?:Add-GitInfoExclude|add_git_info_exclude) '\.codex\/'/u);
+    expect(setupScript).toMatch(/(?:Add-GitInfoExclude|add_git_info_exclude) 'node_modules\/'/u);
     expect(result.project.vibeKanbanRepoId).toBe("repo-imported-synced");
   });
 
