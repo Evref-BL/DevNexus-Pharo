@@ -261,6 +261,16 @@ describe("DevNexus-Pharo MCP server tools", () => {
     ]) {
       expect(toolNames).not.toContain(toolName);
     }
+    for (const tool of tools) {
+      expect(tool.inputSchema).toMatchObject({
+        properties: {
+          detail: {
+            enum: ["summary", "full"],
+            default: "summary",
+          },
+        },
+      });
+    }
   });
 
   it("rejects removed generic, tracker, and worktree tools as unknown", async () => {
@@ -291,6 +301,18 @@ describe("DevNexus-Pharo MCP server tools", () => {
     expect(issues).toEqual([]);
   });
 
+  it("rejects invalid detail values", async () => {
+    const result = await callDevNexusPharoMcpTool("pharo_project_list", {
+      detail: "everything",
+    });
+
+    expect(result.isError).toBe(true);
+    expect(parseToolText(result)).toEqual({
+      ok: false,
+      error: "arguments.detail must be summary or full",
+    });
+  });
+
   it("creates, lists, and reads a project through MCP tool calls", async () => {
     const homePath = makeTempDir("dev-nexus-pharo-home-");
     const projectRoot = path.join(makeTempDir("dev-nexus-pharo-projects-"), "McpProject");
@@ -312,18 +334,26 @@ describe("DevNexus-Pharo MCP server tools", () => {
     expect(createResult.isError).toBeUndefined();
     expect(createPayload).toMatchObject({
       ok: true,
+      detail: "summary",
       projectRoot,
       projectConfig: {
         id: "mcp-project",
         name: "McpProject",
       },
+      codex: {
+        serverCount: 6,
+        contentLength: expect.any(Number),
+      },
     });
+    expect((createPayload as any).codex.content).toBeUndefined();
 
     const listPayload = parseToolText(
       await callDevNexusPharoMcpTool("pharo_project_list", { homePath }),
     );
     expect(listPayload).toMatchObject({
       ok: true,
+      detail: "summary",
+      projectCount: 1,
       projects: [
         {
           id: "mcp-project",
@@ -341,9 +371,30 @@ describe("DevNexus-Pharo MCP server tools", () => {
     );
     expect(statusPayload).toMatchObject({
       ok: true,
+      detail: "summary",
       project: {
         id: "mcp-project",
         projectRoot,
+      },
+    });
+    expect((statusPayload as any).project.components[0].workTrackers).toBeUndefined();
+
+    const fullStatusPayload = parseToolText(
+      await callDevNexusPharoMcpTool("pharo_project_status", {
+        homePath,
+        project: "mcp-project",
+        detail: "full",
+      }),
+    );
+    expect(fullStatusPayload).toMatchObject({
+      ok: true,
+      detail: "full",
+      project: {
+        components: [
+          {
+            workTrackers: expect.any(Array),
+          },
+        ],
       },
     });
   });
@@ -386,14 +437,17 @@ describe("DevNexus-Pharo MCP server tools", () => {
     );
     expect(statusPayload).toMatchObject({
       ok: true,
+      detail: "summary",
       skillStatus: {
         summary: {
           expected: expectedDevNexusPharoSkillCount,
           missing: 2,
           stale: 1,
         },
+        attentionSkillCount: 3,
       },
     });
+    expect((statusPayload as any).skillStatus.skills[0].skillPath).toBeUndefined();
 
     const refreshPayload = parseToolText(
       await callDevNexusPharoMcpTool("pharo_project_skill_refresh", {
@@ -403,6 +457,7 @@ describe("DevNexus-Pharo MCP server tools", () => {
     );
     expect(refreshPayload).toMatchObject({
       ok: true,
+      detail: "summary",
       refresh: {
         before: {
           summary: {
@@ -418,8 +473,10 @@ describe("DevNexus-Pharo MCP server tools", () => {
             stale: 0,
           },
         },
+        materializedCount: expect.any(Number),
       },
     });
+    expect((refreshPayload as any).refresh.before.skills[0].skillPath).toBeUndefined();
     expect(
       fs.existsSync(
         path.join(projectRoot, ".dev-nexus", "skills", "dev-nexus-pharo-workflow", "SKILL.md"),
@@ -635,6 +692,7 @@ describe("DevNexus-Pharo MCP server tools", () => {
         homePath,
         name: "MyLibrary",
         remoteUrl: "https://github.com/me/MyLibrary.git",
+        detail: "full",
       },
       { gitRunner, fetch: fetchMock },
     );

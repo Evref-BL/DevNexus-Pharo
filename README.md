@@ -382,6 +382,10 @@ pharo_project_skill_status
 pharo_project_skill_refresh
 ```
 
+All DevNexus-Pharo MCP tools default to compact `detail: "summary"` responses.
+Pass `detail: "full"` when an agent needs complete generated project config,
+Codex MCP config, PLexus config, Git command records, or per-skill file paths.
+
 Generic DevNexus MCP tools are intentionally exposed only by `dev_nexus`.
 Use `dev_nexus` for generic `project_*`, `work_item_*`, `automation_status`,
 `target_cycle_*`, and `target_report` operations; calls to those names through
