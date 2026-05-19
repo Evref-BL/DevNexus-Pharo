@@ -812,6 +812,76 @@ describe("DevNexus-Pharo project service", () => {
     ]);
   });
 
+  it("does not retain legacy Vibe metadata during normal project re-import", () => {
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
+    const projectRoot = path.join(makeTempDir("dev-nexus-pharo-projects-"), "ExistingLegacyPlexus");
+    fs.mkdirSync(projectRoot, { recursive: true });
+    initNexusHome({ homePath });
+    const existingConfig = {
+      version: 1 as const,
+      id: "existing-legacy-plexus",
+      name: "Existing Legacy PLexus",
+      home: null,
+      repo: {
+        kind: "local" as const,
+        remoteUrl: null,
+        defaultBranch: "main",
+      },
+      worktreesRoot: "worktrees",
+      kanban: {
+        provider: "vibe-kanban" as const,
+        projectId: "legacy-kanban-project",
+      },
+    };
+    fs.writeFileSync(
+      path.join(projectRoot, devNexusProjectConfigFileName),
+      `${JSON.stringify(existingConfig, null, 2)}\n`,
+      "utf8",
+    );
+    fs.writeFileSync(
+      path.join(projectRoot, plexusProjectConfigFileName),
+      `${JSON.stringify(
+        {
+          id: "existing-legacy-plexus",
+          name: "Existing Legacy PLexus",
+          kanban: {
+            provider: "vibe-kanban",
+            projectId: "legacy-kanban-project",
+          },
+          images: [],
+          imageExecution: defaultPlexusImageExecutionPolicy,
+          runtime: {
+            gateway: {
+              mode: "project-local",
+              host: "127.0.0.1",
+              port: 17410,
+              agentMcpPath: "/mcp",
+              routeControlMcpPath: "/control-mcp",
+            },
+          },
+        },
+        null,
+        2,
+      )}\n`,
+      "utf8",
+    );
+
+    const result = importDevNexusPharoProject({
+      homePath,
+      root: projectRoot,
+      gitRunner: fakeGitRunner([], { branch: "main" }),
+    });
+    const plexusProjectConfig = JSON.parse(
+      fs.readFileSync(result.plexusProjectConfigPath, "utf8"),
+    ) as Record<string, unknown>;
+    const codexConfig = fs.readFileSync(result.codexConfigPath, "utf8");
+
+    expect(result.plexusProjectConfig).not.toHaveProperty("kanban");
+    expect(plexusProjectConfig).not.toHaveProperty("kanban");
+    expect(codexConfig).not.toContain("[mcp_servers.vibe_kanban]");
+    expect(codexConfig).not.toContain("VIBE_KANBAN_");
+  });
+
   it("imports an existing project config without duplicating the DevNexus-Pharo plugin", () => {
     const homePath = makeTempDir("dev-nexus-pharo-home-");
     const projectRoot = path.join(makeTempDir("dev-nexus-pharo-projects-"), "ExistingPlugins");

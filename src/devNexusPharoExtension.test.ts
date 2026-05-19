@@ -95,10 +95,6 @@ describe("DevNexus-Pharo extension", () => {
     expect(JSON.parse(fs.readFileSync(files.plexusProjectConfigPath, "utf8"))).toEqual({
       id: "pharo-project",
       name: "Pharo Project",
-      kanban: {
-        provider: "vibe-kanban",
-        projectId: "vk-pharo-project",
-      },
       images: [],
       imageExecution: defaultPlexusImageExecutionPolicy,
       runtime: {
@@ -121,10 +117,6 @@ describe("DevNexus-Pharo extension", () => {
     expect(files.plexusProjectConfig).toEqual({
       id: "pharo-project",
       name: "Pharo Project",
-      kanban: {
-        provider: "vibe-kanban",
-        projectId: "vk-pharo-project",
-      },
       images: [],
       imageExecution: defaultPlexusImageExecutionPolicy,
       runtime: {

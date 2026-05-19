@@ -180,7 +180,11 @@ export function createDevNexusPharoProject(
       ? { vibeKanbanProjectId: options.vibeKanbanProjectId }
       : {}),
     ...(options.gitRunner ? { gitRunner: options.gitRunner } : {}),
-    extensions: devNexusPharoProjectExtensionEntry(),
+    extensions: devNexusPharoProjectExtensionEntry({
+      ...(options.vibeKanbanProjectId !== undefined
+        ? { vibeKanbanProjectId: options.vibeKanbanProjectId }
+        : {}),
+    }),
     scaffoldExtensions: [devNexusPharoExtension],
   });
   const pharoFiles = devNexusPharoProjectFilesFromExtensionResult(
@@ -250,7 +254,11 @@ export function importDevNexusPharoProject(
       ? { vibeKanbanProjectId: options.vibeKanbanProjectId }
       : {}),
     ...(options.gitRunner ? { gitRunner: options.gitRunner } : {}),
-    extensions: devNexusPharoProjectExtensionEntry(),
+    extensions: devNexusPharoProjectExtensionEntry({
+      ...(options.vibeKanbanProjectId !== undefined
+        ? { vibeKanbanProjectId: options.vibeKanbanProjectId }
+        : {}),
+    }),
     scaffoldExtensions: [devNexusPharoExtension],
   });
   const pharoFiles = devNexusPharoProjectFilesFromExtensionResult(

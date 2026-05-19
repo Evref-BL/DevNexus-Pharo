@@ -10,6 +10,7 @@ import {
 import {
   buildPlexusProjectConfig,
   buildPlexusProjectGatewayConfig,
+  devNexusPharoProjectExtensionConfig,
   normalizePlexusProjectConfig,
   projectPlexusConfigPath,
   plexusProjectConfigFileName,
@@ -329,6 +330,12 @@ function sharedPlexusProjectConfigPath(
     : path.join(path.resolve(workspacePath), plexusProjectConfigFileName);
 }
 
+function explicitVibeKanbanProjectId(
+  projectConfig: NexusProjectConfig,
+): string | null {
+  return devNexusPharoProjectExtensionConfig(projectConfig).vibeKanbanProjectId ?? null;
+}
+
 function ensureSharedPlexusProjectConfig(
   workspacePath: string,
   projectConfig: NexusProjectConfig,
@@ -345,16 +352,18 @@ function ensureSharedPlexusProjectConfig(
     ? (buildPlexusProjectConfig(
         projectConfig.name,
         projectConfig.id,
-        projectConfig.kanban?.projectId ?? null,
+        explicitVibeKanbanProjectId(projectConfig),
         undefined,
         reservedGatewayPorts,
       ) as unknown as Record<string, unknown>)
-    : JSON.parse(fs.readFileSync(configPath, "utf8").replace(/^\uFEFF/u, "")) as Record<string, unknown>;
+    : (JSON.parse(
+        fs.readFileSync(configPath, "utf8").replace(/^\uFEFF/u, ""),
+      ) as Record<string, unknown>);
   const normalized = normalizePlexusProjectConfig(
     existing,
     projectConfig.name,
     projectConfig.id,
-    projectConfig.kanban?.projectId ?? null,
+    explicitVibeKanbanProjectId(projectConfig),
     undefined,
     reservedGatewayPorts,
   );
@@ -478,7 +487,7 @@ function loadPlexusProjectConfigIfExists(
     parsed,
     projectConfig.name,
     projectConfig.id,
-    projectConfig.kanban?.projectId ?? null,
+    explicitVibeKanbanProjectId(projectConfig),
   );
 }
 
