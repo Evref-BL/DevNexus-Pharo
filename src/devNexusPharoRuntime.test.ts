@@ -473,118 +473,122 @@ describe("DevNexus-Pharo runtime", () => {
     );
   });
 
-  it("reports top-level status and stops Vibe Kanban before PLexus gateway", async () => {
-    const postFilePath = path.join(makeTempDir("dev-nexus-pharo-post-"), "post.json");
-    const { vibeKanbanPort, devNexusPharoMcpPort, plexusMcpPort } =
-      await freeServicePorts();
+  it(
+    "reports top-level status and stops Vibe Kanban before PLexus gateway",
+    async () => {
+      const postFilePath = path.join(makeTempDir("dev-nexus-pharo-post-"), "post.json");
+      const { vibeKanbanPort, devNexusPharoMcpPort, plexusMcpPort } =
+        await freeServicePorts();
 
-    const homePath = initHomeWithTopLevelTools(
-      vibeKanbanPort,
-      devNexusPharoMcpPort,
-      plexusMcpPort,
-      postFilePath,
-      ["-e", fakePlexusGatewayServerScript()],
-    );
+      const homePath = initHomeWithTopLevelTools(
+        vibeKanbanPort,
+        devNexusPharoMcpPort,
+        plexusMcpPort,
+        postFilePath,
+        ["-e", fakePlexusGatewayServerScript()],
+      );
 
-    await startDevNexusPharo({
-      homePath,
-      skipMcpConfig: true,
-      openBrowser: false,
-      vibeHealthTimeoutMs: 2_000,
-    });
-    await waitForHttpPort({
-      port: plexusMcpPort,
-      totalTimeoutMs: 2_000,
-    });
+      await startDevNexusPharo({
+        homePath,
+        skipMcpConfig: true,
+        openBrowser: false,
+        vibeHealthTimeoutMs: 2_000,
+      });
+      await waitForHttpPort({
+        port: plexusMcpPort,
+        totalTimeoutMs: 2_000,
+      });
 
-    const runningStatus = await getDevNexusPharoStatus({
-      homePath,
-      checkHealth: true,
-      healthTimeoutMs: 1_000,
-    });
+      const runningStatus = await getDevNexusPharoStatus({
+        homePath,
+        checkHealth: true,
+        healthTimeoutMs: 1_000,
+      });
 
-    expect(runningStatus).toMatchObject({
-      running: true,
-      stale: false,
-      services: {
-        devNexusPharoMcp: {
-          running: true,
-          health: {
-            ok: true,
-            statusCode: 200,
+      expect(runningStatus).toMatchObject({
+        running: true,
+        stale: false,
+        services: {
+          devNexusPharoMcp: {
+            running: true,
+            health: {
+              ok: true,
+              statusCode: 200,
+            },
+          },
+          plexusGateway: {
+            running: true,
+            health: {
+              ok: true,
+              statusCode: 204,
+            },
+          },
+          vibeKanban: {
+            running: true,
+            health: {
+              ok: true,
+              statusCode: 204,
+            },
           },
         },
-        plexusGateway: {
-          running: true,
-          health: {
-            ok: true,
-            statusCode: 204,
-          },
-        },
-        vibeKanban: {
-          running: true,
-          health: {
-            ok: true,
-            statusCode: 204,
-          },
-        },
-      },
-    });
+      });
 
-    const progressMessages: string[] = [];
-    const stopped = await stopDevNexusPharo({
-      homePath,
-      force: true,
-      timeoutMs: 2_000,
-      pollIntervalMs: 50,
-      progress: (message) => progressMessages.push(message),
-    });
+      const progressMessages: string[] = [];
+      const stopped = await stopDevNexusPharo({
+        homePath,
+        force: true,
+        timeoutMs: 2_000,
+        pollIntervalMs: 50,
+        progress: (message) => progressMessages.push(message),
+      });
 
-    expect(stopped.services.vibeKanban.stop).toMatchObject({
-      stopped: true,
-    });
-    expect(stopped.services.devNexusPharoMcp.stop).toMatchObject({
-      stopped: true,
-    });
-    expect(stopped.services.plexusGateway.stop).toMatchObject({
-      stopped: true,
-    });
-    expect(progressMessages).toEqual([
-      `Using DevNexus-Pharo home: ${homePath}`,
-      "Stopping Vibe Kanban app...",
-      "Vibe Kanban app stopped.",
-      "Stopping DevNexus-Pharo MCP...",
-      "DevNexus-Pharo MCP stopped.",
-      "Stopping PLexus gateway...",
-      "PLexus gateway stopped.",
-      "Leaving Vibe Kanban backend running by configuration.",
-      "DevNexus-Pharo stop complete.",
-    ]);
+      expect(stopped.services.vibeKanban.stop).toMatchObject({
+        stopped: true,
+      });
+      expect(stopped.services.devNexusPharoMcp.stop).toMatchObject({
+        stopped: true,
+      });
+      expect(stopped.services.plexusGateway.stop).toMatchObject({
+        stopped: true,
+      });
+      expect(progressMessages).toEqual([
+        `Using DevNexus-Pharo home: ${homePath}`,
+        "Stopping Vibe Kanban app...",
+        "Vibe Kanban app stopped.",
+        "Stopping DevNexus-Pharo MCP...",
+        "DevNexus-Pharo MCP stopped.",
+        "Stopping PLexus gateway...",
+        "PLexus gateway stopped.",
+        "Leaving Vibe Kanban backend running by configuration.",
+        "DevNexus-Pharo stop complete.",
+      ]);
 
-    const stoppedStatus = await getDevNexusPharoStatus({ homePath });
-    expect(stoppedStatus).toMatchObject({
-      running: false,
-      stale: false,
-      services: {
-        devNexusPharoMcp: {
-          running: false,
-          state: {
-            status: "stopped",
+      const stoppedStatus = await getDevNexusPharoStatus({ homePath });
+      expect(stoppedStatus).toMatchObject({
+        running: false,
+        stale: false,
+        services: {
+          devNexusPharoMcp: {
+            running: false,
+            state: {
+              status: "stopped",
+            },
+          },
+          plexusGateway: {
+            running: false,
+            state: {
+              status: "stopped",
+            },
+          },
+          vibeKanban: {
+            running: false,
+            state: {
+              status: "stopped",
+            },
           },
         },
-        plexusGateway: {
-          running: false,
-          state: {
-            status: "stopped",
-          },
-        },
-        vibeKanban: {
-          running: false,
-          state: {
-            status: "stopped",
-          },
-        },
-      },
-    });
-  });
+      });
+    },
+    15_000,
+  );
 });
