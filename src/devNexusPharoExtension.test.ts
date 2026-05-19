@@ -63,6 +63,16 @@ afterEach(() => {
 });
 
 describe("DevNexus-Pharo extension", () => {
+  it("publishes the default AGENTS template used by packaged project setup", () => {
+    const packageRoot = path.resolve(path.dirname(import.meta.dirname));
+    const packageJson = JSON.parse(
+      fs.readFileSync(path.join(packageRoot, "package.json"), "utf8"),
+    ) as { files?: string[] };
+
+    expect(fs.existsSync(path.join(packageRoot, "AGENTS.md"))).toBe(true);
+    expect(packageJson.files).toEqual(expect.arrayContaining(["AGENTS.md"]));
+  });
+
   it("owns Pharo and PLexus project files", () => {
     const homePath = makeTempDir("dev-nexus-pharo-home-");
     const projectRoot = path.join(makeTempDir("dev-nexus-pharo-project-"), "Project");
