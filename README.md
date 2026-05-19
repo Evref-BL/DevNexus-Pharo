@@ -336,6 +336,10 @@ dev-nexus-pharo codex doctor C:\dev\code\dev-nexus-pharo\MyProject
 Open a fresh Codex chat from that workspace after `codex doctor` passes. A
 running chat may keep the MCP tool list it loaded at startup.
 
+`.codex\config.toml` is generated workspace state. Keep it local or projected
+from a managed DevNexus project root; the source repository does not track a
+live Codex config file.
+
 `codex init` preserves unrelated Codex settings and unrelated MCP servers. For
 project-scoped DevNexus-Pharo roots it removes obsolete home-scoped `plexus`,
 `vibe_kanban`, and `pharo` entries with clean `plexus_project`,

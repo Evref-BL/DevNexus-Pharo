@@ -52,8 +52,10 @@ depend on implementation details inside Pharo images.
 - Prefer MCP tools for project creation, import, list, status, workspace, and
   image operations. Manual edits to DevNexus-Pharo/PLexus config files are for
   implementation or repair work only.
-- Codex worktrees prepared by DevNexus core should inherit `.codex/config.toml`;
-  verify direct `pharo` MCP availability before changing Pharo code.
+- Codex worktrees prepared by DevNexus core should inherit generated Codex MCP
+  configuration from their managed project root; source checkouts should not
+  track local `.codex/config.toml` files. Verify direct `pharo` MCP
+  availability before changing Pharo code.
 
 ## Git Workflow
 
