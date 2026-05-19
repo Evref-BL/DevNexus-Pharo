@@ -186,6 +186,9 @@ the scoped `plexus_project` and `pharo_launcher` MCP servers. If a project-local
 runtime install exists under `.dev-nexus/runtime/npm-tools`, generated Codex MCP
 commands use those package-local binaries instead of requiring global
 `dev-nexus-pharo` or `plexus` commands.
+Blank PLexus projects may keep `images: []`; `codex doctor` reports that as a
+valid non-ready state and points agents to add a setup-owned scoped image
+profile before image create/start lifecycle work.
 
 By default, DevNexus-Pharo creates the managed project root under
 `paths.projectsRoot` from `dev-nexus.home.json`. Use `--root` on
@@ -395,6 +398,9 @@ Vibe backend modes are configured in `dev-nexus.home.json`:
 Managed project `plexus.project.json` files include an `imageExecution` policy.
 It defaults to `disabled` and requires disposable images plus an explicit
 cleanup plan before future PLexus image launch work can opt into Docker mode.
+DevNexus-Pharo also publishes a default Pharo 13 scoped image-profile shape for
+setup flows. Project creation remains lightweight and does not declare or create
+images by default.
 
 For GitHub sign-in with the self-hosted Vibe backend, set GitHub OAuth
 credentials before startup:

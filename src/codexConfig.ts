@@ -423,6 +423,56 @@ function inspectSharedPlexusProjectConfig(
   }
 }
 
+function inspectSharedPlexusImageProfiles(
+  workspacePath: string,
+  projectConfig?: NexusProjectConfig,
+): CodexDoctorCheck {
+  const configPath = sharedPlexusProjectConfigPath(workspacePath, projectConfig);
+  if (!fs.existsSync(configPath)) {
+    return {
+      name: "plexus_project:images",
+      status: "failed",
+      message: `Missing ${plexusProjectConfigFileName}. Run "dev-nexus-pharo codex init ${workspacePath}" before image setup.`,
+    };
+  }
+
+  try {
+    const parsed = JSON.parse(fs.readFileSync(configPath, "utf8")) as unknown;
+    const images = isRecord(parsed) && Array.isArray(parsed.images)
+      ? parsed.images
+      : null;
+    if (!images) {
+      return {
+        name: "plexus_project:images",
+        status: "failed",
+        message: `${plexusProjectConfigFileName} images must be an array.`,
+      };
+    }
+    if (images.length === 0) {
+      return {
+        name: "plexus_project:images",
+        status: "skipped",
+        message:
+          "No scoped Pharo image profile is declared. Blank projects may keep images: [], but image lifecycle work should first add a setup-owned image profile.",
+      };
+    }
+
+    return {
+      name: "plexus_project:images",
+      status: "ok",
+      message: `Found ${images.length} scoped Pharo image profile(s).`,
+    };
+  } catch (error) {
+    return {
+      name: "plexus_project:images",
+      status: "failed",
+      message: `Could not inspect ${plexusProjectConfigFileName} images: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    };
+  }
+}
+
 function sameResolvedPath(left: string, right: string): boolean {
   const resolvedLeft = path.resolve(left);
   const resolvedRight = path.resolve(right);
@@ -1036,6 +1086,7 @@ export async function doctorCodexWorkspace(
 
   if (projectUsesSharedDevNexusMcp(projectConfig)) {
     checks.push(inspectSharedPlexusProjectConfig(workspacePath, projectConfig));
+    checks.push(inspectSharedPlexusImageProfiles(workspacePath, projectConfig));
 
     for (const [serverName, server] of Object.entries(servers)) {
       checks.push({

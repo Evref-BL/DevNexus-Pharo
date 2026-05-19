@@ -82,6 +82,11 @@ export function devNexusPharoDevNexusPluginConfig(): NexusProjectPluginConfig {
             description: "Inspect one scoped Pharo image.",
           },
           {
+            name: "pharo_launcher_image_create",
+            description:
+              "Create a declared scoped Pharo image when setup and runtime policy allow it.",
+          },
+          {
             name: "pharo_launcher_image_start",
             description: "Start one scoped Pharo image when runtime policy allows it.",
           },
@@ -135,6 +140,13 @@ export function devNexusPharoDevNexusPluginConfig(): NexusProjectPluginConfig {
         description:
           "Verify direct gateway MCP availability before changing Pharo or MCP-Pharo code.",
         required: true,
+      },
+      {
+        kind: "setup_obligation",
+        id: "setup-scoped-pharo-image-profile",
+        description:
+          "Blank projects may start with images: []; declare a scoped image profile before image create/start lifecycle work.",
+        required: false,
       },
       {
         kind: "environment_hint",

@@ -26,6 +26,24 @@ export interface PlexusProjectConfig {
   runtime: PlexusProjectRuntimeConfig;
 }
 
+export interface PlexusPharoImageProfile {
+  id: string;
+  imageName: string;
+  active: boolean;
+  mcp: {
+    loadScript: string | null;
+  };
+  create: {
+    kind: "template";
+    profileId: string;
+    templateName: string;
+    templateCategory: string;
+  };
+  git: {
+    transport: "https" | "ssh";
+  };
+}
+
 export interface PlexusProjectRuntimeConfig {
   gateway: PlexusProjectGatewayConfig;
 }
@@ -52,6 +70,10 @@ export const defaultPlexusGatewayAgentPath = "/mcp";
 export const defaultPlexusGatewayRouteControlPath = "/control-mcp";
 export const defaultPlexusProjectGatewayPortBase = 17_340;
 export const defaultPlexusProjectGatewayPortSpan = 1_000;
+export const defaultPlexusPharoImageProfileId = "dev";
+export const defaultPlexusPharoImageCreateProfileId = "pharo-13-default";
+export const defaultPlexusPharoImageTemplateName = "Pharo 13.0 - 64bit";
+export const defaultPlexusPharoImageTemplateCategory = "Official";
 
 export type PlexusImageExecutionMode = "disabled" | "docker";
 export type PlexusImageExecutionDockerNetwork = "none" | "bridge";
@@ -476,6 +498,36 @@ export function buildPlexusProjectConfig(
   };
 }
 
+export function buildPlexusPharoImageProfile(
+  projectId: string,
+  options: {
+    id?: string;
+    loadScript?: string | null;
+    gitTransport?: "https" | "ssh";
+  } = {},
+): PlexusPharoImageProfile {
+  const id = safePlexusImageProfileId(
+    options.id ?? defaultPlexusPharoImageProfileId,
+  );
+  return {
+    id,
+    imageName: `${safePlexusImageNameToken(projectId)}-{workspaceId}-${id}`,
+    active: true,
+    mcp: {
+      loadScript: options.loadScript ?? null,
+    },
+    create: {
+      kind: "template",
+      profileId: defaultPlexusPharoImageCreateProfileId,
+      templateName: defaultPlexusPharoImageTemplateName,
+      templateCategory: defaultPlexusPharoImageTemplateCategory,
+    },
+    git: {
+      transport: options.gitTransport ?? "https",
+    },
+  };
+}
+
 export function buildPlexusProjectGatewayConfig(
   projectId: string,
   reservedPorts: readonly number[] = [],
@@ -508,6 +560,22 @@ export function allocatePlexusProjectGatewayPort(
   }
 
   throw new Error("No project-local PLexus gateway port is available in the configured policy range");
+}
+
+function safePlexusImageProfileId(value: string): string {
+  const safe = value.trim().toLowerCase().replace(/[^a-z0-9_-]+/gu, "-");
+  const compact = safe.replace(/^-+|-+$/gu, "");
+  if (compact.length === 0) {
+    throw new Error("Plexus image profile id must contain at least one safe character");
+  }
+
+  return compact;
+}
+
+function safePlexusImageNameToken(value: string): string {
+  const safe = value.trim().replace(/[^A-Za-z0-9_-]+/gu, "-");
+  const compact = safe.replace(/^-+|-+$/gu, "");
+  return compact.length > 0 ? compact : "PharoProject";
 }
 
 function stableHash(value: string): number {

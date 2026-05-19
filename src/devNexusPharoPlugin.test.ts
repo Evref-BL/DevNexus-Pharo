@@ -50,6 +50,7 @@ describe("DevNexusPharo DevNexus plugin", () => {
       "mcp-gateway",
       "setup-scoped-plexus-context",
       "setup-direct-pharo-mcp",
+      "setup-scoped-pharo-image-profile",
       "env-plexus-project-root",
       "env-plexus-workspace-id",
       "env-plexus-target-id",
@@ -175,6 +176,7 @@ describe("DevNexusPharo DevNexus plugin", () => {
         tools: [
           "pharo_launcher_image_list",
           "pharo_launcher_image_info",
+          "pharo_launcher_image_create",
           "pharo_launcher_image_start",
           "pharo_launcher_image_stop",
         ],
@@ -201,6 +203,10 @@ describe("DevNexusPharo DevNexus plugin", () => {
       {
         id: "setup-direct-pharo-mcp",
         required: true,
+      },
+      {
+        id: "setup-scoped-pharo-image-profile",
+        required: false,
       },
     ]);
     expect(

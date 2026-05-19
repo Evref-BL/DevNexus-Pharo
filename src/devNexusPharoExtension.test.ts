@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  buildPlexusPharoImageProfile,
   defaultPlexusImageExecutionPolicy,
   devNexusPharoExtension,
   devNexusPharoSkillPack,
@@ -195,6 +196,30 @@ describe("DevNexus-Pharo extension", () => {
         docker: {},
       }),
     ).toThrow(/docker\.image is required/);
+  });
+
+  it("builds a setup-owned default Pharo image profile without enabling images by default", () => {
+    expect(
+      buildPlexusPharoImageProfile("DevNexus MCP-Pharo", {
+        loadScript: "pharo/load-mcp.st",
+      }),
+    ).toEqual({
+      id: "dev",
+      imageName: "DevNexus-MCP-Pharo-{workspaceId}-dev",
+      active: true,
+      mcp: {
+        loadScript: "pharo/load-mcp.st",
+      },
+      create: {
+        kind: "template",
+        profileId: "pharo-13-default",
+        templateName: "Pharo 13.0 - 64bit",
+        templateCategory: "Official",
+      },
+      git: {
+        transport: "https",
+      },
+    });
   });
 
   it("writes configured Docker image execution policy into PLexus metadata", () => {

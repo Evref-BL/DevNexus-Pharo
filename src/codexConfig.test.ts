@@ -445,6 +445,7 @@ describe("Codex config", () => {
       expect.arrayContaining([
         expect.objectContaining({ name: "config:dev_nexus", status: "ok" }),
         expect.objectContaining({ name: "plexus_project:config", status: "ok" }),
+        expect.objectContaining({ name: "plexus_project:images", status: "skipped" }),
         expect.objectContaining({ name: "dev_nexus:command", status: "skipped" }),
         expect.objectContaining({ name: "gateway:http", status: "skipped" }),
         expect.objectContaining({ name: "route_control:http", status: "skipped" }),
@@ -509,7 +510,7 @@ describe("Codex config", () => {
       .not.toContain(secondPort);
   });
 
-  it("preserves existing images and image execution while adding missing runtime metadata", () => {
+  it("preserves existing images and image execution while adding missing runtime metadata", async () => {
     const homePath = makeTempDir("dev-nexus-pharo-home-");
     initNexusHome({ homePath });
     const projectRoot = makeTempDir("dev-nexus-pharo-shared-root-");
@@ -567,6 +568,17 @@ describe("Codex config", () => {
       agentMcpPath: "/mcp",
       routeControlMcpPath: "/control-mcp",
     });
+
+    const doctor = await doctorCodexWorkspace({
+      homePath,
+      workspacePath: projectRoot,
+      config: loadHomeConfig(homePath),
+    });
+    expect(doctor.checks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: "plexus_project:images", status: "ok" }),
+      ]),
+    );
   });
 
   it("reports missing shared PLexus project config as a doctor failure", async () => {
