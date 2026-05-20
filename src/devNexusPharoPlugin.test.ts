@@ -51,6 +51,7 @@ describe("DevNexusPharo DevNexus plugin", () => {
       "setup-scoped-plexus-context",
       "setup-direct-pharo-mcp",
       "setup-scoped-pharo-image-profile",
+      "setup-image-local-pharo-dependencies",
       "env-plexus-project-root",
       "env-plexus-workspace-id",
       "env-plexus-target-id",
@@ -206,6 +207,10 @@ describe("DevNexusPharo DevNexus plugin", () => {
       },
       {
         id: "setup-scoped-pharo-image-profile",
+        required: false,
+      },
+      {
+        id: "setup-image-local-pharo-dependencies",
         required: false,
       },
     ]);

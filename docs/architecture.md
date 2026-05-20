@@ -268,6 +268,22 @@ This policy is configuration only. DevNexus-Pharo must not launch Docker, PLexus
 projects, or Pharo images unless the selected task names the isolated runner,
 disposable image boundary, and cleanup command sequence.
 
+## Image-Local Pharo Load Workspaces
+
+DevNexus-Pharo owns the Pharo-specific setup policy for making project loads
+portable across agents and images. A setup flow can call
+`preparePharoProjectLoadWorkspace` with a primary project repository plus
+declared Metacello dependency repositories. The helper preflights each
+`BaselineOf<Name>` package, copies the repositories into a scoped
+workspace-local area such as an image-local Iceberg directory, and writes a load
+script that uses only local `tonel://` URLs.
+
+The staged workspace is generated runtime support. It follows the image or
+workspace lifecycle and should not be committed to the source checkout. If a
+dependency cannot be staged, setup should fail before image startup with the
+missing baseline path rather than letting an image-side Metacello load discover
+the problem after PLexus opens the runtime.
+
 ## Project Creation
 
 `dev-nexus-pharo project create <name>` is the project factory entrypoint used by

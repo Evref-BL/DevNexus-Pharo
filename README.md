@@ -410,6 +410,14 @@ DevNexus-Pharo also publishes a default Pharo 13 scoped image-profile shape for
 setup flows. Project creation remains lightweight and does not declare or create
 images by default.
 
+DevNexus-Pharo also provides `preparePharoProjectLoadWorkspace` for setup flows
+that need reliable local image loads. The helper copies the project repository
+and declared Metacello dependency repositories into a scoped workspace directory,
+then writes a Smalltalk load script that loads every baseline through local
+`tonel://` repositories. If a declared repository is missing its
+`BaselineOf<Name>` package, the helper returns preflight diagnostics instead of
+writing a partial workspace.
+
 For GitHub sign-in with the self-hosted Vibe backend, set GitHub OAuth
 credentials before startup:
 

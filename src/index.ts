@@ -5,6 +5,7 @@ export * from "./devNexusPharoPlugin.js";
 export * from "./devNexusPharoExtension.js";
 export * from "./devNexusPharoMcpService.js";
 export * from "./devNexusPharoProjectService.js";
+export * from "./pharoProjectLoadWorkspace.js";
 export * from "./devNexusPharoRuntime.js";
 export * from "./plexusGatewayService.js";
 export * from "./nexusProjectService.js";

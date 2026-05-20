@@ -149,6 +149,13 @@ export function devNexusPharoDevNexusPluginConfig(): NexusProjectPluginConfig {
         required: false,
       },
       {
+        kind: "setup_obligation",
+        id: "setup-image-local-pharo-dependencies",
+        description:
+          "Before image startup, stage the project and declared Metacello dependencies into a scoped image/workspace-local repository area or fail preflight with the missing baseline paths.",
+        required: false,
+      },
+      {
         kind: "environment_hint",
         id: "env-plexus-project-root",
         variable: "PLEXUS_PROJECT_ROOT",
