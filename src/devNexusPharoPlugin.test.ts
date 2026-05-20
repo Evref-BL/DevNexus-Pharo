@@ -59,7 +59,9 @@ describe("DevNexusPharo DevNexus plugin", () => {
       "cleanup-owned-runtime",
       "affordance-scoped-image-lifecycle",
       "affordance-gateway-pharo-tools",
+      "affordance-pharo-host-capability-probes",
       "context-pharo-runtime-boundary",
+      "context-pharo-host-capabilities",
       "briefing-pharo-agent-setup",
     ]);
     expect(new Set(config.capabilities.map((capability) => capability.kind))).toEqual(
@@ -253,11 +255,17 @@ describe("DevNexusPharo DevNexus plugin", () => {
       .toEqual([
         "affordance-scoped-image-lifecycle",
         "affordance-gateway-pharo-tools",
+        "affordance-pharo-host-capability-probes",
       ]);
   });
 
   it("carries scoped worker fragments with Pharo runtime guidance", () => {
-    const contextFragment = capabilitiesOfKind("worker_context_fragment")[0];
+    const contextFragment = capabilitiesOfKind("worker_context_fragment").find(
+      (capability) => capability.id === "context-pharo-runtime-boundary",
+    );
+    const capabilityFragment = capabilitiesOfKind("worker_context_fragment").find(
+      (capability) => capability.id === "context-pharo-host-capabilities",
+    );
     const briefingFragment = capabilitiesOfKind("worker_briefing_fragment")[0];
 
     expect(contextFragment).toMatchObject({
@@ -271,6 +279,13 @@ describe("DevNexusPharo DevNexus plugin", () => {
     expect(contextFragment.body).toContain("direct gateway MCP tools");
     expect(contextFragment.body).toContain("report the infrastructure blocker");
     expect(contextFragment.body).toContain("Smalltalk source files from disk");
+    expect(capabilityFragment).toMatchObject({
+      id: "context-pharo-host-capabilities",
+      targetAgents: ["codex", "claude"],
+    });
+    expect(capabilityFragment?.body).toContain("Capability tags: pharo");
+    expect(capabilityFragment?.body).toContain("pharo-live-runtime");
+    expect(capabilityFragment?.body).toContain("approval-gated");
 
     expect(briefingFragment).toMatchObject({
       id: "briefing-pharo-agent-setup",
