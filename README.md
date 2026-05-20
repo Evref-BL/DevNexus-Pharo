@@ -190,6 +190,17 @@ Blank PLexus projects may keep `images: []`; `codex doctor` reports that as a
 valid non-ready state and points agents to add a setup-owned scoped image
 profile before image create/start lifecycle work.
 
+DevNexus-Pharo also exports static host capability helpers for DevNexus remote
+runner planning. `devNexusPharoHostCapabilityTags` contributes the generic tags
+`pharo`, `pharo-launcher`, `plexus`, `mcp`, `dev-nexus-pharo`, and
+`gui-adjacent`. `evaluateDevNexusPharoStaticHostCapabilities` consumes mocked or
+setup-collected facts and reports missing command, missing MCP config, missing
+PLexus gateway command, and missing Pharo Launcher installation separately. The
+published runner profile templates are `pharo-read-only-status`,
+`pharo-mcp-tool-list`, `pharo-verification`, and `pharo-live-runtime`; the
+live-runtime template remains approval-gated and is not permission to launch
+images, PLexus services, Docker, or GUI automation.
+
 By default, DevNexus-Pharo creates the managed project root under
 `paths.projectsRoot` from `dev-nexus.home.json`. Use `--root` on
 `project create` or `--project-root` on `project import` to choose a different

@@ -1,5 +1,9 @@
 import type { NexusProjectPluginConfig } from "dev-nexus";
 import { devNexusPharoSkillPack } from "./devNexusPharoExtension.js";
+import {
+  devNexusPharoHostCapabilityTags,
+  devNexusPharoRunnerProfileTemplates,
+} from "./devNexusPharoHostCapabilities.js";
 
 export const devNexusPharoPluginId = "dev-nexus-pharo";
 export const devNexusPharoPluginName = "DevNexus-Pharo";
@@ -212,6 +216,12 @@ export function devNexusPharoDevNexusPluginConfig(): NexusProjectPluginConfig {
           "Agents should use the projected gateway MCP facade for image-side Pharo work instead of editing Smalltalk files as a substitute.",
       },
       {
+        kind: "agent_affordance",
+        id: "affordance-pharo-host-capability-probes",
+        description:
+          "Agents may consume DevNexus-Pharo static host capability probes and runner profile templates through generic DevNexus host and runner surfaces.",
+      },
+      {
         kind: "worker_context_fragment",
         id: "context-pharo-runtime-boundary",
         title: "Pharo Runtime Boundary",
@@ -223,6 +233,20 @@ export function devNexusPharoDevNexusPluginConfig(): NexusProjectPluginConfig {
         ].join(" "),
         targetAgents: ["codex", "claude"],
         provenance: "DevNexus dogfood Pharo plugin plan",
+      },
+      {
+        kind: "worker_context_fragment",
+        id: "context-pharo-host-capabilities",
+        title: "Pharo Host Capabilities",
+        body: [
+          "DevNexus-Pharo contributes static, read-only host capability probes for generic DevNexus host matching.",
+          `Capability tags: ${devNexusPharoHostCapabilityTags.join(", ")}.`,
+          "The probes report missing command, missing MCP configuration, missing PLexus gateway command, and missing Pharo Launcher installation separately.",
+          `Runner profile templates: ${devNexusPharoRunnerProfileTemplates.map((profile) => profile.id).join(", ")}.`,
+          "The live-runtime template is approval-gated and must not be used as implicit approval to launch Pharo images, PLexus services, Docker, or GUI-adjacent automation.",
+        ].join(" "),
+        targetAgents: ["codex", "claude"],
+        provenance: "DevNexus dogfood remote-host execution plan",
       },
       {
         kind: "worker_briefing_fragment",

@@ -2,6 +2,7 @@ export * from "./codexConfig.js";
 export * from "./config.js";
 export * from "./mcpServer.js";
 export * from "./devNexusPharoPlugin.js";
+export * from "./devNexusPharoHostCapabilities.js";
 export * from "./devNexusPharoExtension.js";
 export * from "./devNexusPharoMcpService.js";
 export * from "./devNexusPharoProjectService.js";
