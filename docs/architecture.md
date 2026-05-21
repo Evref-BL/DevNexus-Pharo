@@ -1,6 +1,8 @@
 # Architecture
 
-DevNexus-Pharo coordinates tools that should remain independently useful:
+DevNexus-Pharo is the Pharo environment layer around DevNexus. It coordinates
+tools that should remain independently useful and keeps orchestration state
+outside Pharo images.
 
 ```text
 DevNexus-Pharo
@@ -11,6 +13,9 @@ DevNexus-Pharo
           -> PharoLauncher
       -> Pharo image MCP workers
 ```
+
+Each Pharo image is a runtime process target. DevNexus-Pharo does not make the
+image the owner of project metadata, agent setup, service state, or routing.
 
 ## Responsibilities
 
@@ -26,6 +31,7 @@ DevNexus-Pharo owns:
 - installation of DevNexus-Pharo and PLexus MCP entries into Vibe Kanban executors
 - bundled Pharo-domain support skills projected through DevNexus project skill
   refresh and plugin `projected_skill` capabilities
+- static host capability helpers for Pharo-capable DevNexus runner planning
 
 DevNexus-Pharo does not own:
 
@@ -52,6 +58,9 @@ DevNexus-Pharo -> PLexus -> pharo-launcher-mcp -> PharoLauncher
 ```
 
 PLexus should not depend on DevNexus-Pharo.
+
+DevNexus-Pharo may prepare projects and service configuration for PLexus, but
+PLexus remains the outside-image runtime control plane.
 
 ## Platform Boundary
 
@@ -427,7 +436,7 @@ real Pharo projects.
 When the user writes a task like:
 
 ```text
-Create a new Pharo project named MyLibrary from https://github.com/me/MyLibrary.git
+Create a new Pharo project named MyLibrary from https://git.example.test/org/MyLibrary.git
 ```
 
 the agent should call `pharo_project_create` on the `dev_nexus_pharo` MCP
@@ -436,7 +445,7 @@ server with:
 ```json
 {
   "name": "MyLibrary",
-  "remoteUrl": "https://github.com/me/MyLibrary.git"
+  "remoteUrl": "https://git.example.test/org/MyLibrary.git"
 }
 ```
 
@@ -476,7 +485,7 @@ The intended first scenario is that a user creates a task in the DevNexus-Pharo
 control project:
 
 ```text
-Create a new Pharo project named MyLibrary from https://github.com/me/MyLibrary.git
+Create a new Pharo project named MyLibrary from https://git.example.test/org/MyLibrary.git
 ```
 
 The agent calls:
@@ -484,7 +493,7 @@ The agent calls:
 ```json
 {
   "name": "MyLibrary",
-  "remoteUrl": "https://github.com/me/MyLibrary.git"
+  "remoteUrl": "https://git.example.test/org/MyLibrary.git"
 }
 ```
 
