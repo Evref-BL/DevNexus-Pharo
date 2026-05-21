@@ -19,6 +19,7 @@
   "types": "./dist/index.d.ts",
   "files": [
     "dist",
+    "docs",
     "AGENTS.md",
     "README.md",
     "package.json"

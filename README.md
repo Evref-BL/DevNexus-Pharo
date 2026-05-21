@@ -1,380 +1,188 @@
 # DevNexus-Pharo
 
-DevNexus-Pharo is the Pharo plugin and user-environment layer for DevNexus. It
-starts the local service graph, keeps project metadata consistent, and gives
-agents MCP tools for creating and managing Pharo projects without replacing
-DevNexus as the generic project, work-item, worktree, and target infrastructure.
+DevNexus-Pharo is the Pharo environment layer for DevNexus.
+
+It prepares Pharo-ready DevNexus workspaces, projects Pharo support skills and
+MCP configuration, and can start the local service graph that connects agents to
+PLexus and image-local Pharo MCP workers.
+
+DevNexus-Pharo does not replace DevNexus. DevNexus remains the generic
+workspace, component, work-item, worktree, and target infrastructure. PLexus
+owns Pharo runtime targets and image routing. pharo-launcher-mcp owns Pharo
+Launcher access. MCP-Pharo runs inside one Pharo image and exposes image-local
+code and environment tools.
+
+## Where It Fits
+
+```text
+DevNexus workspace
+  -> DevNexus-Pharo environment layer
+      -> PLexus project/runtime context
+          -> pharo-launcher-mcp
+              -> Pharo Launcher
+          -> image-local MCP-Pharo workers
+      -> optional Vibe Kanban control surface
+```
+
+The main design point is outside-image orchestration. DevNexus-Pharo and PLexus
+keep setup, project metadata, service state, routing, and agent support outside
+the Pharo image. Each image is a runtime process that agents can inspect or
+modify through scoped MCP tools.
+
+## What It Owns
 
 DevNexus-Pharo owns:
 
 - the user-level DevNexus-Pharo home
-- Vibe Kanban backend and local app startup
-- the PLexus gateway startup
-- Codex/Vibe MCP configuration for DevNexus-Pharo, PLexus, and the projected Pharo
-  MCP facade
-- Pharo-oriented project creation/import helpers and home registry integration
-- the DevNexus plugin declaration that contributes Pharo skills, scoped PLexus
-  setup obligations, Pharo MCP projection, worker briefing fragments, and
-  cleanup expectations for Pharo-capable agents
+- the reserved control project for creating and importing Pharo projects
+- Pharo project creation/import helpers and home registry integration
+- optional Vibe Kanban backend and local app startup
+- PLexus gateway startup for Pharo-capable environments
+- Codex and Vibe MCP configuration for DevNexus-Pharo and PLexus
+- DevNexus plugin capabilities for Pharo skills, setup checks, MCP projection,
+  worker briefing fragments, and cleanup expectations
 
-The bundled Pharo skills include DevNexus-Pharo workflow guidance plus copied
-MCP-Pharo domain guidance for Pharo CI reproduction, image Git handoff, project
-loading, and Pharo cross-version support. The MCP-Pharo copies are support
-material projected under `.dev-nexus/skills`; MCP-Pharo remains the source for
-image-side MCP server behavior and image-owned repository operations.
+DevNexus-Pharo does not own:
 
-PLexus owns Pharo runtime/project/workspace behavior. pharo-launcher-mcp owns
-PharoLauncher access.
+- generic DevNexus project, component, tracker, work-item, worktree, target, or
+  publication behavior
+- Pharo Launcher CLI semantics
+- Pharo image creation, launch, stop, deletion, or process killing
+- image-local Pharo code editing, test execution, repository export, or image
+  save behavior
+
+Those belong to DevNexus core, pharo-launcher-mcp, PLexus, and MCP-Pharo.
+
+## Terms
+
+- A **DevNexus-Pharo home** is host-local state, normally
+  `~/.dev-nexus-pharo`, containing service config, logs, runtime state, the
+  control project, and registered Pharo projects.
+- The **control project** is a reserved DevNexus project named
+  `DevNexus-Pharo`. It is for creating, importing, and managing real Pharo
+  projects.
+- A **managed Pharo project** is a DevNexus project root that points at a Pharo
+  source checkout and contains generated agent and PLexus support files.
+- **Plugin mode** means an existing DevNexus workspace uses DevNexus-Pharo
+  capabilities without being created by `dev-nexus-pharo project create`.
+- **Static projection** writes skills, support config, and MCP entries. It does
+  not start Vibe, PLexus, Pharo Launcher, Docker, or images.
+- The **live service graph** is the supervised local set of DevNexus-Pharo MCP,
+  optional Vibe services, and PLexus gateway services started by
+  `dev-nexus-pharo start`.
 
 ## Requirements
 
 - Node.js 24 or newer, with `npm` and `npx`
 - Git
 - Docker when using the local Vibe backend
-- a working PLexus gateway command, usually `plexus-gateway`
+- a working PLexus gateway command, usually `plexus-gateway`, when live Pharo
+  routing is needed
 
 Windows examples use PowerShell and `C:\...` paths. macOS and Linux can use the
 same commands with POSIX paths.
 
-## Install From Source
+## Quick Start
+
+Install from a source checkout:
 
 ```powershell
-cd C:\dev\code\git\DevNexus-Pharo
+cd C:\work\src\DevNexus-Pharo
 npm install
 npm run build
 npm link
 ```
 
-`npm link` exposes `dev-nexus-pharo` in new terminals. Without a global link, run
-the built CLI directly:
-
-```powershell
-node C:\dev\code\git\DevNexus-Pharo\dist\cli.js --help
-```
-
-## Initialize A Home
+Initialize the host-local DevNexus-Pharo home:
 
 ```powershell
 dev-nexus-pharo init
 ```
 
-By default, DevNexus-Pharo uses `DEV_NEXUS_PHARO_HOME`, then `~\.dev-nexus-pharo`. To use a
-specific home:
-
-```powershell
-$env:DEV_NEXUS_PHARO_HOME = "C:\dev\code\.dev-nexus-pharo"
-dev-nexus-pharo init
-```
-
-```bash
-export DEV_NEXUS_PHARO_HOME=~/dev/dev-nexus-pharo
-dev-nexus-pharo init
-```
-
-For guided setup:
-
-```powershell
-dev-nexus-pharo init --interactive
-```
-
-If `plexus-gateway` is not on `PATH`, edit the generated
-`dev-nexus.home.json` and set `tools.plexus.command` to an absolute path.
-
-## Start And Stop
+Start the local service graph:
 
 ```powershell
 dev-nexus-pharo start
 ```
 
-This starts the configured Vibe backend, Vibe Kanban, the DevNexus-Pharo MCP
-service, and the PLexus gateway. It also creates and links the reserved
-`DevNexus-Pharo` control board, opens Vibe Kanban when healthy, and installs
-`dev_nexus_pharo` and `plexus` MCP entries into the configured Vibe executor.
+This starts the configured Vibe backend when enabled, Vibe Kanban, the
+DevNexus-Pharo MCP service, and the PLexus gateway. It also ensures the reserved
+control project exists and installs the expected MCP entries into the configured
+Vibe executor.
 
-Open Vibe Kanban at:
-
-```text
-http://127.0.0.1:3000
-```
-
-Check status or stop the environment:
-
-```powershell
-dev-nexus-pharo status --check-health
-dev-nexus-pharo stop
-```
-
-Useful startup options:
-
-```text
---force                       restart already-running managed services
---executor <name>             install MCP config for a Vibe Kanban executor
---server-name <name>          PLexus MCP server name, default: plexus
---skip-mcp-config             start services without changing Vibe MCP config
---no-open-browser             do not open Vibe Kanban after startup
---vibe-health-timeout-ms <ms> Vibe Kanban startup wait timeout
-```
-
-## Control Board Workflow
-
-The `DevNexus-Pharo` Kanban board is the control board. Use it for environment and
-project-management tasks, such as:
-
-```text
-Create a new Pharo project named MyLibrary from https://github.com/me/MyLibrary.git
-```
-
-Agents should satisfy that request with the DevNexus-Pharo MCP project factory, not
-by manually creating folders or hand-editing project metadata.
-
-After a project exists, use that project's own Kanban board for feature work.
-Do not use the control board as the normal feature board for real projects.
-
-## Create Or Import Projects
-
-Create a new managed project:
+Create a managed Pharo project:
 
 ```powershell
 dev-nexus-pharo project create MyProject --git-init
 ```
 
-Create a project from a Git URL:
+Or create one from an existing Git URL:
 
 ```powershell
-dev-nexus-pharo project create MyProject --from https://github.com/example/MyProject.git
+dev-nexus-pharo project create MyProject --from https://git.example.test/org/MyProject.git
 ```
 
-Import an existing local source checkout without writing DevNexus-Pharo metadata
-into that checkout:
+Prepare a Codex workspace for a managed project:
 
 ```powershell
-dev-nexus-pharo project import C:\dev\code\git\ExistingProject --name ExistingProject
+dev-nexus-pharo codex init C:\work\.dev-nexus-pharo\projects\MyProject
+dev-nexus-pharo codex doctor C:\work\.dev-nexus-pharo\projects\MyProject
 ```
 
-Inspect or refresh generated DevNexus support skills for a managed project:
+Open a fresh Codex chat from that workspace after `codex doctor` passes. A
+running chat may keep the MCP tool list it loaded at startup.
+
+## Existing DevNexus Workspace
+
+Shared DevNexus project roots can use DevNexus-Pharo as a plugin without being
+created by `dev-nexus-pharo project create`.
+
+From the shared DevNexus workspace root:
+
+```powershell
+dev-nexus-pharo init
+dev-nexus-pharo project skills refresh C:\work\agent-workspace
+dev-nexus-pharo codex init C:\work\agent-workspace
+```
+
+For roots whose `dev-nexus.project.json` has both a DevNexus `mcp` block and an
+enabled `dev-nexus-pharo` plugin, `project skills refresh` materializes only the
+plugin-declared Pharo skills. It does not require a Kanban block and it does not
+start PLexus, Pharo Launcher, images, or Docker.
+
+## Common Workflows
+
+Create or import a Pharo project:
+
+```powershell
+dev-nexus-pharo project create MyProject --git-init
+dev-nexus-pharo project create MyProject --from https://git.example.test/org/MyProject.git
+dev-nexus-pharo project import C:\work\src\ExistingProject --name ExistingProject
+```
+
+Inspect registered projects:
+
+```powershell
+dev-nexus-pharo project list
+dev-nexus-pharo project status MyProject
+dev-nexus-pharo project status C:\work\.dev-nexus-pharo\projects\MyProject
+```
+
+Refresh projected Pharo support skills:
 
 ```powershell
 dev-nexus-pharo project skills status MyProject
 dev-nexus-pharo project skills refresh MyProject
 ```
 
-Managed DevNexus-Pharo projects receive copied support skills under
-`.dev-nexus\skills`, including the MCP-Pharo-derived `pharo-ci-repro`,
-`pharo-image-git-handoff`, `pharo-project-load`, and
-`pharo-version-compat` skills. DevNexus-Pharo records the upstream MCP-Pharo
-commit in each skill manifest so workers do not need a sibling MCP-Pharo checkout
-to read the guidance.
-
-Shared DevNexus project roots can also use DevNexus-Pharo as a plugin without
-being created by `dev-nexus-pharo project create`. After the npm packages are
-installed and the local DevNexus-Pharo home is initialized, run the static setup
-from the shared meta root:
+Check or stop the live service graph:
 
 ```powershell
-dev-nexus-pharo init
-dev-nexus-pharo project skills refresh C:\dev\code\dev-nexus-dogfood
-dev-nexus-pharo codex init C:\dev\code\dev-nexus-dogfood
+dev-nexus-pharo status --check-health
+dev-nexus-pharo stop
 ```
 
-For roots whose `dev-nexus.project.json` has both a DevNexus `mcp` block and an
-enabled `dev-nexus-pharo` plugin, `project skills refresh` materializes only the
-plugin-declared Pharo skills. It does not require a `kanban` block and it
-does not start PLexus, Pharo Launcher, images, or Docker.
-
-`codex init` also materializes the static `plexus.project.json` file required by
-the scoped `plexus_project` and `pharo_launcher` MCP servers. If a project-local
-runtime install exists under `.dev-nexus/runtime/npm-tools`, generated Codex MCP
-commands use those package-local binaries instead of requiring global
-`dev-nexus-pharo` or `plexus` commands.
-Blank PLexus projects may keep `images: []`; `codex doctor` reports that as a
-valid non-ready state and points agents to add a setup-owned scoped image
-profile before image create/start lifecycle work.
-
-DevNexus-Pharo also exports static host capability helpers for DevNexus remote
-runner planning. `devNexusPharoHostCapabilityTags` contributes the generic tags
-`pharo`, `pharo-launcher`, `plexus`, `mcp`, `dev-nexus-pharo`, and
-`gui-adjacent`. `evaluateDevNexusPharoStaticHostCapabilities` consumes mocked or
-setup-collected facts and reports missing command, missing MCP config, missing
-PLexus gateway command, and missing Pharo Launcher installation separately. The
-published runner profile templates are `pharo-read-only-status`,
-`pharo-mcp-tool-list`, `pharo-verification`, and `pharo-live-runtime`; the
-live-runtime template remains approval-gated and is not permission to launch
-images, PLexus services, Docker, or GUI automation.
-
-By default, DevNexus-Pharo creates the managed project root under
-`paths.projectsRoot` from `dev-nexus.home.json`. Use `--root` on
-`project create` or `--project-root` on `project import` to choose a different
-managed root.
-
-Project creation writes the managed project files:
-
-```text
-<project-root>\
-  .codex\config.toml
-  AGENTS.md
-  suggestedFirstPrompt.md
-  dev-nexus.project.json
-  plexus.project.json
-  worktrees\
-```
-
-For `project create --from`, the source repository is cloned under
-`<project-root>\git`. For `project import <source-checkout>`, the managed
-project points at the existing source checkout.
-
-Configure provider-neutral work tracking through DevNexus core. DevNexus owns
-generic project and component work tracking; DevNexus-Pharo only contributes the
-Pharo plugin layer.
-
-```powershell
-dev-nexus project tracker configure C:\dev\code\MyProject --provider local --store-path .dev-nexus\work-items.json
-dev-nexus project tracker configure C:\dev\code\MyProject --provider github --repository-owner example --repository-name MyProject
-dev-nexus project tracker configure C:\dev\code\MyProject --provider github --host github.enterprise.test --repository-owner example --repository-name MyProject
-dev-nexus project tracker configure C:\dev\code\MyProject --provider gitlab --repository-id example/MyProject
-dev-nexus project tracker configure C:\dev\code\MyProject --provider gitlab --host gitlab.enterprise.test --repository-id example/MyProject
-dev-nexus project tracker configure C:\dev\code\MyProject --provider jira --host example.atlassian.net --project-key FCD
-```
-
-The GitHub provider uses the GitHub Issues REST API. It reads credentials in
-this order: explicit provider token from code, `GITHUB_TOKEN`, `GH_TOKEN`, then
-`git credential fill`. If Git Credential Manager is configured as Git's
-credential helper, cached GitHub or GitHub Enterprise tokens are reused through
-that standard Git credential protocol. Automation calls use non-interactive
-credential lookup by default with `GCM_INTERACTIVE=0` and
-`GIT_TERMINAL_PROMPT=0`, so they fail instead of hanging if no cached credential
-exists.
-
-GitHub Projects v2 is optional. If the project config includes a
-`workTracking.board` with `kind: "github-project-v2"` and a project node id,
-new and status-updated GitHub issues are added to that project through
-GitHub's GraphQL API. To map DevNexus statuses to a Projects v2 single-select
-Status field, configure the field node id and option ids:
-
-```json
-{
-  "workTracking": {
-    "provider": "github",
-    "repository": {
-      "owner": "example",
-      "name": "MyProject"
-    },
-    "board": {
-      "kind": "github-project-v2",
-      "projectId": "PVT_project_node_id",
-      "statusFieldId": "PVTSSF_status_field_id",
-      "statusOptions": {
-        "ready": "status_option_id",
-        "in_progress": "status_option_id",
-        "blocked": "status_option_id",
-        "done": "status_option_id"
-      }
-    }
-  }
-}
-```
-
-GitHub requires those Project v2 project, field, and option node ids for GraphQL
-updates. If `statusOptions` does not include a status, DevNexus still adds
-the issue to the project but skips the status-field update for that status.
-
-The GitLab provider uses the GitLab project Issues and Notes REST APIs under
-`/api/v4`. Configure `repository.id` as the GitLab project id or namespace path,
-such as `example/MyProject`. It reads credentials in this order: explicit
-provider token from code, `GITLAB_TOKEN`, `GL_TOKEN`, then `git credential fill`.
-Credential-helper lookup is also non-interactive by default. GitLab write
-operations that set assignees or milestones currently require numeric GitLab
-assignee and milestone ids.
-
-The Jira provider uses the Jira Cloud REST API v3 under `/rest/api/3`.
-Configure `host` as the Jira site host, such as `example.atlassian.net`, and
-`projectKey` as the Jira project key. It reads credentials in this order:
-explicit provider OAuth bearer token from code, `JIRA_TOKEN`, explicit
-email/API-token credentials from code, `JIRA_EMAIL` plus `JIRA_API_TOKEN`
-or `ATLASSIAN_EMAIL` plus `ATLASSIAN_API_TOKEN`, then `git credential fill`.
-Credential-helper lookup is non-interactive by default, so Git Credential
-Manager can supply cached Jira site credentials without hanging automation.
-Jira issue descriptions and comments are sent as Atlassian Document Format.
-Assignees are Jira account ids, and Jira milestones are intentionally not
-mapped yet.
-
-Jira workflow transitions are project-specific. To let DevNexus move Jira
-issues through the real Jira workflow when setting a neutral status, configure
-transition ids in `workTracking.board.statusOptions` with
-`kind: "jira-workflow"`:
-
-```json
-{
-  "workTracking": {
-    "provider": "jira",
-    "host": "example.atlassian.net",
-    "projectKey": "FCD",
-    "board": {
-      "kind": "jira-workflow",
-      "statusOptions": {
-        "blocked": "31",
-        "done": "41"
-      }
-    }
-  }
-}
-```
-
-When no transition id is configured for a status, DevNexus still records the
-neutral status with a `status:<name>` Jira label and skips the workflow
-transition.
-
-List and inspect projects:
-
-```powershell
-dev-nexus-pharo project list
-dev-nexus-pharo project status MyProject
-dev-nexus-pharo project status C:\dev\code\dev-nexus-pharo\MyProject
-```
-
-Use `--json` for machine-readable output.
-
-## Codex Workspace Setup
-
-DevNexus-Pharo-managed Codex workspaces should connect to the supervised local MCP
-endpoints started by `dev-nexus-pharo start`.
-
-```powershell
-dev-nexus-pharo start
-dev-nexus-pharo codex init C:\dev\code\dev-nexus-pharo\MyProject
-dev-nexus-pharo codex doctor C:\dev\code\dev-nexus-pharo\MyProject
-```
-
-Open a fresh Codex chat from that workspace after `codex doctor` passes. A
-running chat may keep the MCP tool list it loaded at startup.
-
-`.codex\config.toml` is generated workspace state. Keep it local or projected
-from a managed DevNexus project root; the source repository does not track a
-live Codex config file.
-
-`codex init` preserves unrelated Codex settings and unrelated MCP servers. For
-project-scoped DevNexus-Pharo roots it removes obsolete home-scoped `plexus`,
-`vibe_kanban`, and `pharo` entries with clean `plexus_project`,
-`pharo_launcher`, `route_control`, and `gateway` entries. The gateway entries
-use the project-local PLexus gateway policy recorded in `plexus.project.json`;
-`codex doctor` verifies that they are projected without spawning commands,
-opening images, or creating routes.
-For shared DevNexus plugin roots, `codex init` writes the root project surface
-instead: `dev_nexus`, `dev_nexus_pharo`, `plexus_project`, `pharo_launcher`,
-`route_control`, and the live `gateway` endpoint. In that mode it removes the
-obsolete managed `plexus`, `vibe_kanban`, and `pharo` entries so fresh Codex
-sessions load the intended project/plugin tool surface.
-
-Generic worktree preparation, status, execution handoff, and archival belong to
-DevNexus core. DevNexus-Pharo keeps the Pharo-specific Codex and PLexus gateway
-projection intact for prepared workspaces. Workers changing Pharo code should use
-the direct `gateway` MCP tools. If those tools are missing or unreachable, report
-the MCP infrastructure blocker and use read-only PLexus status or route discovery
-instead of editing Pharo code through files.
-
-## MCP Server
-
-`dev-nexus-pharo start` supervises the HTTP MCP endpoint automatically. For direct
-MCP server use:
+Run the DevNexus-Pharo MCP server directly:
 
 ```powershell
 dev-nexus-pharo mcp
@@ -386,72 +194,37 @@ Compatibility mode for clients without URL MCP support:
 dev-nexus-pharo mcp-stdio
 ```
 
-DevNexus-Pharo exposes these Pharo-project tools:
+## Safety Notes
 
-```text
-pharo_project_create
-pharo_project_import
-pharo_project_list
-pharo_project_status
-pharo_project_skill_status
-pharo_project_skill_refresh
-```
+`dev-nexus-pharo codex init`, `project skills refresh`, and static plugin setup
+are projection operations. They should not start live Pharo images, Docker,
+PLexus project runtimes, or Pharo Launcher processes.
 
-All DevNexus-Pharo MCP tools default to compact `detail: "summary"` responses.
-Pass `detail: "full"` when an agent needs complete generated project config,
-Codex MCP config, PLexus config, Git command records, or per-skill file paths.
+Live Pharo image work belongs behind PLexus policy and the selected workspace or
+runner boundary. DevNexus-Pharo publishes host capability tags and runner
+profile templates, but the `pharo-live-runtime` profile remains approval-gated.
+It is not permission to launch images, PLexus services, Docker, or GUI
+automation by itself.
 
-Generic DevNexus MCP tools are intentionally exposed only by `dev_nexus`.
-Use `dev_nexus` for generic `project_*`, `work_item_*`, `automation_status`,
-`target_cycle_*`, and `target_report` operations; calls to those names through
-`dev_nexus_pharo` are unknown tools.
+Generic work tracking belongs to DevNexus core. Configure provider-neutral
+trackers with `dev-nexus` commands, not DevNexus-Pharo commands.
 
-## Configuration Notes
+## Documentation
 
-Vibe backend modes are configured in `dev-nexus.home.json`:
-
-- `docker`: local self-hosted Vibe backend through Docker Compose
-- `dind`: local self-hosted Vibe backend inside a Docker-in-Docker container
-- `external`: remote or manually managed Vibe backend
-
-Managed project `plexus.project.json` files include an `imageExecution` policy.
-It defaults to `disabled` and requires disposable images plus an explicit
-cleanup plan before future PLexus image launch work can opt into Docker mode.
-DevNexus-Pharo also publishes a default Pharo 13 scoped image-profile shape for
-setup flows. Project creation remains lightweight and does not declare or create
-images by default.
-
-DevNexus-Pharo also provides `preparePharoProjectLoadWorkspace` for setup flows
-that need reliable local image loads. The helper copies the project repository
-and declared Metacello dependency repositories into a scoped workspace directory,
-then writes a Smalltalk load script that loads every baseline through local
-`tonel://` repositories. If a declared repository is missing its
-`BaselineOf<Name>` package, the helper returns preflight diagnostics instead of
-writing a partial workspace.
-
-For GitHub sign-in with the self-hosted Vibe backend, set GitHub OAuth
-credentials before startup:
-
-```powershell
-$env:DEV_NEXUS_PHARO_GITHUB_OAUTH_CLIENT_ID = "<github-oauth-client-id>"
-$env:DEV_NEXUS_PHARO_GITHUB_OAUTH_CLIENT_SECRET = "<github-oauth-client-secret>"
-```
-
-## Troubleshooting
-
-- Missing `dev_nexus_pharo`, `plexus`, or `pharo` tools: run `dev-nexus-pharo codex doctor
-  <workspace>`, then open a fresh Codex chat after the checks pass.
-- Service health failures: run `dev-nexus-pharo status --check-health`, inspect
-  logs under `<home>\logs\`, then rerun `dev-nexus-pharo start`.
-- Port conflicts: update the ports in `dev-nexus.home.json` or stop the
-  conflicting process, then rerun `dev-nexus-pharo codex init <workspace>`.
-- MCP handshake failures: make sure `.codex\config.toml` points at the
-  configured host and ports, and that `dev-nexus-pharo start` is running.
-- Command fallback mode should use the current Node executable and an absolute
-  DevNexus-Pharo CLI entrypoint, not a bare `dev-nexus-pharo` package-bin name.
-
-## More Documentation
-
-- [Architecture](docs/architecture.md) covers system boundaries and design.
+- [Getting Started](docs/user/getting-started.md) gives the first-use paths.
+- [Modes](docs/user/modes.md) explains home/control-project mode, plugin mode,
+  static projection, and live services.
+- [User Workflows](docs/user/workflows.md) covers project creation, import,
+  control-project tasks, project-board tasks, and Codex setup.
+- [MCP Reference](docs/reference/mcp.md) lists DevNexus-Pharo MCP surfaces and
+  tool ownership.
+- [Configuration Reference](docs/reference/configuration.md) covers home
+  config, Vibe backend modes, image execution policy, host capabilities, and
+  Pharo load workspaces.
+- [Troubleshooting](docs/troubleshooting.md) covers missing MCP tools, service
+  health failures, port conflicts, and stale Codex sessions.
+- [Architecture](docs/architecture.md) covers component boundaries and design.
 - [Development](docs/development.md) covers contributor commands and internal
-  service implementation notes.
+  implementation notes.
+- [Documentation Refresh Plan](docs/documentation-refresh-plan.md) records the
+  reusable documentation direction for the Pharo component family.

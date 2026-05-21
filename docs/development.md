@@ -15,14 +15,25 @@ npm run check
 The CLI entrypoint during development is:
 
 ```powershell
-node C:\dev\code\git\DevNexus-Pharo\dist\cli.js --help
+node C:\work\src\DevNexus-Pharo\dist\cli.js --help
 ```
 
 The package is TypeScript ESM targeting Node.js 24 or newer.
 
 ## Documentation Layout
 
-- `README.md`: user setup, startup, project workflow, and troubleshooting.
+- `README.md`: concise user-facing entry point and docs map.
+- `docs/user/getting-started.md`: first-use setup paths.
+- `docs/user/modes.md`: home/control-project mode, plugin mode, static
+  projection, and live service boundaries.
+- `docs/user/workflows.md`: project factory, control-project, managed project,
+  skill projection, Codex setup, and work-tracking boundaries.
+- `docs/reference/mcp.md`: MCP server commands, tools, and ownership.
+- `docs/reference/configuration.md`: home shape, project shape, Vibe backend
+  modes, image execution policy, load workspaces, and host capabilities.
+- `docs/troubleshooting.md`: operational failures and recovery checks.
+- `docs/documentation-refresh-plan.md`: durable notes for the documentation
+  cleanup direction.
 - `docs/architecture.md`: design boundaries and system model.
 - `docs/development.md`: contributor commands and implementation notes.
 - `AGENTS.md`: agent workflow contract for this repository.
@@ -45,8 +56,8 @@ Project commands:
 
 ```powershell
 dev-nexus-pharo project create MyProject --git-init
-dev-nexus-pharo project create MyProject --from https://github.com/example/MyProject.git
-dev-nexus-pharo project import C:\dev\code\git\ExistingProject --name ExistingProject
+dev-nexus-pharo project create MyProject --from https://git.example.test/org/MyProject.git
+dev-nexus-pharo project import C:\work\src\ExistingProject --name ExistingProject
 dev-nexus-pharo project list
 dev-nexus-pharo project status MyProject
 dev-nexus-pharo project skills status MyProject
@@ -71,8 +82,8 @@ image-side MCP behavior.
 Codex workspace commands:
 
 ```powershell
-dev-nexus-pharo codex init C:\dev\code\dev-nexus-pharo\ExistingProject
-dev-nexus-pharo codex doctor C:\dev\code\dev-nexus-pharo\ExistingProject
+dev-nexus-pharo codex init C:\work\.dev-nexus-pharo\projects\ExistingProject
+dev-nexus-pharo codex doctor C:\work\.dev-nexus-pharo\projects\ExistingProject
 ```
 
 Service subcommands:
