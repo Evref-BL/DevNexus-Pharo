@@ -9,7 +9,7 @@ import {
 import {
   defaultDevNexusPharoMcpHealthPath,
   defaultDevNexusPharoMcpHost,
-} from "./mcpServer.js";
+} from "./devNexusPharoMcpProtocol.js";
 import {
   checkHttpPort,
   defaultDetachedForPersistentService,

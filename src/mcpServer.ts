@@ -22,6 +22,12 @@ import {
   providerCompatibleMcpTools,
   StdioJsonRpcTransport,
 } from "dev-nexus";
+import {
+  defaultDevNexusPharoMcpEndpointPath,
+  defaultDevNexusPharoMcpHealthPath,
+  defaultDevNexusPharoMcpHost,
+  devNexusPharoMcpProtocolVersion,
+} from "./devNexusPharoMcpProtocol.js";
 
 type JsonRpcId = string | number | null;
 
@@ -31,11 +37,6 @@ interface JsonRpcRequest {
   method: string;
   params?: unknown;
 }
-
-export const defaultDevNexusPharoMcpHost = "127.0.0.1";
-export const defaultDevNexusPharoMcpEndpointPath = "/mcp";
-export const defaultDevNexusPharoMcpHealthPath = "/health";
-export const devNexusPharoMcpProtocolVersion = "2024-11-05";
 
 export interface DevNexusPharoMcpHttpServerOptions {
   host?: string;

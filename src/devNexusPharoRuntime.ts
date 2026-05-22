@@ -30,7 +30,7 @@ import {
   type DevNexusPharoMcpStatusResult,
   type DevNexusPharoMcpStopResult,
 } from "./devNexusPharoMcpService.js";
-import { defaultDevNexusPharoMcpHealthPath } from "./mcpServer.js";
+import { defaultDevNexusPharoMcpHealthPath } from "./devNexusPharoMcpProtocol.js";
 import {
   getPlexusGatewayStatus,
   startPlexusGateway,
