@@ -18,7 +18,7 @@ import {
   type PlexusProjectGatewayConfig,
 } from "./devNexusPharoExtension.js";
 import { devNexusPharoPluginId } from "./devNexusPharoPlugin.js";
-import { defaultDevNexusPharoMcpHealthPath } from "./mcpServer.js";
+import { defaultDevNexusPharoMcpHealthPath } from "./devNexusPharoMcpProtocol.js";
 
 export const codexConfigDirectoryName = ".codex";
 export const codexConfigFileName = "config.toml";
