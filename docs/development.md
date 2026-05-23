@@ -205,7 +205,7 @@ not as source-controlled repository configuration.
 
 Shared DevNexus-Pharo project roots emit command-based `plexus_project` and
 `pharo_launcher` entries plus separate URL MCP entries for `route_control` and
-the agent-facing `gateway`. The gateway URLs come from the project-local PLexus
+the agent-facing `pharo_gateway`. The gateway URLs come from the project-local PLexus
 runtime policy in `plexus.project.json`; obsolete home-scoped `plexus`,
 `vibe_kanban`, and `pharo` entries are removed during regeneration.
 Shared roots also include the generic `dev_nexus` server. Use `dev_nexus`, not
@@ -214,7 +214,7 @@ Shared roots also include the generic `dev_nexus` server. Use `dev_nexus`, not
 
 `codex doctor` validates managed config sections, endpoint health, MCP
 `initialize`, `tools/list`, and expected tool names. For project-local
-`gateway` and `route_control` entries it performs only a read-only config check,
+`pharo_gateway` and `route_control` entries it performs only a read-only config check,
 so the check does not launch images or open PLexus routes.
 
 ## Agent Model Policy

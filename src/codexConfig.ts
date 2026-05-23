@@ -10,6 +10,7 @@ import {
 import {
   buildPlexusProjectConfig,
   buildPlexusProjectGatewayConfig,
+  defaultPlexusGatewayAgentMcpServerName,
   devNexusPharoProjectExtensionConfig,
   normalizePlexusProjectConfig,
   projectPlexusConfigPath,
@@ -26,7 +27,9 @@ export const defaultDevNexusCodexMcpServerName = "dev_nexus";
 export const defaultDevNexusPharoCodexMcpServerName = "dev_nexus_pharo";
 export const defaultPlexusProjectCodexMcpServerName = "plexus_project";
 export const defaultPharoLauncherCodexMcpServerName = "pharo_launcher";
-export const defaultGatewayCodexMcpServerName = "gateway";
+export const legacyGatewayCodexMcpServerName = "gateway";
+export const defaultGatewayCodexMcpServerName =
+  defaultPlexusGatewayAgentMcpServerName;
 export const defaultRouteControlCodexMcpServerName = "route_control";
 export const defaultVibeKanbanCodexMcpServerName = "vibe_kanban";
 export const defaultPharoCodexMcpServerName = "pharo";
@@ -705,6 +708,8 @@ function buildSharedDevNexusPharoMcpServers(
       config.ports.devNexusPharoMcp,
       config.ports.plexusMcp,
     ]);
+  const pharoGatewayServerName =
+    gateway.agentMcpServerName || defaultGatewayCodexMcpServerName;
 
   return {
     [
@@ -738,7 +743,7 @@ function buildSharedDevNexusPharoMcpServers(
       url: gatewayUrl(gateway, gateway.routeControlMcpPath),
       defaultToolsApprovalMode: "approve",
     },
-    [defaultGatewayCodexMcpServerName]: {
+    [pharoGatewayServerName]: {
       type: "http",
       enabled: true,
       url: gatewayUrl(gateway, gateway.agentMcpPath),
@@ -842,6 +847,7 @@ export function initCodexWorkspace(
           config.integrations.vibeKanban.plexusMcpServerName,
           defaultVibeKanbanCodexMcpServerName,
           defaultPharoCodexMcpServerName,
+          legacyGatewayCodexMcpServerName,
         ]
       : [],
   );

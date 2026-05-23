@@ -1,5 +1,8 @@
 import type { NexusProjectPluginConfig } from "dev-nexus";
-import { devNexusPharoSkillPack } from "./devNexusPharoExtension.js";
+import {
+  defaultPlexusGatewayAgentMcpServerName,
+  devNexusPharoSkillPack,
+} from "./devNexusPharoExtension.js";
 import {
   devNexusPharoHostCapabilityTags,
   devNexusPharoRunnerProfileTemplates,
@@ -121,7 +124,7 @@ export function devNexusPharoDevNexusPluginConfig(): NexusProjectPluginConfig {
       {
         kind: "mcp_server",
         id: "mcp-gateway",
-        serverName: "gateway",
+        serverName: defaultPlexusGatewayAgentMcpServerName,
         description:
           "PLexus-projected direct Pharo MCP facade for the selected scoped image.",
         tools: [
@@ -142,7 +145,7 @@ export function devNexusPharoDevNexusPluginConfig(): NexusProjectPluginConfig {
         kind: "setup_obligation",
         id: "setup-direct-pharo-mcp",
         description:
-          "Verify direct gateway MCP availability before changing Pharo or MCP-Pharo code.",
+          "Verify direct pharo_gateway MCP availability before changing Pharo or MCP-Pharo code.",
         required: true,
       },
       {
@@ -228,7 +231,7 @@ export function devNexusPharoDevNexusPluginConfig(): NexusProjectPluginConfig {
         body: [
           "DevNexus-Pharo composes with DevNexus and does not choose or supervise implementation work.",
           "It contributes setup, skills, MCP projection, and scoped PLexus context only; the coordinator still chooses and supervises implementation work.",
-          "For Pharo or MCP-Pharo code work, use the direct gateway MCP tools.",
+          "For Pharo or MCP-Pharo code work, use the direct pharo_gateway MCP tools.",
           "If that surface is missing or unreachable, report the infrastructure blocker instead of editing Smalltalk source files from disk as a substitute.",
         ].join(" "),
         targetAgents: ["codex", "claude"],
@@ -253,7 +256,7 @@ export function devNexusPharoDevNexusPluginConfig(): NexusProjectPluginConfig {
         id: "briefing-pharo-agent-setup",
         title: "Pharo Agent Setup",
         body: [
-          "Prefer scoped PLexus and gateway tools for image operations.",
+          "Prefer scoped PLexus and pharo_gateway tools for image operations.",
           "For mutable Pharo work, create a fresh disposable image per issue, branch, chat, or experiment; shared or dev images are read-only unless explicitly owned by the worker.",
           "Keep image lifecycle mutations inside the assigned project/workspace/target scope, record imageId and route identity in handoffs, and clean only resources owned by the worker.",
           "Do not run live images, Docker, PLexus open/close, or gateway live routes unless the selected work item documents the approved isolated runner and cleanup plan.",

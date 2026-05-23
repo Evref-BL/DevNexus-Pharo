@@ -112,11 +112,11 @@ dev-nexus-pharo codex doctor C:\work\.dev-nexus-pharo\projects\MyProject
 `codex init` preserves unrelated Codex settings and unrelated MCP servers. For
 project-scoped DevNexus-Pharo roots it removes obsolete home-scoped `plexus`,
 `vibe_kanban`, and `pharo` entries and writes the current project-scoped
-`plexus_project`, `pharo_launcher`, `route_control`, and `gateway` entries.
+`plexus_project`, `pharo_launcher`, `route_control`, and `pharo_gateway` entries.
 
 For shared DevNexus plugin roots, `codex init` writes the root project surface:
 `dev_nexus`, `dev_nexus_pharo`, `plexus_project`, `pharo_launcher`,
-`route_control`, and the live `gateway` endpoint.
+`route_control`, and the live `pharo_gateway` endpoint.
 
 `codex doctor` validates generated config and expected endpoint/tool
 availability without opening images or creating routes for project-local

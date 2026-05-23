@@ -191,7 +191,7 @@ describe("DevNexusPharo DevNexus plugin", () => {
       },
       {
         id: "mcp-gateway",
-        serverName: "gateway",
+        serverName: "pharo_gateway",
         tools: ["pharo_eval"],
       },
     ]);
@@ -281,7 +281,7 @@ describe("DevNexusPharo DevNexus plugin", () => {
     expect(contextFragment.body).toContain(
       "DevNexus-Pharo composes with DevNexus and does not choose or supervise implementation work",
     );
-    expect(contextFragment.body).toContain("direct gateway MCP tools");
+    expect(contextFragment.body).toContain("direct pharo_gateway MCP tools");
     expect(contextFragment.body).toContain("report the infrastructure blocker");
     expect(contextFragment.body).toContain("Smalltalk source files from disk");
     expect(capabilityFragment).toMatchObject({
@@ -298,7 +298,7 @@ describe("DevNexusPharo DevNexus plugin", () => {
     });
     expect(briefingFragment.targetComponents).toBeUndefined();
     expect(briefingFragment.body).toContain(
-      "Prefer scoped PLexus and gateway tools for image operations",
+      "Prefer scoped PLexus and pharo_gateway tools for image operations",
     );
     expect(briefingFragment.body).toContain(
       "fresh disposable image per issue, branch, chat, or experiment",

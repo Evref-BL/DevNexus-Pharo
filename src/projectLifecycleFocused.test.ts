@@ -347,6 +347,7 @@ describe("DevNexus-Pharo focused project lifecycle contracts", () => {
           mode: "project-local",
           host: "127.0.0.1",
           port: expect.any(Number),
+          agentMcpServerName: "pharo_gateway",
           agentMcpPath: "/mcp",
           routeControlMcpPath: "/control-mcp",
         },
