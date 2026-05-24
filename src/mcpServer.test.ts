@@ -340,6 +340,11 @@ describe("DevNexus-Pharo MCP server tools", () => {
         id: "mcp-project",
         name: "McpProject",
       },
+      plexusProjectConfig: {
+        gateway: {
+          agentMcpServerName: "pharo_gateway",
+        },
+      },
       codex: {
         serverCount: 6,
         contentLength: expect.any(Number),

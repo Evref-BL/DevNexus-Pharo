@@ -3,7 +3,7 @@
 ## Missing MCP Tools
 
 If expected `dev_nexus_pharo`, `plexus_project`, `pharo_launcher`,
-`route_control`, or `gateway` tools are missing:
+`route_control`, or `pharo_gateway` tools are missing:
 
 ```powershell
 dev-nexus-pharo codex doctor <workspace>
@@ -64,7 +64,7 @@ config.
 DevNexus-Pharo does not itself expose image-local Pharo code tools. Those come
 from PLexus routing to an MCP-Pharo worker inside a selected image.
 
-If a Pharo code task lacks the expected `gateway` or image-local Pharo tool
+If a Pharo code task lacks the expected `pharo_gateway` or image-local Pharo tool
 surface, report the missing route/configuration as an infrastructure blocker.
 Do not edit Pharo source files as a substitute for live-image inspection or
 repository handoff tools.

@@ -522,6 +522,7 @@ function summarizePlexusProjectConfig(config: unknown) {
           mode: gateway.mode,
           host: gateway.host,
           port: gateway.port,
+          agentMcpServerName: gateway.agentMcpServerName,
           agentMcpPath: gateway.agentMcpPath,
           routeControlMcpPath: gateway.routeControlMcpPath,
         }

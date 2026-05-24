@@ -212,6 +212,7 @@ describe("DevNexus-Pharo project service", () => {
           mode: "project-local",
           host: "127.0.0.1",
           port: expect.any(Number),
+          agentMcpServerName: "pharo_gateway",
           agentMcpPath: "/mcp",
           routeControlMcpPath: "/control-mcp",
         },
@@ -242,7 +243,7 @@ describe("DevNexus-Pharo project service", () => {
     expect(codexConfig).toContain("[mcp_servers.plexus_project]");
     expect(codexConfig).toContain("[mcp_servers.pharo_launcher]");
     expect(codexConfig).toContain("[mcp_servers.route_control]");
-    expect(codexConfig).toContain("[mcp_servers.gateway]");
+    expect(codexConfig).toContain("[mcp_servers.pharo_gateway]");
     expect(codexConfig).not.toContain("[mcp_servers.plexus]");
     expect(codexConfig).not.toContain("[mcp_servers.pharo]");
     expect(codexConfig.match(/default_tools_approval_mode = "approve"/gu)).toHaveLength(6);
@@ -612,7 +613,7 @@ describe("DevNexus-Pharo project service", () => {
       "[mcp_servers.dev_nexus_pharo]",
     );
     expect(fs.readFileSync(codexConfigPath(projectRoot), "utf8")).toContain(
-      "[mcp_servers.gateway]",
+      "[mcp_servers.pharo_gateway]",
     );
     expect(loadHomeConfig(homePath).projects).toEqual([
       {
@@ -728,7 +729,7 @@ describe("DevNexus-Pharo project service", () => {
     expect(managedCodexConfig).toContain("[mcp_servers.plexus_project]");
     expect(managedCodexConfig).toContain("[mcp_servers.pharo_launcher]");
     expect(managedCodexConfig).toContain("[mcp_servers.route_control]");
-    expect(managedCodexConfig).toContain("[mcp_servers.gateway]");
+    expect(managedCodexConfig).toContain("[mcp_servers.pharo_gateway]");
     expect(managedCodexConfig).not.toContain("[mcp_servers.plexus]");
     expect(managedCodexConfig).not.toContain("[mcp_servers.pharo]");
     expect(managedCodexConfig.match(/default_tools_approval_mode = "approve"/gu)).toHaveLength(6);
