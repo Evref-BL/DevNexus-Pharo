@@ -228,3 +228,7 @@ trackers with `dev-nexus` commands, not DevNexus-Pharo commands.
   implementation notes.
 - [Documentation Refresh Plan](docs/documentation-refresh-plan.md) records the
   reusable documentation direction for the Pharo component family.
+
+## License
+
+DevNexus-Pharo is licensed under the [Apache License 2.0](LICENSE).

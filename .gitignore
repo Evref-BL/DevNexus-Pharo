@@ -4,3 +4,10 @@ dist/
 coverage/
 .codex/
 *.log
+.env
+.env.*
+!.env.example
+*.changes
+*.image
+*.ombu
+*.sources
