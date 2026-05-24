@@ -18,7 +18,6 @@ import {
   findNexusProjectReferenceByPath,
   getNexusProjectStatus as getNexusProjectStatusFromHome,
   importNexusProject as importNexusProjectFromHome,
-  loadProjectConfigIfExists,
   listNexusProjects as listNexusProjectsFromHome,
   NexusProjectError,
   optionalNonEmptyString,
@@ -40,6 +39,7 @@ import {
   type WorkTrackingConfig,
 } from "dev-nexus";
 import {
+  loadProjectConfigIfExists,
   loadHomeConfig,
   resolveNexusHome,
   saveHomeConfig,
@@ -79,7 +79,6 @@ export {
   findNexusProjectReference,
   findNexusProjectReferenceById,
   findNexusProjectReferenceByPath,
-  loadProjectConfigIfExists,
   NexusProjectError,
   optionalNonEmptyString,
   pathForProjectConfig,

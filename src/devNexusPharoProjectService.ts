@@ -5,6 +5,7 @@ import {
   type InitCodexWorkspaceResult,
 } from "./codexConfig.js";
 import {
+  loadProjectConfigIfExists,
   loadHomeConfig,
   resolveNexusHome,
   saveProjectConfig,
@@ -17,7 +18,6 @@ import {
 } from "dev-nexus";
 import {
   defaultImportedProjectRoot,
-  loadProjectConfigIfExists,
   NexusProjectError,
   registerNexusProjectExtension,
   safeDirectoryName,

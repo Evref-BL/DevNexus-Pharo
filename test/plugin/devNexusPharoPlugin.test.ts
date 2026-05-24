@@ -161,12 +161,20 @@ describe("DevNexusPharo DevNexus plugin", () => {
       mcpServers.map((server) => ({
         id: server.id,
         serverName: server.serverName,
+        command: server.command,
+        args: server.args,
+        targetAgents: server.targetAgents,
+        exposure: server.exposure,
         tools: server.tools?.map((tool) => tool.name),
       })),
     ).toEqual([
       {
         id: "plexus-mcp",
         serverName: "plexus_project",
+        command: "plexus",
+        args: ["mcp", "project"],
+        targetAgents: ["codex"],
+        exposure: "gateway",
         tools: [
           "plexus_project_status",
           "plexus_project_open",
@@ -176,6 +184,10 @@ describe("DevNexusPharo DevNexus plugin", () => {
       {
         id: "pharo-launcher-mcp",
         serverName: "pharo_launcher",
+        command: "plexus",
+        args: ["mcp", "pharo-launcher", "--project-path", "."],
+        targetAgents: ["codex"],
+        exposure: "gateway",
         tools: [
           "pharo_launcher_image_list",
           "pharo_launcher_image_info",
@@ -187,11 +199,19 @@ describe("DevNexusPharo DevNexus plugin", () => {
       {
         id: "plexus-route-control-mcp",
         serverName: "route_control",
+        command: undefined,
+        args: undefined,
+        targetAgents: undefined,
+        exposure: undefined,
         tools: ["plexus_project_status", "plexus_route_to_image"],
       },
       {
         id: "mcp-gateway",
         serverName: "pharo_gateway",
+        command: undefined,
+        args: undefined,
+        targetAgents: undefined,
+        exposure: undefined,
         tools: ["pharo_eval"],
       },
     ]);
