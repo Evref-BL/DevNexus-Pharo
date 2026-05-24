@@ -148,10 +148,6 @@ describe("DevNexus-Pharo focused project lifecycle contracts", () => {
           },
         ],
         worktreesRoot: "worktrees",
-        kanban: {
-          provider: "vibe-kanban",
-          projectId: null,
-        },
       }),
     ).toEqual({
       version: 1,
@@ -176,10 +172,6 @@ describe("DevNexus-Pharo focused project lifecycle contracts", () => {
         },
       ],
       worktreesRoot: "worktrees",
-      kanban: {
-        provider: "vibe-kanban",
-        projectId: null,
-      },
     });
 
     expect(() =>
@@ -189,9 +181,6 @@ describe("DevNexus-Pharo focused project lifecycle contracts", () => {
         name: "Invalid",
         repo: {
           kind: "svn",
-        },
-        kanban: {
-          provider: "vibe-kanban",
         },
       }),
     ).toThrow("repo.kind must be local or git");
@@ -301,10 +290,6 @@ describe("DevNexus-Pharo focused project lifecycle contracts", () => {
         defaultBranch: null,
       },
       worktreesRoot: path.join(".nexus", "worktrees"),
-      kanban: {
-        provider: "vibe-kanban",
-        projectId: null,
-      },
       extensions: {
         [devNexusPharoProjectExtensionConfigKey]: {
           plexusProjectConfig: path.join("config", "plexus.project.json"),

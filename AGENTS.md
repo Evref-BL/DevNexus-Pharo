@@ -10,9 +10,6 @@ state or assuming a single repository layout.
   items, isolated worktrees, coordination handoffs, and publication policy.
 - Use `dev_nexus_pharo` only for Pharo-specific project, home, setup, MCP, and
   skill-projection operations.
-- Do not create Vibe Kanban workspaces, sessions, or executions for
-  DevNexus-Pharo source work. Vibe support in this repository is managed
-  runtime compatibility code, not the default work tracker for this component.
 - Use `pharo_launcher` for Pharo image creation and launch operations only when
   an approved live-runtime boundary exists. In the intended architecture, this
   surface is provided through PLexus, which uses pharo-launcher-mcp underneath.
@@ -50,7 +47,6 @@ depend on implementation details inside Pharo images.
 - Installed support skills live under `.dev-nexus/skills` in the managed
   project root. Load only the skill that matches the current task instead of
   copying skill text into prompts or source files.
-- Do not create a new Kanban project for every task.
 - Prefer MCP tools for project creation, import, list, status, workspace, and
   image operations. Manual edits to DevNexus-Pharo/PLexus config files are for
   implementation or repair work only.

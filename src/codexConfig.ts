@@ -28,7 +28,6 @@ export const defaultPlexusProjectCodexMcpServerName = "plexus_project";
 export const defaultPharoLauncherCodexMcpServerName = "pharo_launcher";
 export const defaultGatewayCodexMcpServerName = "gateway";
 export const defaultRouteControlCodexMcpServerName = "route_control";
-export const defaultVibeKanbanCodexMcpServerName = "vibe_kanban";
 export const defaultPharoCodexMcpServerName = "pharo";
 
 const devNexusPharoExtensionConfigKey = "dev-nexus-pharo";
@@ -243,10 +242,6 @@ export function mergeCodexMcpServersIntoToml(
   return `${preserved ? `${preserved}\n\n` : ""}${renderedServers}\n`;
 }
 
-function withVibeKanbanMcpMode(args: string[]): string[] {
-  return args.includes("--mcp") ? [...args] : [...args, "--mcp"];
-}
-
 function withPlexusGatewayStdio(args: string[]): string[] {
   return args.includes("--stdio") ? [...args] : [...args, "--stdio"];
 }
@@ -330,12 +325,6 @@ function sharedPlexusProjectConfigPath(
     : path.join(path.resolve(workspacePath), plexusProjectConfigFileName);
 }
 
-function explicitVibeKanbanProjectId(
-  projectConfig: NexusProjectConfig,
-): string | null {
-  return devNexusPharoProjectExtensionConfig(projectConfig).vibeKanbanProjectId ?? null;
-}
-
 function ensureSharedPlexusProjectConfig(
   workspacePath: string,
   projectConfig: NexusProjectConfig,
@@ -349,13 +338,12 @@ function ensureSharedPlexusProjectConfig(
     workspacePath,
   );
   const existing = created
-    ? (buildPlexusProjectConfig(
-        projectConfig.name,
-        projectConfig.id,
-        explicitVibeKanbanProjectId(projectConfig),
-        undefined,
-        reservedGatewayPorts,
-      ) as unknown as Record<string, unknown>)
+      ? (buildPlexusProjectConfig(
+          projectConfig.name,
+          projectConfig.id,
+          undefined,
+          reservedGatewayPorts,
+        ) as unknown as Record<string, unknown>)
     : (JSON.parse(
         fs.readFileSync(configPath, "utf8").replace(/^\uFEFF/u, ""),
       ) as Record<string, unknown>);
@@ -363,7 +351,6 @@ function ensureSharedPlexusProjectConfig(
     existing,
     projectConfig.name,
     projectConfig.id,
-    explicitVibeKanbanProjectId(projectConfig),
     undefined,
     reservedGatewayPorts,
   );
@@ -502,7 +489,6 @@ function reservedPlexusGatewayPorts(
   currentProjectRoot: string,
 ): number[] {
   const ports = new Set([
-    homeConfig.ports.vibeKanban,
     homeConfig.ports.devNexusPharoMcp,
     homeConfig.ports.plexusMcp,
   ]);
@@ -537,7 +523,6 @@ function loadPlexusProjectConfigIfExists(
     parsed,
     projectConfig.name,
     projectConfig.id,
-    explicitVibeKanbanProjectId(projectConfig),
   );
 }
 
@@ -701,7 +686,6 @@ function buildSharedDevNexusPharoMcpServers(
     options.plexusProjectConfig?.runtime.gateway ??
     loadPlexusProjectConfigIfExists(projectRoot, projectConfig)?.runtime.gateway ??
     buildPlexusProjectGatewayConfig(projectConfig.id, [
-      config.ports.vibeKanban,
       config.ports.devNexusPharoMcp,
       config.ports.plexusMcp,
     ]);
@@ -760,11 +744,7 @@ export function buildCodexMcpServers(
     typeof platformOrOptions === "string"
       ? { platform: platformOrOptions }
       : platformOrOptions;
-  const platform = options.platform ?? process.platform;
   const host = config.mcp.host;
-  const nexusServerName = config.integrations.vibeKanban.nexusMcpServerName;
-  const plexusServerName = config.integrations.vibeKanban.plexusMcpServerName;
-  const vibeKanbanArgs = withVibeKanbanMcpMode(config.tools.vibeKanban.args);
   const projectConfig =
     workspaceProjectConfig(options.workspacePath) ??
     workspaceProjectConfig(options.projectRoot);
@@ -775,27 +755,17 @@ export function buildCodexMcpServers(
   const pharoServer = buildPharoMcpServer(config, options, projectConfig);
 
   return {
-    [nexusServerName]: {
+    [defaultDevNexusPharoCodexMcpServerName]: {
       type: "http",
       enabled: true,
       required: true,
       url: `http://${host}:${config.ports.devNexusPharoMcp}/mcp`,
       defaultToolsApprovalMode: "approve",
     },
-    [plexusServerName]: {
+    ["plexus"]: {
       type: "http",
       enabled: true,
       url: `http://${host}:${config.ports.plexusMcp}/mcp`,
-      defaultToolsApprovalMode: "approve",
-    },
-    [defaultVibeKanbanCodexMcpServerName]: {
-      enabled: true,
-      command:
-        platform === "win32" ? "cmd" : config.tools.vibeKanban.command,
-      args:
-        platform === "win32"
-          ? ["/c", config.tools.vibeKanban.command, ...vibeKanbanArgs]
-          : vibeKanbanArgs,
       defaultToolsApprovalMode: "approve",
     },
     ...(pharoServer ? { [defaultPharoCodexMcpServerName]: pharoServer } : {}),
@@ -839,8 +809,7 @@ export function initCodexWorkspace(
     servers,
     projectUsesSharedDevNexusMcp(projectConfig)
       ? [
-          config.integrations.vibeKanban.plexusMcpServerName,
-          defaultVibeKanbanCodexMcpServerName,
+          "plexus",
           defaultPharoCodexMcpServerName,
         ]
       : [],
@@ -1118,12 +1087,10 @@ export async function doctorCodexWorkspace(
     });
   }
 
-  const nexusServerName = config.integrations.vibeKanban.nexusMcpServerName;
-  const plexusServerName = config.integrations.vibeKanban.plexusMcpServerName;
   const httpChecks: HttpMcpServerCheck[] = [
     {
-      name: nexusServerName,
-      url: servers[nexusServerName]?.url ?? "",
+      name: defaultDevNexusPharoCodexMcpServerName,
+      url: servers[defaultDevNexusPharoCodexMcpServerName]?.url ?? "",
       healthPath: defaultDevNexusPharoMcpHealthPath,
       expectedTools: [
         "pharo_project_create",
@@ -1132,8 +1099,8 @@ export async function doctorCodexWorkspace(
       ],
     },
     {
-      name: plexusServerName,
-      url: servers[plexusServerName]?.url ?? "",
+      name: "plexus",
+      url: servers.plexus?.url ?? "",
       healthPath: "/health",
       expectedTools: ["plexus_project_open", "plexus_project_status"],
     },
@@ -1148,12 +1115,6 @@ export async function doctorCodexWorkspace(
       })),
     );
   }
-
-  checks.push({
-    name: `${defaultVibeKanbanCodexMcpServerName}:command`,
-    status: "skipped",
-    message: "Vibe Kanban MCP is command-based; doctor verifies the generated config entry but does not spawn it.",
-  });
 
   if (servers[defaultPharoCodexMcpServerName] || hasPharoServerSection) {
     checks.push({

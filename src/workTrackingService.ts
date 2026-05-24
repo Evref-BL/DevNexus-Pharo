@@ -3,7 +3,6 @@ import {
   createWorkTrackerProvider as createDevNexusWorkTrackerProvider,
   WorkTrackingProviderServiceError,
   type CreateWorkTrackerProviderOptions as DevNexusWorkTrackerProviderOptions,
-  type VibeKanbanApiOptions,
   WorkTrackingConfig,
   WorkTrackerProvider,
 } from "dev-nexus";
@@ -11,7 +10,6 @@ import {
 export interface CreateWorkTrackerProviderOptions {
   projectRoot?: string;
   now?: () => Date | string;
-  vibeKanban?: VibeKanbanApiOptions;
   github?: DevNexusWorkTrackerProviderOptions["github"];
   gitlab?: DevNexusWorkTrackerProviderOptions["gitlab"];
   jira?: DevNexusWorkTrackerProviderOptions["jira"];
@@ -25,16 +23,10 @@ export class WorkTrackingServiceError extends Error {
 }
 
 export function resolveProjectWorkTrackingConfig(
-  config: Pick<NexusProjectConfig, "kanban" | "workTracking">,
+  config: Pick<NexusProjectConfig, "workTracking">,
 ): WorkTrackingConfig {
   if (config.workTracking) {
     return config.workTracking;
-  }
-
-  if (config.kanban) {
-    throw new WorkTrackingServiceError(
-      'Project config uses obsolete "kanban" work tracking metadata without "workTracking". Regenerate this project through current DevNexus/DevNexus-Pharo setup or add an explicit workTracking block.',
-    );
   }
 
   throw new WorkTrackingServiceError(
@@ -50,7 +42,6 @@ export function createWorkTrackerProvider(
     return createDevNexusWorkTrackerProvider(config, {
       projectRoot: options.projectRoot,
       now: options.now,
-      vibeKanban: options.vibeKanban,
       github: options.github,
       gitlab: options.gitlab,
       jira: options.jira,
@@ -65,7 +56,7 @@ export function createWorkTrackerProvider(
 }
 
 export function createProjectWorkTrackerProvider(
-  config: Pick<NexusProjectConfig, "kanban" | "workTracking">,
+  config: Pick<NexusProjectConfig, "workTracking">,
   options: CreateWorkTrackerProviderOptions = {},
 ): WorkTrackerProvider {
   return createWorkTrackerProvider(resolveProjectWorkTrackingConfig(config), options);

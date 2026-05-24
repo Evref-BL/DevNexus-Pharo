@@ -24,15 +24,11 @@ afterEach(() => {
 });
 
 describe("work tracking service", () => {
-  it("uses explicit provider-neutral work tracking when Kanban metadata also exists", () => {
+  it("uses explicit provider-neutral work tracking", () => {
     const config = validateProjectConfig({
       version: 1,
       id: "local-tracked-project",
       name: "Local Tracked Project",
-      kanban: {
-        provider: "vibe-kanban",
-        projectId: "vibe-project",
-      },
       workTracking: {
         provider: "local",
         storePath: ".dev-nexus-pharo/work-items.json",
@@ -51,10 +47,6 @@ describe("work tracking service", () => {
       version: 1,
       id: "local-tracked-project",
       name: "Local Tracked Project",
-      kanban: {
-        provider: "vibe-kanban",
-        projectId: "vibe-project",
-      },
       workTracking: {
         provider: "local",
         storePath: path.join(".custom", "items.json"),
@@ -91,30 +83,6 @@ describe("work tracking service", () => {
 
     expect(provider.provider).toBe("local");
     await expect(provider.listWorkItems()).resolves.toEqual([]);
-  });
-
-  it("creates a Vibe work tracker provider from explicit workTracking when API options are supplied", () => {
-    const vibeConfig = validateProjectConfig({
-      version: 1,
-      id: "vibe-project",
-      name: "Vibe Project",
-      workTracking: {
-        provider: "vibe-kanban",
-        projectId: "vk-project",
-      },
-    });
-
-    const provider = createProjectWorkTrackerProvider(vibeConfig, {
-      vibeKanban: {
-        host: "localhost",
-        port: 3000,
-        fetch: async () => new Response(),
-      },
-    });
-
-    expect(provider.provider).toBe("vibe-kanban");
-    expect(provider.capabilities.board).toBe(true);
-    expect(provider.capabilities.createItem).toBe(false);
   });
 
   it("creates a GitHub work tracker provider from direct config", () => {
@@ -181,22 +149,18 @@ describe("work tracking service", () => {
     expect(provider.capabilities.milestones).toBe(false);
   });
 
-  it("rejects Kanban-only project configs with a regeneration error", () => {
-    const kanbanOnlyConfig = validateProjectConfig({
+  it("rejects project configs without explicit work tracking", () => {
+    const missingTrackingConfig = validateProjectConfig({
       version: 1,
-      id: "kanban-only-project",
-      name: "Kanban Only Project",
-      kanban: {
-        provider: "vibe-kanban",
-        projectId: "vk-project",
-      },
+      id: "missing-tracking-project",
+      name: "Missing Tracking Project",
     });
 
-    expect(() => resolveProjectWorkTrackingConfig(kanbanOnlyConfig)).toThrow(
-      /obsolete "kanban".*Regenerate.*workTracking/,
+    expect(() => resolveProjectWorkTrackingConfig(missingTrackingConfig)).toThrow(
+      /explicit "workTracking" block/,
     );
-    expect(() => createProjectWorkTrackerProvider(kanbanOnlyConfig)).toThrow(
-      /obsolete "kanban".*Regenerate.*workTracking/,
+    expect(() => createProjectWorkTrackerProvider(missingTrackingConfig)).toThrow(
+      /explicit "workTracking" block/,
     );
   });
 });

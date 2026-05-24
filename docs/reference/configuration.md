@@ -1,32 +1,63 @@
-# Configuration Reference
+# Configuration reference
 
-This reference summarizes DevNexus-Pharo configuration owned by this package.
+DevNexus-Pharo has two configuration surfaces:
 
-## Home Shape
+- `dev-nexus.home.json` in the DevNexus-Pharo home
+- `dev-nexus.project.json` and `plexus.project.json` in managed project roots
 
-`dev-nexus-pharo init` creates `dev-nexus.home.json` and initial runtime
-directories:
+DevNexus core owns generic project, component, work tracking, and publication
+configuration. DevNexus-Pharo adds Pharo setup, skill projection, and PLexus
+runtime metadata.
 
-```text
-<home>\
-  dev-nexus.home.json
-  DevNexus-Pharo\
-    dev-nexus.project.json
-    plexus.project.json
-    worktrees\
-  projects\
-  workspaces\
-  state\
-  logs\
-  generated\
+## Home config
+
+`dev-nexus-pharo init` writes `dev-nexus.home.json` under the selected home.
+The default home is resolved from `DEV_NEXUS_PHARO_HOME` or the platform default
+for `.dev-nexus-pharo`.
+
+Important fields:
+
+```json
+{
+  "version": 1,
+  "paths": {
+    "projectsRoot": "<home>/projects",
+    "workspacesRoot": "<home>/workspaces",
+    "plexusStateRoot": "<home>/state/plexus"
+  },
+  "ports": {
+    "devNexusPharoMcp": 7330,
+    "plexusMcp": 7331
+  },
+  "mcp": {
+    "host": "127.0.0.1"
+  },
+  "tools": {
+    "nexus": {
+      "command": "<node>",
+      "args": ["<package>/dist/cli.js", "mcp"]
+    },
+    "plexus": {
+      "command": "plexus-gateway",
+      "args": []
+    }
+  },
+  "controlProject": {
+    "id": "dev-nexus-pharo-control",
+    "name": "DevNexus-Pharo",
+    "root": "<home>/DevNexus-Pharo"
+  },
+  "projects": []
+}
 ```
 
-The `DevNexus-Pharo` directory is the reserved control project. It is not a
-normal Pharo application project.
+The DevNexus-Pharo MCP port and PLexus MCP port must be distinct. Tool commands
+are started as long-lived local services by `dev-nexus-pharo start`.
 
-## Project Shape
+## Project config
 
-Each managed project has a `dev-nexus.project.json` file:
+Managed Pharo project roots use the standard DevNexus project schema plus the
+DevNexus-Pharo extension entry:
 
 ```json
 {
@@ -35,139 +66,93 @@ Each managed project has a `dev-nexus.project.json` file:
   "name": "MyProject",
   "home": null,
   "repo": {
-    "kind": "local",
-    "remoteUrl": null,
-    "defaultBranch": null
+    "kind": "git",
+    "remoteUrl": "https://git.example.test/org/MyProject.git",
+    "defaultBranch": "main",
+    "sourceRoot": "git"
   },
   "worktreesRoot": "worktrees",
-  "kanban": {
-    "provider": "vibe-kanban",
-    "projectId": null
-  },
   "extensions": {
-    "dev-nexus-pharo": {
-      "plexusProjectConfig": "plexus.project.json"
+    "dev-nexus-pharo": {}
+  },
+  "plugins": [
+    {
+      "id": "dev-nexus-pharo",
+      "name": "DevNexus-Pharo"
     }
-  }
+  ]
 }
 ```
 
-Generic relative paths, such as `worktreesRoot`, resolve from the directory
-containing `dev-nexus.project.json`. Pharo/PLexus paths, such as
-`extensions.dev-nexus-pharo.plexusProjectConfig`, are interpreted by the
-DevNexus-Pharo extension.
+Generic work tracking belongs in the provider-neutral `workTracking` block from
+DevNexus core. DevNexus-Pharo does not define its own issue tracker schema.
 
-## Vibe Backend Modes
+## PLexus project config
 
-Vibe Kanban has two distinct pieces in the DevNexus-Pharo model:
-
-```text
-Vibe shared backend  -> project and issue data
-Vibe local app       -> local repo/workspace runner and UI
-```
-
-DevNexus-Pharo configures the local app with `VK_SHARED_API_BASE`, so the app
-talks to the intended shared backend.
-
-`integrations.vibeKanban.backend.mode` supports:
-
-- `docker`: DevNexus-Pharo runs Docker Compose directly.
-- `dind`: DevNexus-Pharo starts a privileged `docker:dind` container and runs
-  Docker Compose inside it.
-- `external`: DevNexus-Pharo records and health-checks a backend it does not
-  own.
-
-The default local app command is pinned to `npx -y vibe-kanban@0.1.43`.
-
-In managed backend modes, DevNexus-Pharo clones the Vibe source checkout when
-`autoBootstrap` is true and the checkout is missing, then generates
-`.env.remote` with local-only secrets and bootstrap local-auth credentials when
-needed.
-
-## GitHub Sign-In For Vibe
-
-For GitHub sign-in with the self-hosted Vibe backend, set GitHub OAuth
-credentials before startup:
-
-```powershell
-$env:DEV_NEXUS_PHARO_GITHUB_OAUTH_CLIENT_ID = "<github-oauth-client-id>"
-$env:DEV_NEXUS_PHARO_GITHUB_OAUTH_CLIENT_SECRET = "<github-oauth-client-secret>"
-```
-
-Existing Git config can provide an email identity hint for fallback local auth,
-but it cannot supply the OAuth client secret required by Vibe's backend.
-
-## Image Execution Policy
-
-DevNexus-Pharo writes a PLexus-facing `imageExecution` policy into
-`plexus.project.json` for managed projects. The default policy is disabled and
-requires disposable images plus an explicit cleanup plan before any launch work.
-
-Docker-backed image execution must be enabled explicitly with a runner image:
+`plexus.project.json` is generated beside the DevNexus project config for
+DevNexus-Pharo-managed projects:
 
 ```json
 {
+  "id": "my-project",
+  "name": "MyProject",
+  "images": [],
   "imageExecution": {
-    "mode": "docker",
+    "mode": "disabled",
     "requireDisposableImage": true,
     "requireCleanupPlan": true,
     "docker": {
-      "image": "ghcr.io/example/pharo-runner:test",
+      "image": null,
       "network": "none",
       "autoRemove": true,
       "mountProjectReadOnly": true
     }
+  },
+  "runtime": {
+    "gateway": {
+      "mode": "project-local",
+      "host": "127.0.0.1",
+      "port": 17340,
+      "agentMcpPath": "/mcp",
+      "routeControlMcpPath": "/control-mcp"
+    }
   }
 }
 ```
 
-This policy is configuration only. DevNexus-Pharo must not launch Docker,
-PLexus projects, or Pharo images unless the selected task names the isolated
-runner, disposable image boundary, and cleanup command sequence.
+The project-local gateway port is allocated from a deterministic range and is
+kept separate from home-level MCP ports.
 
-## Pharo Load Workspaces
+## Image execution policy
 
-DevNexus-Pharo provides `preparePharoProjectLoadWorkspace` for setup flows that
-need reliable local image loads.
+The default image execution policy is disabled:
 
-The helper copies the project repository and declared Metacello dependency
-repositories into a scoped workspace directory, then writes a Smalltalk load
-script that loads every baseline through local `tonel://` repositories.
-
-If a declared repository is missing its `BaselineOf<Name>` package, the helper
-returns preflight diagnostics instead of writing a partial workspace.
-
-Generated load workspaces are runtime support. They follow the image or
-workspace lifecycle and should not be committed to the source checkout.
-
-## Host Capabilities
-
-DevNexus-Pharo exports static host capability helpers for DevNexus remote runner
-planning.
-
-`devNexusPharoHostCapabilityTags` contributes:
-
-```text
-pharo
-pharo-launcher
-plexus
-mcp
-dev-nexus-pharo
-gui-adjacent
+```json
+{
+  "mode": "disabled",
+  "requireDisposableImage": true,
+  "requireCleanupPlan": true,
+  "docker": {
+    "image": null,
+    "network": "none",
+    "autoRemove": true,
+    "mountProjectReadOnly": true
+  }
+}
 ```
 
-`evaluateDevNexusPharoStaticHostCapabilities` consumes mocked or setup-collected
-facts and reports missing command, missing MCP config, missing PLexus gateway
-command, and missing Pharo Launcher installation separately.
+Projects may opt into Docker-backed image execution through
+`extensions.dev-nexus-pharo.imageExecution` or through the generated PLexus
+project config. When `mode` is `docker`, `docker.image` is required.
 
-The published runner profile templates are:
+## Host capabilities
 
-```text
-pharo-read-only-status
-pharo-mcp-tool-list
-pharo-verification
-pharo-live-runtime
-```
+Host capability reports are advisory. They describe whether the local host has
+tools such as Node.js, Git, PLexus, Pharo Launcher, and Docker available. They do
+not grant permission to launch images or mutate a runtime.
 
-`pharo-live-runtime` remains approval-gated. It is not permission to launch
-images, PLexus services, Docker, or GUI automation by itself.
+## Pharo load workspaces
+
+Managed project setup may declare Pharo load workspaces through project-specific
+PLexus or skill material. DevNexus-Pharo keeps that metadata outside the image so
+agents can load, test, and export Pharo code through approved MCP routes.

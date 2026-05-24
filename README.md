@@ -2,17 +2,16 @@
 
 DevNexus-Pharo is the Pharo environment layer for DevNexus.
 
-It prepares Pharo-ready DevNexus workspaces, projects Pharo support skills and
-MCP configuration, and can start the local service graph that connects agents to
-PLexus and image-local Pharo MCP workers.
+It prepares Pharo-ready DevNexus projects, projects Pharo support skills and
+Codex MCP configuration, and starts the local service graph that connects agents
+to PLexus and image-local Pharo MCP workers.
 
-DevNexus-Pharo does not replace DevNexus. DevNexus remains the generic
-workspace, component, work-item, worktree, and target infrastructure. PLexus
-owns Pharo runtime targets and image routing. pharo-launcher-mcp owns Pharo
-Launcher access. MCP-Pharo runs inside one Pharo image and exposes image-local
-code and environment tools.
+DevNexus remains the generic workspace, component, work-item, worktree, and
+target infrastructure. PLexus owns Pharo runtime targets and image routing.
+pharo-launcher-mcp owns Pharo Launcher access. MCP-Pharo runs inside one Pharo
+image and exposes image-local code and environment tools.
 
-## Where It Fits
+## Where it fits
 
 ```text
 DevNexus workspace
@@ -21,24 +20,22 @@ DevNexus workspace
           -> pharo-launcher-mcp
               -> Pharo Launcher
           -> image-local MCP-Pharo workers
-      -> optional Vibe Kanban control surface
 ```
 
 The main design point is outside-image orchestration. DevNexus-Pharo and PLexus
 keep setup, project metadata, service state, routing, and agent support outside
-the Pharo image. Each image is a runtime process that agents can inspect or
-modify through scoped MCP tools.
+the Pharo image. Each image is a runtime process that agents inspect or modify
+through scoped MCP tools.
 
-## What It Owns
+## What it owns
 
 DevNexus-Pharo owns:
 
 - the user-level DevNexus-Pharo home
 - the reserved control project for creating and importing Pharo projects
 - Pharo project creation/import helpers and home registry integration
-- optional Vibe Kanban backend and local app startup
 - PLexus gateway startup for Pharo-capable environments
-- Codex and Vibe MCP configuration for DevNexus-Pharo and PLexus
+- Codex MCP configuration for DevNexus-Pharo, PLexus, and scoped project tools
 - DevNexus plugin capabilities for Pharo skills, setup checks, MCP projection,
   worker briefing fragments, and cleanup expectations
 
@@ -66,23 +63,21 @@ Those belong to DevNexus core, pharo-launcher-mcp, PLexus, and MCP-Pharo.
 - **Plugin mode** means an existing DevNexus workspace uses DevNexus-Pharo
   capabilities without being created by `dev-nexus-pharo project create`.
 - **Static projection** writes skills, support config, and MCP entries. It does
-  not start Vibe, PLexus, Pharo Launcher, Docker, or images.
-- The **live service graph** is the supervised local set of DevNexus-Pharo MCP,
-  optional Vibe services, and PLexus gateway services started by
-  `dev-nexus-pharo start`.
+  not start PLexus, Pharo Launcher, images, Docker, or GUI tools.
+- The **live service graph** is the supervised local set of DevNexus-Pharo MCP
+  and PLexus gateway services started by `dev-nexus-pharo start`.
 
 ## Requirements
 
-- Node.js 24 or newer, with `npm` and `npx`
+- Node.js 24 or newer, with `npm`
 - Git
-- Docker when using the local Vibe backend
-- a working PLexus gateway command, usually `plexus-gateway`, when live Pharo
-  routing is needed
+- a working PLexus command, usually `plexus-gateway`, when live Pharo routing is
+  needed
 
 Windows examples use PowerShell and `C:\...` paths. macOS and Linux can use the
 same commands with POSIX paths.
 
-## Quick Start
+## Quick start
 
 Install from a source checkout:
 
@@ -105,10 +100,8 @@ Start the local service graph:
 dev-nexus-pharo start
 ```
 
-This starts the configured Vibe backend when enabled, Vibe Kanban, the
-DevNexus-Pharo MCP service, and the PLexus gateway. It also ensures the reserved
-control project exists and installs the expected MCP entries into the configured
-Vibe executor.
+This starts the DevNexus-Pharo MCP service and the PLexus gateway, then ensures
+the reserved control project exists.
 
 Create a managed Pharo project:
 
@@ -132,7 +125,7 @@ dev-nexus-pharo codex doctor C:\work\.dev-nexus-pharo\projects\MyProject
 Open a fresh Codex chat from that workspace after `codex doctor` passes. A
 running chat may keep the MCP tool list it loaded at startup.
 
-## Existing DevNexus Workspace
+## Existing DevNexus workspace
 
 Shared DevNexus project roots can use DevNexus-Pharo as a plugin without being
 created by `dev-nexus-pharo project create`.
@@ -147,10 +140,10 @@ dev-nexus-pharo codex init C:\work\agent-workspace
 
 For roots whose `dev-nexus.project.json` has both a DevNexus `mcp` block and an
 enabled `dev-nexus-pharo` plugin, `project skills refresh` materializes only the
-plugin-declared Pharo skills. It does not require a Kanban block and it does not
-start PLexus, Pharo Launcher, images, or Docker.
+plugin-declared Pharo skills. It does not start PLexus, Pharo Launcher, images,
+or Docker.
 
-## Common Workflows
+## Common workflows
 
 Create or import a Pharo project:
 
@@ -194,7 +187,7 @@ Compatibility mode for clients without URL MCP support:
 dev-nexus-pharo mcp-stdio
 ```
 
-## Safety Notes
+## Safety notes
 
 `dev-nexus-pharo codex init`, `project skills refresh`, and static plugin setup
 are projection operations. They should not start live Pharo images, Docker,
@@ -215,12 +208,11 @@ trackers with `dev-nexus` commands, not DevNexus-Pharo commands.
 - [Modes](docs/user/modes.md) explains home/control-project mode, plugin mode,
   static projection, and live services.
 - [User Workflows](docs/user/workflows.md) covers project creation, import,
-  control-project tasks, project-board tasks, and Codex setup.
+  control-project tasks, project work, and Codex setup.
 - [MCP Reference](docs/reference/mcp.md) lists DevNexus-Pharo MCP surfaces and
   tool ownership.
 - [Configuration Reference](docs/reference/configuration.md) covers home
-  config, Vibe backend modes, image execution policy, host capabilities, and
-  Pharo load workspaces.
+  config, image execution policy, host capabilities, and Pharo load workspaces.
 - [Troubleshooting](docs/troubleshooting.md) covers missing MCP tools, service
   health failures, port conflicts, and stale Codex sessions.
 - [Architecture](docs/architecture.md) covers component boundaries and design.

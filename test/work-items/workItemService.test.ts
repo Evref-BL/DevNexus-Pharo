@@ -65,10 +65,6 @@ function writeProject(
       defaultBranch: null,
     },
     worktreesRoot: "worktrees",
-    kanban: {
-      provider: "vibe-kanban",
-      projectId: "vibe-project",
-    },
     workTracking: {
       provider: "local",
       storePath: path.join(".tracker", "items.json"),
@@ -223,9 +219,9 @@ describe("work item service", () => {
     ).toThrow(/does not match configured provider/);
   });
 
-  it("wraps Kanban-only configuration diagnostics with project context", () => {
+  it("wraps missing work tracking diagnostics with project context", () => {
     const homePath = makeTempDir("dev-nexus-pharo-home-");
-    const projectRoot = path.join(homePath, "projects", "KanbanOnly");
+    const projectRoot = path.join(homePath, "projects", "MissingTracker");
     fs.mkdirSync(projectRoot, { recursive: true });
     writeHome(homePath, projectRoot);
     writeProject(projectRoot, {
@@ -239,6 +235,6 @@ describe("work item service", () => {
     ).toThrow(WorkItemServiceError);
     expect(() =>
       service.resolveProviderContext({ project: "tracked-project" }),
-    ).toThrow(/tracked-project.*obsolete "kanban".*Regenerate/);
+    ).toThrow(/tracked-project.*explicit "workTracking" block/);
   });
 });

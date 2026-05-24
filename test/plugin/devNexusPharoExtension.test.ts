@@ -49,10 +49,6 @@ function projectConfig(overrides: Partial<NexusProjectConfig> = {}): NexusProjec
       sourceRoot: "git",
     },
     worktreesRoot: nexusProjectWorktreesDirectoryName,
-    kanban: {
-      provider: "vibe-kanban",
-      projectId: "vk-pharo-project",
-    },
     ...overrides,
   };
 }

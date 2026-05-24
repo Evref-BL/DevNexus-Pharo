@@ -54,13 +54,6 @@ describe("dev-nexus-pharo cli", () => {
     expect(usage()).not.toContain("sync-tracker");
     expect(usage()).toContain("dev-nexus-pharo project skills status <id-or-path>");
     expect(usage()).toContain("dev-nexus-pharo project skills refresh <id-or-path>");
-    expect(usage()).toContain("dev-nexus-pharo vibe-kanban start <home>");
-    expect(usage()).toContain("dev-nexus-pharo vibe-kanban status <home>");
-    expect(usage()).toContain("dev-nexus-pharo vibe-kanban stop <home>");
-    expect(usage()).toContain("dev-nexus-pharo vibe-backend start <home>");
-    expect(usage()).toContain("dev-nexus-pharo vibe-backend status <home>");
-    expect(usage()).toContain("dev-nexus-pharo vibe-backend stop <home>");
-    expect(usage()).toContain("dev-nexus-pharo vibe-kanban mcp-config install");
     expect(usage()).toContain("--interactive");
     expect(usage()).not.toContain("--tracker-project-id");
     expect(usage()).not.toContain("--sync-tracker");
@@ -68,7 +61,6 @@ describe("dev-nexus-pharo cli", () => {
     expect(usage()).not.toContain("--repository-owner");
     expect(usage()).not.toContain("--repository-name");
     expect(usage()).not.toContain("--repository-id");
-    expect(usage()).toContain("--no-open-browser");
     expect(usage()).toContain("--json");
   });
 
@@ -80,15 +72,12 @@ describe("dev-nexus-pharo cli", () => {
       main([
         "init",
         homePath,
-        "--vibe-kanban-port",
-        "3100",
         "--plexus-mcp-port",
         "7332",
       ]),
     ).resolves.toBe(0);
 
     expect(loadHomeConfig(homePath).ports).toEqual({
-      vibeKanban: 3100,
       devNexusPharoMcp: 7330,
       plexusMcp: 7332,
     });
@@ -122,8 +111,6 @@ describe("dev-nexus-pharo cli", () => {
       main([
         "init",
         homePath,
-        "--vibe-kanban-port",
-        "3100",
         "--plexus-mcp-port",
         "7332",
         "--json",
@@ -197,7 +184,6 @@ describe("dev-nexus-pharo cli", () => {
     expect(content).toContain('model = "gpt-5.3-codex"');
     expect(content).toContain("[mcp_servers.dev_nexus_pharo]");
     expect(content).toContain("[mcp_servers.plexus]");
-    expect(content).toContain("[mcp_servers.vibe_kanban]");
     expect(log.mock.calls.map((call) => String(call[0]))).toContain(
       "Codex config updated.",
     );
@@ -365,10 +351,6 @@ describe("dev-nexus-pharo cli", () => {
         defaultBranch: "main",
       },
       worktreesRoot: "worktrees",
-      kanban: {
-        provider: "vibe-kanban",
-        projectId: "kanban-listed",
-      },
       extensions: {
         [devNexusPharoProjectExtensionConfigKey]: {},
       },
@@ -377,7 +359,6 @@ describe("dev-nexus-pharo cli", () => {
       path.join(projectRoot, plexusProjectConfigFileName),
       JSON.stringify({
         name: "Listed",
-        kanban: { provider: "vibe-kanban", projectId: "listed" },
         images: [],
       }),
       "utf8",
@@ -409,7 +390,6 @@ describe("dev-nexus-pharo cli", () => {
             remoteUrl: "https://github.com/example/listed.git",
             defaultBranch: "main",
           },
-          vibeKanbanProjectId: "kanban-listed",
           plexusProjectConfigPath: path.join(projectRoot, plexusProjectConfigFileName),
           worktreesRoot: path.join(projectRoot, "worktrees"),
         },
@@ -460,93 +440,6 @@ describe("dev-nexus-pharo cli", () => {
         path.join(projectRoot, ".dev-nexus", "skills", "dev-nexus-pharo-workflow", "SKILL.md"),
       ),
     ).toBe(true);
-  });
-
-  it("installs PLexus MCP config into Vibe Kanban from the CLI", async () => {
-    const homePath = path.join(makeTempDir("dev-nexus-pharo-parent-"), "home");
-    initHome(homePath);
-    const log = vi.spyOn(console, "log").mockImplementation(() => {});
-    const postedBodies: unknown[] = [];
-    const fetchMock = vi.fn(
-      async (_input: string | URL | Request, init?: RequestInit) => {
-        if (init?.method === "POST") {
-          postedBodies.push(JSON.parse(String(init.body)));
-          return new Response(
-            JSON.stringify({
-              success: true,
-              data: "Updated MCP server configuration",
-            }),
-            { status: 200 },
-          );
-        }
-
-        return new Response(
-          JSON.stringify({
-            success: true,
-            data: {
-              mcp_config: {
-                servers: {
-                  existing: {
-                    command: "node",
-                    args: ["existing.js"],
-                  },
-                },
-              },
-            },
-          }),
-          { status: 200 },
-        );
-      },
-    );
-    vi.stubGlobal("fetch", fetchMock);
-
-    await expect(
-      main([
-        "vibe-kanban",
-        "mcp-config",
-        "install",
-        homePath,
-        "--executor",
-        "codex",
-        "--server-name",
-        "plexus_local",
-        "--port",
-        "3000",
-      ]),
-    ).resolves.toBe(0);
-
-    expect(String(fetchMock.mock.calls[0]?.[0])).toContain(
-      "/api/mcp-config?executor=CODEX",
-    );
-    expect(postedBodies).toEqual([
-      {
-        servers: {
-          existing: {
-            command: "node",
-            args: ["existing.js"],
-          },
-          dev_nexus_pharo: {
-            type: "http",
-            url: "http://127.0.0.1:7330/mcp",
-          },
-          plexus_local: {
-            type: "http",
-            url: "http://127.0.0.1:7331/mcp",
-          },
-        },
-      },
-    ]);
-    expect(JSON.parse(String(log.mock.calls[0]?.[0]))).toMatchObject({
-      ok: true,
-      executor: "CODEX",
-      devNexusPharo: {
-        serverName: "dev_nexus_pharo",
-      },
-      plexus: {
-        serverName: "plexus_local",
-      },
-      updated: true,
-    });
   });
 });
 
