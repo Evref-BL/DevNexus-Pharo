@@ -10,16 +10,16 @@ import {
   devNexusPharoProjectFilesFromExtensionResult,
   projectPlexusImageExecutionPolicy,
   resolvePlexusImageExecutionPolicy,
-} from "./devNexusPharoExtension.js";
+} from "../../src/devNexusPharoExtension.js";
 import { scaffoldNexusProject } from "dev-nexus";
 import {
   nexusProjectWorktreesDirectoryName,
   type NexusProjectConfig,
-} from "./config.js";
+} from "../../src/config.js";
 import {
   devNexusPharoProjectExtensionConfigKey,
   plexusProjectConfigFileName,
-} from "./devNexusPharoExtension.js";
+} from "../../src/devNexusPharoExtension.js";
 
 const tempDirs: string[] = [];
 const mcpPharoSkillSourceCommit = "8ba98ede78404d6a1e3937a8a759022f90c33bde";
@@ -49,10 +49,6 @@ function projectConfig(overrides: Partial<NexusProjectConfig> = {}): NexusProjec
       sourceRoot: "git",
     },
     worktreesRoot: nexusProjectWorktreesDirectoryName,
-    kanban: {
-      provider: "vibe-kanban",
-      projectId: "vk-pharo-project",
-    },
     ...overrides,
   };
 }
@@ -65,7 +61,7 @@ afterEach(() => {
 
 describe("DevNexus-Pharo extension", () => {
   it("publishes the default AGENTS template used by packaged project setup", () => {
-    const packageRoot = path.resolve(path.dirname(import.meta.dirname));
+    const packageRoot = path.resolve(import.meta.dirname, "../..");
     const packageJson = JSON.parse(
       fs.readFileSync(path.join(packageRoot, "package.json"), "utf8"),
     ) as { files?: string[] };

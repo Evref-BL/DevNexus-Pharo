@@ -1,19 +1,17 @@
-# Getting Started
+# Getting started
 
-This guide covers the first-use paths for DevNexus-Pharo.
-
-Use DevNexus-Pharo when you want a DevNexus workspace or project to be ready for
-Pharo work: Pharo support skills, Codex MCP configuration, optional Vibe Kanban
-startup, PLexus gateway startup, and project factory tools.
+Use DevNexus-Pharo when a DevNexus project needs Pharo support skills, Codex MCP
+projection, and a PLexus route into Pharo runtime tooling.
 
 ## Requirements
 
-- Node.js 24 or newer, with `npm` and `npx`
+- Node.js 24 or newer
 - Git
-- Docker when using the local Vibe backend
-- a working PLexus gateway command when live Pharo routing is needed
+- a working `plexus-gateway` command when live routing is needed
+- Pharo Launcher and MCP-Pharo only when the selected task requires live image
+  work
 
-## Install From Source
+## Install from source
 
 ```powershell
 cd C:\work\src\DevNexus-Pharo
@@ -22,157 +20,81 @@ npm run build
 npm link
 ```
 
-Without a global link, run the built CLI directly:
-
-```powershell
-node C:\work\src\DevNexus-Pharo\dist\cli.js --help
-```
-
-## Initialize A Home
+## Initialize the home
 
 ```powershell
 dev-nexus-pharo init
 ```
 
-By default, DevNexus-Pharo uses `DEV_NEXUS_PHARO_HOME`, then
-`~\.dev-nexus-pharo`.
+This writes `dev-nexus.home.json`, creates runtime directories, and creates the
+reserved `DevNexus-Pharo` control project.
 
-To use a specific home:
-
-```powershell
-$env:DEV_NEXUS_PHARO_HOME = "C:\work\.dev-nexus-pharo"
-dev-nexus-pharo init
-```
-
-On macOS or Linux:
-
-```bash
-export DEV_NEXUS_PHARO_HOME=~/dev/.dev-nexus-pharo
-dev-nexus-pharo init
-```
-
-For guided setup:
-
-```powershell
-dev-nexus-pharo init --interactive
-```
-
-If `plexus-gateway` is not on `PATH`, edit the generated
-`dev-nexus.home.json` and set `tools.plexus.command` to an absolute path.
-
-## Start The Service Graph
+## Start services
 
 ```powershell
 dev-nexus-pharo start
 ```
 
-This starts the configured Vibe backend, Vibe Kanban, the DevNexus-Pharo MCP
-service, and the PLexus gateway. It also creates and links the reserved
-`DevNexus-Pharo` control project, opens Vibe Kanban when healthy, and installs
-DevNexus-Pharo and PLexus MCP entries into the configured Vibe executor.
+This starts:
 
-Open Vibe Kanban at:
+- the DevNexus-Pharo MCP HTTP service
+- the PLexus gateway service
 
-```text
-http://127.0.0.1:3000
-```
+It also ensures the control project exists. It does not launch Pharo images.
 
-Check status or stop the environment:
+Check the service graph:
 
 ```powershell
 dev-nexus-pharo status --check-health
+```
+
+Stop it:
+
+```powershell
 dev-nexus-pharo stop
 ```
 
-Useful startup options:
+## Create a Pharo project
 
-```text
---force                       restart already-running managed services
---executor <name>             install MCP config for a Vibe Kanban executor
---server-name <name>          PLexus MCP server name, default: plexus
---skip-mcp-config             start services without changing Vibe MCP config
---no-open-browser             do not open Vibe Kanban after startup
---vibe-health-timeout-ms <ms> Vibe Kanban startup wait timeout
-```
-
-## Create Or Import A Project
-
-Create a new managed project:
+Create an empty Git-backed project:
 
 ```powershell
 dev-nexus-pharo project create MyProject --git-init
 ```
 
-Create a project from a Git URL:
+Create a managed project from a remote repository:
 
 ```powershell
 dev-nexus-pharo project create MyProject --from https://git.example.test/org/MyProject.git
 ```
 
-Import an existing local source checkout without writing DevNexus-Pharo
-metadata into that checkout:
+Import an existing checkout:
 
 ```powershell
 dev-nexus-pharo project import C:\work\src\ExistingProject --name ExistingProject
 ```
 
-By default, managed project roots are created under `paths.projectsRoot` from
-`dev-nexus.home.json`. Use `--root` on `project create` or `--project-root` on
-`project import` to choose a different managed root.
-
-Project creation writes:
-
-```text
-<project-root>\
-  .codex\config.toml
-  AGENTS.md
-  suggestedFirstPrompt.md
-  dev-nexus.project.json
-  plexus.project.json
-  worktrees\
-```
-
-For `project create --from`, the source repository is cloned under
-`<project-root>\git`. For `project import <source-checkout>`, the managed
-project points at the existing source checkout.
-
 ## Prepare Codex
 
-DevNexus-Pharo-managed Codex workspaces should connect to the supervised local
-MCP endpoints started by `dev-nexus-pharo start`.
+Run Codex setup from the managed project root:
 
 ```powershell
-dev-nexus-pharo start
 dev-nexus-pharo codex init C:\work\.dev-nexus-pharo\projects\MyProject
 dev-nexus-pharo codex doctor C:\work\.dev-nexus-pharo\projects\MyProject
 ```
 
-`.codex\config.toml` is generated workspace state. Keep it local or projected
-from a managed DevNexus project root; the source repository does not track a
-live Codex config file.
+Open a new Codex chat after `doctor` passes. Existing chats may keep the MCP
+tool list they loaded at startup.
 
-Open a fresh Codex chat after `codex doctor` passes. A running chat may keep the
-MCP tool list it loaded at startup.
+## Existing DevNexus workspaces
 
-## Existing DevNexus Workspace
-
-For an existing DevNexus workspace with an enabled `dev-nexus-pharo` plugin:
+For an existing DevNexus project with the `dev-nexus-pharo` plugin enabled:
 
 ```powershell
-dev-nexus-pharo init
 dev-nexus-pharo project skills refresh C:\work\agent-workspace
 dev-nexus-pharo codex init C:\work\agent-workspace
+dev-nexus-pharo codex doctor C:\work\agent-workspace
 ```
 
-This path performs static projection. It materializes Pharo skills and Codex MCP
-configuration for the workspace. It does not start PLexus, Pharo Launcher,
-images, Vibe, or Docker.
-
-## Next Steps
-
-- Read [Modes](modes.md) before deciding whether to use home/control-project
-  mode or plugin mode.
-- Read [User Workflows](workflows.md) for project factory, control-project, and
-  Codex workflows.
-- Read [Troubleshooting](../troubleshooting.md) if expected MCP tools are
-  missing or services do not become healthy.
+This projects Pharo skills and scoped MCP entries. It does not start images,
+PLexus project runtimes, Docker, or GUI tools.

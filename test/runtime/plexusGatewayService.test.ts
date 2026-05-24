@@ -8,7 +8,7 @@ import {
   loadHomeConfig,
   saveHomeConfig,
   type NexusHomeConfig,
-} from "./config.js";
+} from "../../src/config.js";
 import {
   buildPlexusGatewayServiceArgs,
   getPlexusGatewayStatus,
@@ -18,7 +18,7 @@ import {
   resolvePlexusGatewayServiceCommand,
   startPlexusGateway,
   stopPlexusGateway,
-} from "./plexusGatewayService.js";
+} from "../../src/plexusGatewayService.js";
 
 const tempDirs: string[] = [];
 const homePaths: string[] = [];

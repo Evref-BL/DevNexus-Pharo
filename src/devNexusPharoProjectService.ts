@@ -42,7 +42,6 @@ export interface CreateDevNexusPharoProjectOptions {
   root?: string;
   from?: string;
   gitInit?: boolean;
-  vibeKanbanProjectId?: string;
   gitRunner?: GitRunner;
 }
 
@@ -51,7 +50,6 @@ export interface ImportDevNexusPharoProjectOptions {
   root: string;
   projectRoot?: string;
   name?: string;
-  vibeKanbanProjectId?: string;
   gitRunner?: GitRunner;
 }
 
@@ -176,15 +174,8 @@ export function createDevNexusPharoProject(
     ...(options.root !== undefined ? { root: options.root } : {}),
     ...(options.from !== undefined ? { from: options.from } : {}),
     ...(options.gitInit !== undefined ? { gitInit: options.gitInit } : {}),
-    ...(options.vibeKanbanProjectId !== undefined
-      ? { vibeKanbanProjectId: options.vibeKanbanProjectId }
-      : {}),
     ...(options.gitRunner ? { gitRunner: options.gitRunner } : {}),
-    extensions: devNexusPharoProjectExtensionEntry({
-      ...(options.vibeKanbanProjectId !== undefined
-        ? { vibeKanbanProjectId: options.vibeKanbanProjectId }
-        : {}),
-    }),
+    extensions: devNexusPharoProjectExtensionEntry(),
     scaffoldExtensions: [devNexusPharoExtension],
   });
   const pharoFiles = devNexusPharoProjectFilesFromExtensionResult(
@@ -250,15 +241,8 @@ export function importDevNexusPharoProject(
     root: options.root,
     ...(options.projectRoot !== undefined ? { projectRoot: options.projectRoot } : {}),
     ...(options.name !== undefined ? { name: options.name } : {}),
-    ...(options.vibeKanbanProjectId !== undefined
-      ? { vibeKanbanProjectId: options.vibeKanbanProjectId }
-      : {}),
     ...(options.gitRunner ? { gitRunner: options.gitRunner } : {}),
-    extensions: devNexusPharoProjectExtensionEntry({
-      ...(options.vibeKanbanProjectId !== undefined
-        ? { vibeKanbanProjectId: options.vibeKanbanProjectId }
-        : {}),
-    }),
+    extensions: devNexusPharoProjectExtensionEntry(),
     scaffoldExtensions: [devNexusPharoExtension],
   });
   const pharoFiles = devNexusPharoProjectFilesFromExtensionResult(

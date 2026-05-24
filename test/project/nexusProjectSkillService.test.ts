@@ -6,9 +6,9 @@ import {
   initNexusHome,
   saveProjectConfig,
   type NexusProjectConfig,
-} from "./config.js";
-import { devNexusPharoDevNexusPluginConfig } from "./devNexusPharoPlugin.js";
-import { refreshProjectSkills } from "./nexusProjectSkillService.js";
+} from "../../src/config.js";
+import { devNexusPharoDevNexusPluginConfig } from "../../src/devNexusPharoPlugin.js";
+import { refreshProjectSkills } from "../../src/nexusProjectSkillService.js";
 
 const tempDirs: string[] = [];
 
@@ -76,7 +76,7 @@ function sharedProjectConfig(): NexusProjectConfig {
 }
 
 describe("DevNexus-Pharo project skills", () => {
-  it("projects plugin-declared Pharo skills for shared projects without Kanban metadata", () => {
+  it("projects plugin-declared Pharo skills for shared projects", () => {
     const homePath = makeTempDir("dev-nexus-pharo-home-");
     const projectRoot = makeTempDir("dev-nexus-pharo-shared-project-");
     initNexusHome({ homePath });

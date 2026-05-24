@@ -13,26 +13,26 @@ import {
   devNexusProjectConfigFileName,
   projectWorktreesRootPath,
   validateProjectConfig,
-} from "./config.js";
+} from "../../src/config.js";
 import {
   defaultPlexusImageExecutionPolicy,
   devNexusPharoProjectExtensionConfigKey,
   plexusProjectConfigFileName,
   projectPlexusConfigPath,
-} from "./devNexusPharoExtension.js";
+} from "../../src/devNexusPharoExtension.js";
 import {
   NexusProjectError,
   type GitCommandResult,
   type GitRunner,
-} from "./nexusProjectService.js";
+} from "../../src/nexusProjectService.js";
 import {
   createDevNexusPharoProject,
   importDevNexusPharoProject,
-} from "./devNexusPharoProjectService.js";
+} from "../../src/devNexusPharoProjectService.js";
 import {
   devNexusPharoPluginId,
   devNexusPharoPluginName,
-} from "./devNexusPharoPlugin.js";
+} from "../../src/devNexusPharoPlugin.js";
 
 const tempDirs: string[] = [];
 
@@ -148,10 +148,6 @@ describe("DevNexus-Pharo focused project lifecycle contracts", () => {
           },
         ],
         worktreesRoot: "worktrees",
-        kanban: {
-          provider: "vibe-kanban",
-          projectId: null,
-        },
       }),
     ).toEqual({
       version: 1,
@@ -176,10 +172,6 @@ describe("DevNexus-Pharo focused project lifecycle contracts", () => {
         },
       ],
       worktreesRoot: "worktrees",
-      kanban: {
-        provider: "vibe-kanban",
-        projectId: null,
-      },
     });
 
     expect(() =>
@@ -189,9 +181,6 @@ describe("DevNexus-Pharo focused project lifecycle contracts", () => {
         name: "Invalid",
         repo: {
           kind: "svn",
-        },
-        kanban: {
-          provider: "vibe-kanban",
         },
       }),
     ).toThrow("repo.kind must be local or git");
@@ -301,10 +290,6 @@ describe("DevNexus-Pharo focused project lifecycle contracts", () => {
         defaultBranch: null,
       },
       worktreesRoot: path.join(".nexus", "worktrees"),
-      kanban: {
-        provider: "vibe-kanban",
-        projectId: null,
-      },
       extensions: {
         [devNexusPharoProjectExtensionConfigKey]: {
           plexusProjectConfig: path.join("config", "plexus.project.json"),

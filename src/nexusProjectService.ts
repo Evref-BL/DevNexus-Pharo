@@ -98,7 +98,6 @@ export interface CreateNexusProjectOptions {
   root?: string;
   from?: string;
   gitInit?: boolean;
-  vibeKanbanProjectId?: string;
   gitRunner?: GitRunner;
 }
 
@@ -107,7 +106,6 @@ export interface ImportNexusProjectOptions {
   root: string;
   projectRoot?: string;
   name?: string;
-  vibeKanbanProjectId?: string;
   gitRunner?: GitRunner;
 }
 
@@ -145,9 +143,11 @@ export interface NexusProjectStatus {
   projectRoot: string;
   repo: NexusProjectConfig["repo"] | null;
   components: NexusProjectStatusBase["components"];
+  defaultTrackerId: NexusProjectStatusBase["defaultTrackerId"];
+  workTrackers: NexusProjectStatusBase["workTrackers"];
   workTracking: WorkTrackingConfig | null;
-  vibeKanbanProjectId: string | null;
-  vibeKanbanRepoId: string | null;
+  workTrackingCapabilities: NexusProjectStatusBase["workTrackingCapabilities"];
+  workTrackingCapabilityReport: NexusProjectStatusBase["workTrackingCapabilityReport"];
   projectConfigPath: string;
   projectConfigExists: boolean;
   plexusProjectConfigPath: string | null;
@@ -256,7 +256,20 @@ function statusForProjectStatusBase(
   );
 
   return {
-    ...baseStatus,
+    id: baseStatus.id,
+    name: baseStatus.name,
+    projectRoot: baseStatus.projectRoot,
+    repo: baseStatus.repo,
+    components: baseStatus.components,
+    defaultTrackerId: baseStatus.defaultTrackerId,
+    workTrackers: baseStatus.workTrackers,
+    workTracking: baseStatus.workTracking,
+    workTrackingCapabilities: baseStatus.workTrackingCapabilities,
+    workTrackingCapabilityReport: baseStatus.workTrackingCapabilityReport,
+    projectConfigPath: baseStatus.projectConfigPath,
+    projectConfigExists: baseStatus.projectConfigExists,
+    worktreesRoot: baseStatus.worktreesRoot,
+    worktreesRootExists: baseStatus.worktreesRootExists,
     plexusProjectConfigPath: statusContribution.plexusProjectConfigPath,
     plexusProjectConfigExists: statusContribution.plexusProjectConfigExists,
   };
@@ -266,13 +279,8 @@ export function upsertProjectReference(
   config: NexusHomeConfig,
   projectRoot: string,
   projectConfig: NexusProjectConfig,
-  vibeKanbanProjectId: string | null,
-  vibeKanbanRepoId?: string | null,
 ): NexusProjectReference {
-  return upsertNexusProjectReference(config, projectRoot, projectConfig, {
-    vibeKanbanProjectId,
-    vibeKanbanRepoId,
-  });
+  return upsertNexusProjectReference(config, projectRoot, projectConfig);
 }
 
 export function createNexusProject(
@@ -285,9 +293,6 @@ export function createNexusProject(
     ...(options.root !== undefined ? { root: options.root } : {}),
     ...(options.from !== undefined ? { from: options.from } : {}),
     ...(options.gitInit !== undefined ? { gitInit: options.gitInit } : {}),
-    ...(options.vibeKanbanProjectId !== undefined
-      ? { vibeKanbanProjectId: options.vibeKanbanProjectId }
-      : {}),
     ...(options.gitRunner ? { gitRunner: options.gitRunner } : {}),
   });
 
@@ -310,9 +315,6 @@ export function importNexusProject(
     root: options.root,
     ...(options.projectRoot !== undefined ? { projectRoot: options.projectRoot } : {}),
     ...(options.name !== undefined ? { name: options.name } : {}),
-    ...(options.vibeKanbanProjectId !== undefined
-      ? { vibeKanbanProjectId: options.vibeKanbanProjectId }
-      : {}),
     ...(options.gitRunner ? { gitRunner: options.gitRunner } : {}),
   });
 
@@ -354,4 +356,3 @@ export function getNexusProjectStatus(
     project: statusForProjectStatusBase(result.project),
   };
 }
-

@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { codexConfigPath } from "./codexConfig.js";
+import { codexConfigPath } from "../../src/codexConfig.js";
 import {
   initNexusHome,
   loadHomeConfig,
@@ -11,12 +11,12 @@ import {
   devNexusPharoControlProjectId,
   devNexusProjectConfigFileName,
   saveProjectConfig,
-} from "./config.js";
+} from "../../src/config.js";
 import {
   defaultPlexusImageExecutionPolicy,
   devNexusPharoProjectExtensionConfigKey,
   plexusProjectConfigFileName,
-} from "./devNexusPharoExtension.js";
+} from "../../src/devNexusPharoExtension.js";
 import {
   createNexusProject,
   getNexusProjectStatus,
@@ -25,15 +25,15 @@ import {
   NexusProjectError,
   type GitCommandResult,
   type GitRunner,
-} from "./nexusProjectService.js";
+} from "../../src/nexusProjectService.js";
 import {
   createDevNexusPharoProject,
   importDevNexusPharoProject,
-} from "./devNexusPharoProjectService.js";
+} from "../../src/devNexusPharoProjectService.js";
 import {
   devNexusPharoPluginId,
   devNexusPharoPluginName,
-} from "./devNexusPharoPlugin.js";
+} from "../../src/devNexusPharoPlugin.js";
 
 const tempDirs: string[] = [];
 
@@ -45,7 +45,10 @@ function makeTempDir(prefix: string): string {
 
 function defaultAgentsContent(): string {
   return fs.readFileSync(
-    path.join(path.dirname(path.dirname(fileURLToPath(import.meta.url))), "AGENTS.md"),
+    path.join(
+      path.dirname(path.dirname(path.dirname(fileURLToPath(import.meta.url)))),
+      "AGENTS.md",
+    ),
     "utf8",
   );
 }
@@ -255,9 +258,6 @@ describe("DevNexus-Pharo project service", () => {
     );
     expect(suggestedFirstPrompt).toContain(".dev-nexus");
     expect(suggestedFirstPrompt).toContain("DevNexus-Pharo skills: dev-nexus-pharo-workflow");
-    expect(suggestedFirstPrompt).toContain(
-      "Legacy Vibe Kanban project id: (not known yet)",
-    );
     expect(suggestedFirstPrompt).toContain("Record durable local context in NOTES.md");
     expect(suggestedFirstPrompt).toContain(
       "commit them in the relevant source repository",
@@ -372,42 +372,6 @@ describe("DevNexus-Pharo project service", () => {
     ]);
   });
 
-  it("stores a Vibe Kanban project id during project creation", () => {
-    const homePath = makeTempDir("dev-nexus-pharo-home-");
-    initNexusHome({ homePath });
-    const projectRoot = path.join(makeTempDir("dev-nexus-pharo-projects-"), "LinkedAtCreate");
-
-    const result = createDevNexusPharoProject({
-      homePath,
-      name: "LinkedAtCreate",
-      root: projectRoot,
-      gitInit: true,
-      vibeKanbanProjectId: "vk-project-1",
-      gitRunner: fakeGitRunner([], { branch: "main" }),
-    });
-
-    expect(result.projectConfig.kanban.projectId).toBe("vk-project-1");
-    expect(fs.readFileSync(result.suggestedFirstPromptPath, "utf8")).toContain(
-      "Legacy Vibe Kanban project id: vk-project-1",
-    );
-    expect(
-      JSON.parse(fs.readFileSync(result.plexusProjectConfigPath, "utf8")),
-    ).toMatchObject({
-      kanban: {
-        provider: "vibe-kanban",
-        projectId: "vk-project-1",
-      },
-    });
-    expect(loadHomeConfig(homePath).projects).toEqual([
-      {
-        id: "linked-at-create",
-        name: "LinkedAtCreate",
-        projectRoot: projectRoot,
-        vibeKanbanProjectId: "vk-project-1",
-      },
-    ]);
-  });
-
   it("lists registered projects with repo and resolved path details", () => {
     const homePath = makeTempDir("dev-nexus-pharo-home-");
     initNexusHome({ homePath });
@@ -460,8 +424,6 @@ describe("DevNexus-Pharo project service", () => {
           workTracking: null,
           workTrackingCapabilities: null,
           workTrackingCapabilityReport: null,
-          vibeKanbanProjectId: null,
-          vibeKanbanRepoId: null,
           projectConfigPath: path.join(projectRoot, devNexusProjectConfigFileName),
           projectConfigExists: true,
           plexusProjectConfigPath: path.join(projectRoot, plexusProjectConfigFileName),
@@ -508,8 +470,6 @@ describe("DevNexus-Pharo project service", () => {
         remoteUrl: null,
         defaultBranch: "main",
       },
-      vibeKanbanProjectId: null,
-      vibeKanbanRepoId: null,
     });
   });
 
@@ -756,10 +716,6 @@ describe("DevNexus-Pharo project service", () => {
         defaultBranch: "dev",
       },
       worktreesRoot: "worktrees",
-      kanban: {
-        provider: "vibe-kanban" as const,
-        projectId: "kanban-existing",
-      },
     };
     fs.writeFileSync(
       path.join(projectRoot, devNexusProjectConfigFileName),
@@ -807,79 +763,8 @@ describe("DevNexus-Pharo project service", () => {
         id: "existing-id",
         name: "Existing Name",
         projectRoot: projectRoot,
-        vibeKanbanProjectId: "kanban-existing",
       },
     ]);
-  });
-
-  it("does not retain legacy Vibe metadata during normal project re-import", () => {
-    const homePath = makeTempDir("dev-nexus-pharo-home-");
-    const projectRoot = path.join(makeTempDir("dev-nexus-pharo-projects-"), "ExistingLegacyPlexus");
-    fs.mkdirSync(projectRoot, { recursive: true });
-    initNexusHome({ homePath });
-    const existingConfig = {
-      version: 1 as const,
-      id: "existing-legacy-plexus",
-      name: "Existing Legacy PLexus",
-      home: null,
-      repo: {
-        kind: "local" as const,
-        remoteUrl: null,
-        defaultBranch: "main",
-      },
-      worktreesRoot: "worktrees",
-      kanban: {
-        provider: "vibe-kanban" as const,
-        projectId: "legacy-kanban-project",
-      },
-    };
-    fs.writeFileSync(
-      path.join(projectRoot, devNexusProjectConfigFileName),
-      `${JSON.stringify(existingConfig, null, 2)}\n`,
-      "utf8",
-    );
-    fs.writeFileSync(
-      path.join(projectRoot, plexusProjectConfigFileName),
-      `${JSON.stringify(
-        {
-          id: "existing-legacy-plexus",
-          name: "Existing Legacy PLexus",
-          kanban: {
-            provider: "vibe-kanban",
-            projectId: "legacy-kanban-project",
-          },
-          images: [],
-          imageExecution: defaultPlexusImageExecutionPolicy,
-          runtime: {
-            gateway: {
-              mode: "project-local",
-              host: "127.0.0.1",
-              port: 17410,
-              agentMcpPath: "/mcp",
-              routeControlMcpPath: "/control-mcp",
-            },
-          },
-        },
-        null,
-        2,
-      )}\n`,
-      "utf8",
-    );
-
-    const result = importDevNexusPharoProject({
-      homePath,
-      root: projectRoot,
-      gitRunner: fakeGitRunner([], { branch: "main" }),
-    });
-    const plexusProjectConfig = JSON.parse(
-      fs.readFileSync(result.plexusProjectConfigPath, "utf8"),
-    ) as Record<string, unknown>;
-    const codexConfig = fs.readFileSync(result.codexConfigPath, "utf8");
-
-    expect(result.plexusProjectConfig).not.toHaveProperty("kanban");
-    expect(plexusProjectConfig).not.toHaveProperty("kanban");
-    expect(codexConfig).not.toContain("[mcp_servers.vibe_kanban]");
-    expect(codexConfig).not.toContain("VIBE_KANBAN_");
   });
 
   it("imports an existing project config without duplicating the DevNexus-Pharo plugin", () => {
@@ -905,10 +790,6 @@ describe("DevNexus-Pharo project service", () => {
         defaultBranch: "main",
       },
       worktreesRoot: "worktrees",
-      kanban: {
-        provider: "vibe-kanban" as const,
-        projectId: null,
-      },
       plugins: [
         existingPlugin,
         {
@@ -946,7 +827,6 @@ describe("DevNexus-Pharo project service", () => {
       id: "missing",
       name: "Missing",
       projectRoot: projectRoot,
-      vibeKanbanProjectId: "kanban-missing",
     });
     fs.mkdirSync(projectRoot, { recursive: true });
     fs.writeFileSync(
@@ -966,8 +846,6 @@ describe("DevNexus-Pharo project service", () => {
       workTracking: null,
       workTrackingCapabilities: null,
       workTrackingCapabilityReport: null,
-      vibeKanbanProjectId: "kanban-missing",
-      vibeKanbanRepoId: null,
       projectConfigPath: path.join(projectRoot, devNexusProjectConfigFileName),
       projectConfigExists: false,
       plexusProjectConfigPath: null,
@@ -1040,10 +918,6 @@ describe("DevNexus-Pharo project service", () => {
         defaultBranch: "main",
       },
       worktreesRoot: "worktrees",
-      kanban: {
-        provider: "vibe-kanban",
-        projectId: null,
-      },
     });
     const gitCalls: string[][] = [];
 

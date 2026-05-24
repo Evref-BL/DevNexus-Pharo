@@ -17,10 +17,6 @@ import type {
 export interface PlexusProjectConfig {
   id: string;
   name: string;
-  kanban?: {
-    provider: "vibe-kanban";
-    projectId: string;
-  };
   images: unknown[];
   imageExecution: PlexusImageExecutionPolicy;
   runtime: PlexusProjectRuntimeConfig;
@@ -107,7 +103,6 @@ export const defaultPlexusImageExecutionPolicy: PlexusImageExecutionPolicy = {
 export interface DevNexusPharoProjectExtensionConfig {
   plexusProjectConfig?: string;
   imageExecution?: PlexusImageExecutionPolicy;
-  vibeKanbanProjectId?: string | null;
 }
 
 export function devNexusPharoProjectExtensionEntry(
@@ -129,7 +124,6 @@ export function projectUsesDevNexusPharoExtension(
 export interface InstallDevNexusPharoProjectFilesOptions {
   projectRoot: string;
   projectConfig: NexusProjectConfig;
-  vibeKanbanProjectId?: string | null;
   reservedGatewayPorts?: readonly number[];
 }
 
@@ -178,7 +172,7 @@ export const devNexusPharoSkillPack: readonly NexusSkillDefinition[] = [
   devNexusPharoSkill(
     "dev-nexus-pharo-workflow",
     "dev-nexus-pharo-workflow",
-    "Workflow guidance for DevNexus-Pharo-managed projects, boards, worktrees, and publication decisions.",
+    "Workflow guidance for DevNexus-Pharo-managed projects, work trackers, worktrees, and publication decisions.",
     `
 # DevNexus-Pharo Workflow
 
@@ -188,8 +182,7 @@ Use this skill when working inside a DevNexus-Pharo-managed project.
 2. Read local AGENTS.md, NOTES.md, and the project config before changing files.
 3. Use provider-neutral project and work-item tools where possible.
 4. Confirm direct \`pharo\` MCP tools are available before changing Pharo code; if not, report the MCP infrastructure blocker instead of editing Pharo files.
-5. Keep Vibe Kanban as tracker context only unless a task explicitly asks for Vibe diagnostics.
-6. Verify focused behavior before broader checks, then record commits and publication state.
+5. Verify focused behavior before broader checks, then record commits and publication state.
 `,
   ),
   devNexusPharoSkill(
@@ -296,15 +289,9 @@ export function devNexusPharoProjectExtensionConfig(
           value.imageExecution,
           `extensions.${devNexusPharoProjectExtensionConfigKey}.imageExecution`,
         );
-  const vibeKanbanProjectId = nullableString(
-    value.vibeKanbanProjectId,
-    `extensions.${devNexusPharoProjectExtensionConfigKey}.vibeKanbanProjectId`,
-  );
-
   return {
     ...(plexusProjectConfig ? { plexusProjectConfig } : {}),
     ...(imageExecution ? { imageExecution } : {}),
-    ...(vibeKanbanProjectId ? { vibeKanbanProjectId } : {}),
   };
 }
 
@@ -423,9 +410,6 @@ function buildSuggestedFirstPrompt(
   projectConfig: NexusProjectConfig,
 ): string {
   const sourceRoot = resolveProjectSourceRoot(projectRoot, projectConfig);
-  const kanbanProjectId =
-    devNexusPharoProjectExtensionConfig(projectConfig).vibeKanbanProjectId ??
-    null;
   const genericSkills = defaultCoreSkillPack
     .map((skill) => skill.manifest.id)
     .join(", ");
@@ -449,7 +433,6 @@ function buildSuggestedFirstPrompt(
     "Known at prompt generation time:",
     "",
     `- DevNexus-Pharo project id: ${projectConfig.id}`,
-    `- Legacy Vibe Kanban project id: ${formatPromptValue(kanbanProjectId)}`,
     `- Source remote: ${formatPromptValue(projectConfig.repo.remoteUrl)}`,
     `- Default branch: ${formatPromptValue(projectConfig.repo.defaultBranch)}`,
     "",
@@ -476,7 +459,6 @@ function installSuggestedFirstPrompt(
 export function buildPlexusProjectConfig(
   name: string,
   projectId: string,
-  vibeKanbanProjectId: string | null = null,
   imageExecutionPolicy: PlexusImageExecutionPolicy =
     defaultPlexusImageExecutionPolicy,
   reservedGatewayPorts: readonly number[] = [],
@@ -484,14 +466,6 @@ export function buildPlexusProjectConfig(
   return {
     id: projectId,
     name,
-    ...(vibeKanbanProjectId
-      ? {
-          kanban: {
-            provider: "vibe-kanban",
-            projectId: vibeKanbanProjectId,
-          },
-        }
-      : {}),
     images: [],
     imageExecution: clonePlexusImageExecutionPolicy(imageExecutionPolicy),
     runtime: {
@@ -640,15 +614,10 @@ export function normalizePlexusProjectConfig(
   existing: Record<string, unknown>,
   projectName: string,
   projectId: string,
-  vibeKanbanProjectId: string | null,
   imageExecutionPolicy: PlexusImageExecutionPolicy =
     defaultPlexusImageExecutionPolicy,
   reservedGatewayPorts: readonly number[] = [],
 ): PlexusProjectConfig {
-  const existingKanban =
-    existing.kanban && typeof existing.kanban === "object" && !Array.isArray(existing.kanban)
-      ? (existing.kanban as Record<string, unknown>)
-      : {};
   const gateway = maybeExistingGateway(existing);
   if (gateway && reservedGatewayPorts.includes(gateway.port)) {
     throw new Error(
@@ -659,22 +628,10 @@ export function normalizePlexusProjectConfig(
     typeof existing.id === "string" && existing.id.trim().length > 0
       ? existing.id
       : projectId;
-  const configuredKanbanProjectId = vibeKanbanProjectId;
-  const { kanban: _kanban, ...existingWithoutKanban } = existing;
 
   return {
-    ...existingWithoutKanban,
     id: configuredProjectId,
     name: typeof existing.name === "string" ? existing.name : projectName,
-    ...(configuredKanbanProjectId
-      ? {
-          kanban: {
-            ...existingKanban,
-            provider: "vibe-kanban",
-            projectId: configuredKanbanProjectId,
-          },
-        }
-      : {}),
     images: Array.isArray(existing.images) ? existing.images : [],
     imageExecution:
       existing.imageExecution === undefined
@@ -691,35 +648,6 @@ export function normalizePlexusProjectConfig(
   } as PlexusProjectConfig;
 }
 
-export function updatePlexusProjectKanban(
-  plexusConfigPath: string,
-  projectName: string,
-  projectId: string,
-  vibeKanbanProjectId: string,
-  imageExecutionPolicy: PlexusImageExecutionPolicy =
-    defaultPlexusImageExecutionPolicy,
-): PlexusProjectConfig {
-  const existing = fs.existsSync(plexusConfigPath)
-    ? readJsonFile<Record<string, unknown>>(plexusConfigPath)
-    : (buildPlexusProjectConfig(
-        projectName,
-        projectId,
-        vibeKanbanProjectId,
-        imageExecutionPolicy,
-        [],
-      ) as unknown as Record<string, unknown>);
-  const updated = normalizePlexusProjectConfig(
-    existing,
-    projectName,
-    projectId,
-    vibeKanbanProjectId,
-    imageExecutionPolicy,
-  );
-
-  saveJsonFile(plexusConfigPath, updated);
-  return updated;
-}
-
 export function installDevNexusPharoProjectFiles(
   options: InstallDevNexusPharoProjectFilesOptions,
 ): DevNexusPharoProjectFiles {
@@ -734,36 +662,25 @@ export function installDevNexusPharoProjectFiles(
     ? readJsonFile<Record<string, unknown>>(plexusConfigPath)
     : null;
   let plexusProjectConfig = existingPlexusProjectConfig
-    ? normalizePlexusProjectConfig(
-        existingPlexusProjectConfig,
-        options.projectConfig.name,
-        options.projectConfig.id,
-        options.vibeKanbanProjectId ?? null,
-        imageExecutionPolicy,
-        options.reservedGatewayPorts ?? [],
-      )
+      ? normalizePlexusProjectConfig(
+          existingPlexusProjectConfig,
+          options.projectConfig.name,
+          options.projectConfig.id,
+          imageExecutionPolicy,
+          options.reservedGatewayPorts ?? [],
+        )
     : buildPlexusProjectConfig(
         options.projectConfig.name,
         options.projectConfig.id,
-        options.vibeKanbanProjectId ?? null,
         imageExecutionPolicy,
         options.reservedGatewayPorts ?? [],
       );
 
   if (!existingPlexusProjectConfig) {
     saveJsonFile(plexusConfigPath, plexusProjectConfig);
-  } else if (options.vibeKanbanProjectId) {
-    plexusProjectConfig = updatePlexusProjectKanban(
-      plexusConfigPath,
-      options.projectConfig.name,
-      options.projectConfig.id,
-      options.vibeKanbanProjectId,
-      imageExecutionPolicy,
-    );
   } else if (
     existingPlexusProjectConfig.imageExecution === undefined ||
-    existingPlexusProjectConfig.runtime === undefined ||
-    (existingPlexusProjectConfig.kanban !== undefined && !options.vibeKanbanProjectId)
+    existingPlexusProjectConfig.runtime === undefined
   ) {
     saveJsonFile(plexusConfigPath, plexusProjectConfig);
   }
@@ -787,11 +704,9 @@ export const devNexusPharoExtension: NexusExtension<
   id: "dev-nexus-pharo",
   name: "DevNexus-Pharo",
   installProjectFiles: ({ projectRoot, projectConfig }) => {
-    const extensionConfig = devNexusPharoProjectExtensionConfig(projectConfig);
     return installDevNexusPharoProjectFiles({
       projectRoot,
       projectConfig,
-      vibeKanbanProjectId: extensionConfig.vibeKanbanProjectId ?? null,
     });
   },
   projectSkills: ({ projectConfig }) =>

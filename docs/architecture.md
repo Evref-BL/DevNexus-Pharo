@@ -1,556 +1,109 @@
 # Architecture
 
-DevNexus-Pharo is the Pharo environment layer around DevNexus. It coordinates
-tools that should remain independently useful and keeps orchestration state
-outside Pharo images.
+DevNexus-Pharo is a specialization layer. It adds Pharo-aware setup and runtime
+projection to DevNexus without taking ownership of generic DevNexus workflow
+features or Pharo image internals.
+
+## Component boundaries
 
 ```text
+DevNexus
+  -> project registry, work tracking, worktrees, targets, publication
+
 DevNexus-Pharo
-  -> Vibe Kanban shared backend
-  -> Vibe Kanban
-  -> PLexus MCP
-      -> pharo-launcher-mcp
-          -> PharoLauncher
-      -> Pharo image MCP workers
+  -> Pharo project setup, support skills, Codex projection, home services
+
+PLexus
+  -> project-local runtime routing and policy
+
+pharo-launcher-mcp
+  -> Pharo Launcher image lifecycle
+
+MCP-Pharo
+  -> image-local Pharo tools
 ```
 
-Each Pharo image is a runtime process target. DevNexus-Pharo does not make the
-image the owner of project metadata, agent setup, service state, or routing.
+DevNexus-Pharo should depend on published DevNexus APIs and PLexus command/MCP
+surfaces. It should not reach into Pharo images directly.
 
-## Responsibilities
+## Home model
 
-DevNexus-Pharo owns:
+The home is host-local state. It contains:
 
-- user home configuration
-- the reserved control project where users ask agents to create and manage Pharo projects
-- process startup and shutdown for top-level services
-- top-level ports
-- Vibe Kanban backend mode selection (`docker`, `dind`, or `external`)
-- logs and generated integration files
-- the registry of Vibe Kanban repo/project ids and their PLexus project roots
-- installation of DevNexus-Pharo and PLexus MCP entries into Vibe Kanban executors
-- bundled Pharo-domain support skills projected through DevNexus project skill
-  refresh and plugin `projected_skill` capabilities
-- static host capability helpers for Pharo-capable DevNexus runner planning
+- `dev-nexus.home.json`
+- service logs
+- service state files
+- the reserved control project
+- registered managed projects
 
-DevNexus-Pharo does not own:
+The control project is for environment management only. Product work belongs in
+the managed project root or the owning DevNexus component.
 
-- generic DevNexus project, component, work-item, or tracker configuration
-- PharoLauncher CLI details
-- Pharo image creation, launch, or kill semantics
-- in-image Pharo code editing or test execution
-- MCP-Pharo's image-side MCP server behavior
+## Project model
 
-Those belong to DevNexus core, pharo-launcher-mcp, PLexus, and the Pharo MCP
-worker respectively.
-DevNexus-Pharo may copy MCP-Pharo repo-local skills such as Pharo CI
-reproduction, image Git handoff, project loading, and cross-version support into
-`.dev-nexus/skills` with upstream commit provenance. These copies are worker
-guidance only; they do not make DevNexus-Pharo the source of MCP-Pharo runtime
-behavior.
+A managed Pharo project can have a project root that differs from its source Git
+checkout. This lets DevNexus-Pharo store generated support files without writing
+into an existing source repository.
 
-## Boundary Rule
+Generated project files include:
 
-Dependencies point downward:
+- `dev-nexus.project.json`
+- `plexus.project.json`
+- `AGENTS.md`
+- `suggestedFirstPrompt.md`
+- `.dev-nexus/skills`
+- `.codex/config.toml`
 
-```text
-DevNexus-Pharo -> PLexus -> pharo-launcher-mcp -> PharoLauncher
-```
+The DevNexus project config remains the source of truth for project identity,
+repository facts, worktree roots, extensions, plugins, and provider-neutral work
+tracking.
 
-PLexus should not depend on DevNexus-Pharo.
+## Runtime model
 
-DevNexus-Pharo may prepare projects and service configuration for PLexus, but
-PLexus remains the outside-image runtime control plane.
+The live service graph has two home-level services:
 
-## Platform Boundary
+- DevNexus-Pharo MCP
+- PLexus gateway
 
-The home/project model is OS-neutral: a DevNexus-Pharo home contains the same
-registry, service state, logs, generated files, control project, and project
-entries on Windows, macOS, and Linux. Only filesystem path syntax differs.
+`dev-nexus-pharo start` ensures the control project exists, starts PLexus, starts
+DevNexus-Pharo MCP, and waits for DevNexus-Pharo MCP health. `stop` shuts down
+DevNexus-Pharo MCP before PLexus.
 
-OS-specific behavior belongs in orchestration adapters and helpers:
+Project-local runtime routing is represented in `plexus.project.json`. Codex
+uses scoped MCP entries to reach project-local PLexus surfaces when a shared
+DevNexus project enables the DevNexus-Pharo plugin.
 
-- command resolution for Windows `.cmd`/`.bat` shims and POSIX executables
-- process-tree shutdown, including Windows `taskkill`
-- release/detach defaults for supervised background services
-- browser opening commands
-- Docker/Vibe backend launch details
-- MCP config command fallback for clients that cannot use URL MCP
+## Codex projection
 
-Higher-level project creation, import, Vibe linking, and Codex config generation
-should call those helpers instead of branching directly on platform details.
+Home-level workspaces receive HTTP entries for DevNexus-Pharo MCP and PLexus.
+Shared project roots receive command entries for DevNexus, DevNexus-Pharo, and
+PLexus project tools plus HTTP entries for the scoped route-control and gateway
+surfaces.
 
-## Vibe Backend Modes
+`codex init` replaces only managed entries and preserves unrelated user-managed
+TOML. `codex doctor` verifies generated entries and performs live HTTP checks
+only for home-level services.
 
-Vibe Kanban has two distinct pieces in the DevNexus-Pharo model:
+## Image execution
 
-```text
-Vibe shared backend  -> project and issue data
-Vibe local app       -> local repo/workspace runner and UI
-```
+DevNexus-Pharo records image execution policy but does not launch images during
+static setup. The default policy disables image execution and requires disposable
+images and cleanup planning when a project opts into runtime image work.
 
-DevNexus-Pharo configures the local app with `VK_SHARED_API_BASE`, so the app talks
-to the intended shared backend instead of assuming the hosted default.
-The default local app command is pinned to `npx -y vibe-kanban@0.1.43`; the
-`0.1.44` package keeps the app local but routes project pages to an export-only
-sunset screen.
+Live image operations belong behind PLexus policy and must have an explicit
+project, workspace, target, and cleanup boundary.
 
-The home config stores this under `integrations.vibeKanban.backend`:
+## Work tracking
 
-```json
-{
-  "mode": "docker",
-  "sharedApiBase": "http://127.0.0.1:3100",
-  "healthPath": "/v1/health",
-  "sourceRepositoryUrl": "https://github.com/BloopAI/vibe-kanban.git",
-  "autoBootstrap": true,
-  "composeCommand": "auto",
-  "composeArgs": [],
-  "composeFile": "<home>\\vibe-kanban\\crates\\remote\\docker-compose.yml",
-  "envFile": "<home>\\vibe-kanban\\crates\\remote\\.env.remote",
-  "projectName": "dev-nexus-pharo-vibe",
-  "workingDirectory": "<home>\\vibe-kanban\\crates\\remote",
-  "startOnDevNexus-PharoStart": true,
-  "stopOnDevNexus-PharoStop": true
-}
-```
+Work tracking is provider-neutral and owned by DevNexus core. DevNexus-Pharo
+reads work tracking facts for status and MCP context, but it does not define a
+tracker-specific schema.
 
-`docker` mode is for the usual local self-hosted setup. DevNexus-Pharo runs Docker
-Compose with argv arrays, captures stdout/stderr/exit code/duration, writes
-state under `<home>\state\services\vibe-kanban-backend.json`, and health-checks
-`sharedApiBase + healthPath`. Compose builds run with `DOCKER_BUILDKIT=1` and
-`COMPOSE_DOCKER_CLI_BUILD=1`; DevNexus-Pharo checks for Buildx before starting the
-backend so Docker prerequisite failures are reported directly.
+## Design constraints
 
-`dind` mode is for hosts where Vibe needs to be composed inside an isolated
-Linux Docker daemon. DevNexus-Pharo starts a privileged `docker:dind` container,
-bind-mounts the Vibe checkout into `/workspace/vibe-kanban`, waits for the inner
-Docker daemon, verifies `docker compose`, and runs the same Vibe Compose stack
-inside that container. The DinD container publishes the backend port back to the
-host, while the inner Compose stack uses `REMOTE_SERVER_PORTS=0.0.0.0:3100:8081`
-so the nested remote server is reachable through the outer container mapping.
-
-When `autoBootstrap` is true, DevNexus-Pharo also owns first-run setup for the local
-backend: it clones `sourceRepositoryUrl` into `<home>\vibe-kanban` if the
-checkout is missing, then generates `<home>\vibe-kanban\crates\remote\.env.remote`
-with local-only secrets and bootstrap local-auth credentials if that file is
-missing.
-
-After the local Vibe app is healthy, DevNexus-Pharo reads those generated
-`SELF_HOST_LOCAL_AUTH_EMAIL` and `SELF_HOST_LOCAL_AUTH_PASSWORD` values and calls
-the local app's `/api/auth/local/login` endpoint when the app is not already
-signed in. That keeps the self-hosted path local and avoids asking the user to
-copy the bootstrap password from `.env.remote` into the browser.
-
-GitHub login is available when the user supplies Vibe GitHub OAuth
-app credentials through `DEV_NEXUS_PHARO_GITHUB_OAUTH_CLIENT_ID` and
-`DEV_NEXUS_PHARO_GITHUB_OAUTH_CLIENT_SECRET` or the equivalent `GITHUB_OAUTH_*`
-environment variables. Existing Git config can provide an email identity hint
-for fallback local auth, but it cannot supply the OAuth client secret required
-by Vibe's backend.
-
-The default backend port is 3100 to avoid colliding with the Vibe local app's
-default port 3000. The generated Vibe `.env.remote` exposes the remote server
-with `REMOTE_SERVER_PORTS=127.0.0.1:3100:8081`, unless both ports are changed
-together.
-
-`external` mode is for a remote or manually managed Vibe backend:
-
-```json
-{
-  "mode": "external",
-  "sharedApiBase": "https://kanban.example.com",
-  "healthPath": "/v1/health",
-  "startOnDevNexus-PharoStart": false,
-  "stopOnDevNexus-PharoStop": false
-}
-```
-
-In `external` mode, DevNexus-Pharo does not own the backend lifecycle; it only
-records the configured target and can health-check it.
-
-## Control Project
-
-Every DevNexus-Pharo home contains one reserved project:
-
-```text
-<home>\DevNexus-Pharo\
-  dev-nexus.project.json
-  worktrees\
-```
-
-The home config records that project explicitly:
-
-```json
-{
-  "controlProject": {
-    "id": "dev-nexus-pharo-control",
-    "name": "DevNexus-Pharo",
-    "root": "<home>\\DevNexus-Pharo",
-    "vibeKanbanProjectId": null,
-    "vibeKanbanRepoId": null
-  },
-  "projects": []
-}
-```
-
-This project is the management surface for Vibe Kanban. The user can create
-tasks there such as "create a new Pharo project from this GitHub repository",
-and agents can call DevNexus-Pharo tools to create or import the real project on
-disk.
-
-The control project is not itself a Pharo application repository. It is the
-durable local workspace for DevNexus-Pharo management tasks.
-
-`dev-nexus-pharo start` ensures this control project exists, registers its root as a
-Vibe Kanban repo when no `vibeKanbanRepoId` is stored yet, and ensures a Vibe
-Kanban project/board named `DevNexus-Pharo` exists when no `vibeKanbanProjectId` is
-stored yet. The board id is written to both:
-
-```text
-<home>\dev-nexus.home.json
-<home>\DevNexus-Pharo\dev-nexus.project.json
-```
-
-Registration is best-effort. If Vibe Kanban is healthy but repo registration is
-or board creation is not available, start continues and reports the error in its
-structured result.
-
-## Project Config
-
-Each DevNexus-Pharo project has a `dev-nexus.project.json` file:
-
-```json
-{
-  "version": 1,
-  "id": "my-project",
-  "name": "MyProject",
-  "home": null,
-  "repo": {
-    "kind": "local",
-    "remoteUrl": null,
-    "defaultBranch": null
-  },
-  "worktreesRoot": "worktrees",
-  "kanban": {
-    "provider": "vibe-kanban",
-    "projectId": null
-  },
-  "extensions": {
-    "dev-nexus-pharo": {
-      "plexusProjectConfig": "plexus.project.json"
-    }
-  }
-}
-```
-
-Generic relative project paths, such as `worktreesRoot`, resolve from the
-directory containing `dev-nexus.project.json`. Pharo/PLexus paths, such as
-`extensions.dev-nexus-pharo.plexusProjectConfig`, are interpreted by the
-DevNexus-Pharo extension.
-
-## Image Execution Policy
-
-DevNexus-Pharo writes a PLexus-facing `imageExecution` policy into
-`plexus.project.json` for managed projects. The default policy is disabled and
-requires disposable images plus an explicit cleanup plan before any launch work.
-
-Docker-backed image execution must be enabled explicitly with a runner image:
-
-```json
-{
-  "imageExecution": {
-    "mode": "docker",
-    "requireDisposableImage": true,
-    "requireCleanupPlan": true,
-    "docker": {
-      "image": "ghcr.io/example/pharo-runner:test",
-      "network": "none",
-      "autoRemove": true,
-      "mountProjectReadOnly": true
-    }
-  }
-}
-```
-
-This policy is configuration only. DevNexus-Pharo must not launch Docker, PLexus
-projects, or Pharo images unless the selected task names the isolated runner,
-disposable image boundary, and cleanup command sequence.
-
-## Image-Local Pharo Load Workspaces
-
-DevNexus-Pharo owns the Pharo-specific setup policy for making project loads
-portable across agents and images. A setup flow can call
-`preparePharoProjectLoadWorkspace` with a primary project repository plus
-declared Metacello dependency repositories. The helper preflights each
-`BaselineOf<Name>` package, copies the repositories into a scoped
-workspace-local area such as an image-local Iceberg directory, and writes a load
-script that uses only local `tonel://` URLs.
-
-The staged workspace is generated runtime support. It follows the image or
-workspace lifecycle and should not be committed to the source checkout. If a
-dependency cannot be staged, setup should fail before image startup with the
-missing baseline path rather than letting an image-side Metacello load discover
-the problem after PLexus opens the runtime.
-
-## Project Creation
-
-`dev-nexus-pharo project create <name>` is the project factory entrypoint used by
-agents working from the control project. `dev-nexus-pharo project import <path>`
-imports a local source Git checkout while keeping DevNexus-Pharo runtime metadata in
-a managed DevNexus-Pharo project root.
-
-It supports two source modes:
-
-```text
---git-init
---from <git-url>
-```
-
-If `--root` is omitted, the project root is created under
-`dev-nexus.home.json`'s `paths.projectsRoot`.
-
-For `project import`, `<path>` is the source Git checkout, not the metadata
-root. Use `--project-root <path>` only when the managed DevNexus-Pharo project root
-needs to be placed somewhere other than `paths.projectsRoot`.
-
-Creation writes:
-
-```text
-<project-root>\
-  dev-nexus.project.json
-  plexus.project.json
-  .codex\config.toml
-  AGENTS.md
-  suggestedFirstPrompt.md
-  worktrees\
-```
-
-For `project create --from`, the source repository is cloned under
-`<project-root>\git` and referenced from `repo.sourceRoot`. For `project import
-<source-checkout>`, `repo.sourceRoot` points at the existing checkout. The
-source checkout must not receive DevNexus-Pharo metadata files unless it is already a
-managed DevNexus-Pharo project.
-
-`suggestedFirstPrompt.md` is a generated first-session prompt for agents. It
-points at the managed project root, source checkout, known Kanban id when
-available, and asks the agent to update local notes and refine `AGENTS.md` only
-where project-specific workflow guidance is needed.
-
-The home config `projects` registry is updated with the DevNexus-Pharo project id,
-display name, PLexus project root, and any known Vibe ids.
-
-If a Vibe Kanban project id is already known, project creation can store it at
-creation time. Otherwise the project remains unlinked until a user or agent
-links it:
-
-```text
-dev-nexus-pharo project link-kanban <id-or-path> --vibe-project-id <id>
-```
-
-If Vibe Kanban is running, DevNexus-Pharo can also register the project's source
-checkout as a local Vibe repo and ensure a Vibe project/board exists:
-
-```text
-dev-nexus-pharo project create <name> --git-init --sync-vibe-kanban
-dev-nexus-pharo project import <path> --name <name> --sync-vibe-kanban
-dev-nexus-pharo project sync-kanban <id-or-path>
-```
-
-The link and sync operations update three places so all layers agree:
-
-```text
-<home>\dev-nexus.home.json
-<project-root>\dev-nexus.project.json
-<project-root>\plexus.project.json
-```
-
-The repo adapter uses Vibe Kanban's local repo API (`POST /api/repos`) and
-stores that id as `vibeKanbanRepoId`. For imported or cloned repositories, this
-repo path is the source checkout (`repo.sourceRoot`), not the managed
-DevNexus-Pharo project root. DevNexus-Pharo then refreshes the Vibe repo setup script
-from managed project metadata so future Vibe worktrees receive local support
-files without committing them:
-
-- copy `AGENTS.md` from the managed project root when the worktree lacks one
-- copy managed `.codex/config.toml` when the worktree lacks Codex config
-- add `AGENTS.md`, `.codex/`, and `node_modules/` to `.git/info/exclude`
-- link to source checkout `node_modules` when it already exists, and report
-  when local dependencies are missing instead of hiding that failure
-
-This setup-script provisioning is environment wiring only. Implementation work
-should be done by the Codex automation process against the owning checkout; Vibe
-Kanban remains the board and workspace history system, not the normal source
-worker dispatcher.
-
-The board adapter uses Vibe Kanban's local auth session and shared project API
-to find or create the Kanban board, then stores that id as
-`vibeKanbanProjectId`. `link-kanban` remains the fallback when the Vibe board is
-created manually or by another agent.
-
-Project discovery commands read that registry:
-
-```text
-dev-nexus-pharo project list
-dev-nexus-pharo project status <id-or-path>
-```
-
-`project list` reports registered real Pharo projects. `project status` accepts
-either a registered project id or a path to a project root or
-`dev-nexus.project.json` file. Both commands resolve the PLexus config path
-and worktrees root from the project config.
-
-## MCP Surface
-
-DevNexus-Pharo exposes its project factory and registry through a supervised local
-HTTP MCP server:
-
-```text
-dev-nexus-pharo mcp
-```
-
-The control project should make this server available to agents alongside the
-generic `dev_nexus` server. The DevNexus-Pharo MCP tools are:
-
-```text
-pharo_project_create
-pharo_project_import
-pharo_project_list
-pharo_project_status
-pharo_project_skill_status
-pharo_project_skill_refresh
-```
-
-The MCP surface belongs to DevNexus-Pharo rather than PLexus because these tools
-create and register repositories. PLexus remains responsible for opening,
-closing, and routing runtime targets inside an already-created project.
-Generic DevNexus MCP tools such as `work_item_*`, `automation_status`,
-`target_cycle_*`, `target_report`, and generic `project_*` operations belong to
-`dev_nexus` and are not exposed through `dev_nexus_pharo`.
-
-## Control Board Prompt Contract
-
-The DevNexus-Pharo control board is the human entrypoint for creating or importing
-real Pharo projects.
-
-When the user writes a task like:
-
-```text
-Create a new Pharo project named MyLibrary from https://git.example.test/org/MyLibrary.git
-```
-
-the agent should call `pharo_project_create` on the `dev_nexus_pharo` MCP
-server with:
-
-```json
-{
-  "name": "MyLibrary",
-  "remoteUrl": "https://git.example.test/org/MyLibrary.git"
-}
-```
-
-The agent should not manually create directories, hand-edit project config
-files, or call Vibe Kanban directly for this workflow. DevNexus-Pharo owns the
-transaction: Git clone or init, `dev-nexus.project.json`,
-`plexus.project.json`, `.codex\config.toml`, `AGENTS.md`, `worktrees\`, Vibe
-repo registration, Vibe board creation or linking, and the home project
-registry update.
-
-## Project Board Feature Contract
-
-Once a real Pharo project exists, feature planning and implementation happen on
-that project's Vibe Kanban board, not on the DevNexus-Pharo control board.
-
-When the user writes an issue like:
-
-```text
-Plan persistence support for MyLibrary
-```
-
-the Vibe agent should work the issue in an isolated Vibe workspace for that
-project repository. The expected agent behavior is:
-
-- plan the requested feature in the issue context
-- make code and documentation changes inside the isolated workspace
-- run the relevant checks available in that workspace
-- report the outcome back to the issue
-
-DevNexus-Pharo does not create another DevNexus-Pharo project for feature issues. It
-only ensures the project exists and is linked to Vibe Kanban. PLexus later owns
-the Pharo runtime layer for each workspace: deciding which Pharo image(s) are
-active, starting them, loading the in-image MCP server, assigning ports, and
-routing Pharo-specific MCP calls to the correct image.
-
-The intended first scenario is that a user creates a task in the DevNexus-Pharo
-control project:
-
-```text
-Create a new Pharo project named MyLibrary from https://git.example.test/org/MyLibrary.git
-```
-
-The agent calls:
-
-```json
-{
-  "name": "MyLibrary",
-  "remoteUrl": "https://git.example.test/org/MyLibrary.git"
-}
-```
-
-on `dev_nexus_pharo`. `remoteUrl` is the MCP-facing name for the Git source URL.
-MCP create/import calls create DevNexus-Pharo project metadata and do not expose
-generic project, tracker, or Vibe sync wrappers.
-
-On start, DevNexus-Pharo installs two MCP server entries into the selected Vibe
-Kanban executor:
-
-```text
-dev_nexus_pharo -> http://127.0.0.1:<devNexusPharoMcp>/mcp
-plexus       -> http://127.0.0.1:<plexusMcp>/mcp
-```
-
-Existing Vibe Kanban MCP servers are preserved. The server names, HTTP host,
-and ports come from `dev-nexus.home.json`.
-
-## Codex Workspace Config
-
-Codex workspaces should be connection-first:
-
-```powershell
-dev-nexus-pharo start
-dev-nexus-pharo codex init <workspace>
-dev-nexus-pharo codex doctor <workspace>
-```
-
-`codex init` updates `<workspace>\.codex\config.toml` and preserves unrelated
-Codex settings and unrelated MCP servers. It owns only the managed
-`dev_nexus_pharo`, `plexus`, and `vibe_kanban` sections. The DevNexus-Pharo and PLexus
-entries use URL MCP connections to the supervised endpoints. This keeps one
-DevNexus-Pharo-controlled service graph per home instead of one ad hoc process tree
-per Codex chat.
-
-`codex doctor` validates the generated config, endpoint health, MCP
-`initialize`, `tools/list`, and the expected tool names. A stale Codex chat may
-still miss tools after the config is correct because MCP tools are loaded when
-the executor session starts; open a fresh chat after the doctor passes.
-
-Command-mode fallback is for clients that cannot use URL MCP. The fallback must
-use the current Node executable and an absolute DevNexus-Pharo entrypoint, such as
-`node <repo>\dist\cli.js mcp-stdio`, rather than a bare package-bin command.
-
-## Agent Model Policy
-
-Agent executor, model, and reasoning defaults are DevNexus-Pharo policy. They belong
-in `dev-nexus.home.json`, `dev-nexus.project.json`, and future
-issue/workspace-start inputs, not in PLexus or PLexus gateway.
-
-Resolution order is:
-
-1. issue-level override
-2. project `agent` defaults
-3. home `agent` defaults
-4. executor profile fallback from Vibe/Codex
-
-This keeps PLexus focused on project/workspace/runtime routing while giving
-DevNexus-Pharo a single place to resolve the values that a future Vibe workspace
-start API call can pass as model/reasoning ids.
+- Keep generic workflow logic in DevNexus core.
+- Keep Pharo image lifecycle logic in pharo-launcher-mcp and PLexus.
+- Keep image-local code execution inside MCP-Pharo routes.
+- Keep generated support files out of source checkouts unless the checkout is
+  explicitly the managed project root.
+- Keep runtime mutation separate from static projection.

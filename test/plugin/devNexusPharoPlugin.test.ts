@@ -5,8 +5,8 @@ import {
   devNexusPharoPluginId,
   devNexusPharoPluginName,
   devNexusPharoPluginVersion,
-} from "./devNexusPharoPlugin.js";
-import { devNexusPharoSkillPack } from "./devNexusPharoExtension.js";
+} from "../../src/devNexusPharoPlugin.js";
+import { devNexusPharoSkillPack } from "../../src/devNexusPharoExtension.js";
 
 type DevNexusPharoCapability =
   ReturnType<typeof devNexusPharoDevNexusPluginConfig>["capabilities"][number];
