@@ -6,18 +6,22 @@ state or assuming a single repository layout.
 
 ## Tool Roles
 
-- Use `dev_nexus_pharo` to organize and orchestrate projects, homes, workspaces,
-  MCP configuration, and project/board linkage.
-- Use `vibe_kanban` to plan and track feature work through project boards,
-  issues, workspaces, and sessions.
-- Use `pharo_launcher` for Pharo image creation and launch operations. In the
-  intended architecture, this surface is provided through PLexus, which uses
-  pharo-launcher-mcp underneath.
-- Use `pharo` tools to execute code inside images. In the intended
-  architecture, this surface is reached through the PLexus gateway and backed
-  by the Evref-BL/MCP Pharo project. If a task requires Pharo code changes and
-  the `pharo` MCP surface is missing or unreachable, stop and report the MCP
-  infrastructure blocker instead of editing Pharo code through files.
+- Use DevNexus workspace tools for component metadata, provider-backed work
+  items, isolated worktrees, coordination handoffs, and publication policy.
+- Use `dev_nexus_pharo` only for Pharo-specific project, home, setup, MCP, and
+  skill-projection operations.
+- Do not create Vibe Kanban workspaces, sessions, or executions for
+  DevNexus-Pharo source work. Vibe support in this repository is managed
+  runtime compatibility code, not the default work tracker for this component.
+- Use `pharo_launcher` for Pharo image creation and launch operations only when
+  an approved live-runtime boundary exists. In the intended architecture, this
+  surface is provided through PLexus, which uses pharo-launcher-mcp underneath.
+- Use `pharo` tools to execute code inside images only when the runtime is
+  approved and reachable. In the intended architecture, this surface is reached
+  through the PLexus gateway and backed by the Evref-BL/MCP Pharo project. If a
+  task requires Pharo code changes and the `pharo` MCP surface is missing or
+  unreachable, stop and report the MCP infrastructure blocker instead of editing
+  Pharo code through files.
 
 ## System Shape
 
@@ -34,13 +38,11 @@ depend on implementation details inside Pharo images.
 
 - The DevNexus-Pharo control project is reserved for managing the environment:
   creating/importing/linking projects, checking status, and orchestrating
-  services. Do not use it as the normal feature board for a source repository.
-- A real project is where product work happens. Its Kanban board represents one
-  source repository or application, and its issues represent feature, bugfix,
-  planning, or maintenance work.
-- `MetaDevNexus-Pharo` is the real project for developing DevNexus-Pharo itself. It is
-  distinct from the reserved control project, even though both are related to
-  DevNexus-Pharo.
+  services. Do not use it as the normal tracker for a source repository.
+- A real project is where product work happens. Use the configured DevNexus
+  component work tracker for that repository or application.
+- DevNexus-Pharo source changes belong to the DevNexus-Pharo component tracker,
+  normally GitHub Issues in the DevNexus dogfood workspace.
 - A DevNexus-Pharo project root is the managed project context. It may contain
   Codex configuration, agent instructions, worktrees, and project metadata.
 - The source Git checkout may be separate from that root, or may live in a
@@ -68,15 +70,16 @@ depend on implementation details inside Pharo images.
   commit.
 - Push only when the user asked for it, the project instructions say pushing is
   expected, or the current task clearly requires publishing the commit.
-- Keep the Kanban issue or project notes aligned with commits, verification,
-  and remaining risks.
+- Keep the owning work item aligned with commits, verification, and remaining
+  risks.
 
-## Board Choice
+## Work Item Choice
 
-- Use the control board for instructions like "create/import/register/sync a
-  project" or "start/check/fix the DevNexus-Pharo environment".
-- Use a real project board, such as `MetaDevNexus-Pharo`, `PLexus`, or `pharo-launcher-mcp`,
-  for source changes, design notes, tests, and implementation work in that
-  project.
+- Use DevNexus-Pharo project/home tooling for instructions like
+  "create/import/register/sync a project" or "start/check/fix the
+  DevNexus-Pharo environment".
+- Use the owning component tracker, such as DevNexus-Pharo, PLexus, or
+  pharo-launcher-mcp, for source changes, design notes, tests, and
+  implementation work in that project.
 - If a task mentions "DevNexus-Pharo" but asks for source-code changes, treat it as
-  `MetaDevNexus-Pharo`, not the control project.
+  DevNexus-Pharo component source work, not control-project runtime work.
