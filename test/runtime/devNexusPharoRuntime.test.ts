@@ -9,17 +9,17 @@ import {
   loadHomeConfig,
   loadProjectConfig,
   saveHomeConfig,
-} from "./config.js";
+} from "../../src/config.js";
 import {
   getDevNexusPharoStatus,
   startDevNexusPharo,
   stopDevNexusPharo,
   vibeKanbanToolOpensBrowserOnStart,
-} from "./devNexusPharoRuntime.js";
-import { stopDevNexusPharoMcp } from "./devNexusPharoMcpService.js";
-import { stopPlexusGateway } from "./plexusGatewayService.js";
+} from "../../src/devNexusPharoRuntime.js";
+import { stopDevNexusPharoMcp } from "../../src/devNexusPharoMcpService.js";
+import { stopPlexusGateway } from "../../src/plexusGatewayService.js";
 import { waitForHttpPort } from "dev-nexus";
-import { stopVibeKanban } from "./vibeKanbanService.js";
+import { stopVibeKanban } from "../../src/vibeKanbanService.js";
 
 const tempDirs: string[] = [];
 const homePaths: string[] = [];

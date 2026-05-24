@@ -9,16 +9,16 @@ import {
   loadHomeConfig,
   saveProjectConfig,
   saveHomeConfig,
-} from "./config.js";
-import { devNexusPharoProjectExtensionConfigKey } from "./devNexusPharoExtension.js";
-import { devNexusPharoDevNexusPluginConfig } from "./devNexusPharoPlugin.js";
+} from "../../src/config.js";
+import { devNexusPharoProjectExtensionConfigKey } from "../../src/devNexusPharoExtension.js";
+import { devNexusPharoDevNexusPluginConfig } from "../../src/devNexusPharoPlugin.js";
 import {
   buildCodexMcpServers,
   codexConfigPath,
   doctorCodexWorkspace,
   initCodexWorkspace,
   mergeCodexMcpServersIntoToml,
-} from "./codexConfig.js";
+} from "../../src/codexConfig.js";
 
 const tempDirs: string[] = [];
 const servers: http.Server[] = [];

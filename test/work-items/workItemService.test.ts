@@ -8,13 +8,13 @@ import {
   saveProjectConfig,
   type NexusHomeConfig,
   type NexusProjectConfig,
-} from "./config.js";
+} from "../../src/config.js";
 import {
   createWorkItemService,
   normalizeProjectSelector,
   normalizeWorkItemRef,
   WorkItemServiceError,
-} from "./workItemService.js";
+} from "../../src/workItemService.js";
 
 const tempDirs: string[] = [];
 

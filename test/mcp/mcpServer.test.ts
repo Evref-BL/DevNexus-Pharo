@@ -12,18 +12,18 @@ import {
   loadHomeConfig,
   loadProjectConfig,
   saveProjectConfig,
-} from "./config.js";
+} from "../../src/config.js";
 import {
   defaultPlexusImageExecutionPolicy,
   devNexusPharoSkillPack,
   plexusProjectConfigFileName,
-} from "./devNexusPharoExtension.js";
+} from "../../src/devNexusPharoExtension.js";
 import {
   callDevNexusPharoMcpTool,
   listDevNexusPharoMcpTools,
   startDevNexusPharoMcpHttpServer,
-} from "./mcpServer.js";
-import type { GitCommandResult, GitRunner } from "./nexusProjectService.js";
+} from "../../src/mcpServer.js";
+import type { GitCommandResult, GitRunner } from "../../src/nexusProjectService.js";
 
 const tempDirs: string[] = [];
 const expectedDevNexusPharoSkillCount =

@@ -3,7 +3,7 @@ import {
   devNexusPharoHostCapabilityTags,
   devNexusPharoRunnerProfileTemplates,
   evaluateDevNexusPharoStaticHostCapabilities,
-} from "./devNexusPharoHostCapabilities.js";
+} from "../../src/devNexusPharoHostCapabilities.js";
 
 describe("DevNexus-Pharo host capability contributions", () => {
   it("declares Pharo-domain capability tags for generic DevNexus host matching", () => {

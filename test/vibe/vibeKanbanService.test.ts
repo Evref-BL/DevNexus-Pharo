@@ -8,7 +8,7 @@ import {
   loadHomeConfig,
   saveHomeConfig,
   type NexusHomeConfig,
-} from "./config.js";
+} from "../../src/config.js";
 import {
   getVibeKanbanStatus,
   loadVibeKanbanState,
@@ -16,7 +16,7 @@ import {
   stopVibeKanban,
   VibeKanbanServiceError,
   vibeKanbanStatePath,
-} from "./vibeKanbanService.js";
+} from "../../src/vibeKanbanService.js";
 
 const tempDirs: string[] = [];
 const homePaths: string[] = [];

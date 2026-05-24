@@ -2,12 +2,12 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { validateProjectConfig } from "./config.js";
+import { validateProjectConfig } from "../../src/config.js";
 import {
   createProjectWorkTrackerProvider,
   createWorkTrackerProvider,
   resolveProjectWorkTrackingConfig,
-} from "./workTrackingService.js";
+} from "../../src/workTrackingService.js";
 
 const tempDirs: string[] = [];
 

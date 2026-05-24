@@ -4,8 +4,8 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { defaultCoreSkillPack } from "dev-nexus";
-import { main, usage } from "./cli.js";
-import { codexConfigPath } from "./codexConfig.js";
+import { main, usage } from "../../src/cli.js";
+import { codexConfigPath } from "../../src/codexConfig.js";
 import {
   initNexusHome,
   loadProjectConfig,
@@ -13,13 +13,13 @@ import {
   devNexusProjectConfigFileName,
   saveHomeConfig,
   saveProjectConfig,
-} from "./config.js";
+} from "../../src/config.js";
 import {
   defaultPlexusImageExecutionPolicy,
   devNexusPharoProjectExtensionConfigKey,
   devNexusPharoSkillPack,
   plexusProjectConfigFileName,
-} from "./devNexusPharoExtension.js";
+} from "../../src/devNexusPharoExtension.js";
 
 const tempDirs: string[] = [];
 const expectedDevNexusPharoSkillCount =

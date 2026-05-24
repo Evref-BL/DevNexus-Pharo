@@ -13,26 +13,26 @@ import {
   devNexusProjectConfigFileName,
   projectWorktreesRootPath,
   validateProjectConfig,
-} from "./config.js";
+} from "../../src/config.js";
 import {
   defaultPlexusImageExecutionPolicy,
   devNexusPharoProjectExtensionConfigKey,
   plexusProjectConfigFileName,
   projectPlexusConfigPath,
-} from "./devNexusPharoExtension.js";
+} from "../../src/devNexusPharoExtension.js";
 import {
   NexusProjectError,
   type GitCommandResult,
   type GitRunner,
-} from "./nexusProjectService.js";
+} from "../../src/nexusProjectService.js";
 import {
   createDevNexusPharoProject,
   importDevNexusPharoProject,
-} from "./devNexusPharoProjectService.js";
+} from "../../src/devNexusPharoProjectService.js";
 import {
   devNexusPharoPluginId,
   devNexusPharoPluginName,
-} from "./devNexusPharoPlugin.js";
+} from "../../src/devNexusPharoPlugin.js";
 
 const tempDirs: string[] = [];
 

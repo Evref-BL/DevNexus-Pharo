@@ -16,13 +16,13 @@ import {
   initNexusHome,
   loadHomeConfig,
   saveHomeConfig,
-} from "./config.js";
+} from "../../src/config.js";
 import {
   buildDevNexusPharoMcpServerConfig,
   buildPlexusMcpServerConfig,
   installDevNexusPharoAndPlexusMcpForExecutor,
   installPlexusMcpForExecutor,
-} from "./vibeKanbanMcpConfig.js";
+} from "../../src/vibeKanbanMcpConfig.js";
 
 const tempDirs: string[] = [];
 

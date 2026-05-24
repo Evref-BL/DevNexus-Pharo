@@ -6,11 +6,11 @@ import {
   initNexusHome,
   loadHomeConfig,
   saveHomeConfig,
-} from "./config.js";
+} from "../../src/config.js";
 import {
   ensureVibeKanbanSelfHostedLogin,
   readVibeKanbanLocalAuthCredentials,
-} from "./vibeKanbanAuth.js";
+} from "../../src/vibeKanbanAuth.js";
 
 function jsonResponse(value: unknown, status = 200): Response {
   return new Response(JSON.stringify(value), { status });

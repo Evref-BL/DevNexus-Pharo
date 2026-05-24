@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { codexConfigPath } from "./codexConfig.js";
+import { codexConfigPath } from "../../src/codexConfig.js";
 import {
   initNexusHome,
   loadHomeConfig,
@@ -11,12 +11,12 @@ import {
   devNexusPharoControlProjectId,
   devNexusProjectConfigFileName,
   saveProjectConfig,
-} from "./config.js";
+} from "../../src/config.js";
 import {
   defaultPlexusImageExecutionPolicy,
   devNexusPharoProjectExtensionConfigKey,
   plexusProjectConfigFileName,
-} from "./devNexusPharoExtension.js";
+} from "../../src/devNexusPharoExtension.js";
 import {
   createNexusProject,
   getNexusProjectStatus,
@@ -25,15 +25,15 @@ import {
   NexusProjectError,
   type GitCommandResult,
   type GitRunner,
-} from "./nexusProjectService.js";
+} from "../../src/nexusProjectService.js";
 import {
   createDevNexusPharoProject,
   importDevNexusPharoProject,
-} from "./devNexusPharoProjectService.js";
+} from "../../src/devNexusPharoProjectService.js";
 import {
   devNexusPharoPluginId,
   devNexusPharoPluginName,
-} from "./devNexusPharoPlugin.js";
+} from "../../src/devNexusPharoPlugin.js";
 
 const tempDirs: string[] = [];
 
@@ -45,7 +45,10 @@ function makeTempDir(prefix: string): string {
 
 function defaultAgentsContent(): string {
   return fs.readFileSync(
-    path.join(path.dirname(path.dirname(fileURLToPath(import.meta.url))), "AGENTS.md"),
+    path.join(
+      path.dirname(path.dirname(path.dirname(fileURLToPath(import.meta.url)))),
+      "AGENTS.md",
+    ),
     "utf8",
   );
 }

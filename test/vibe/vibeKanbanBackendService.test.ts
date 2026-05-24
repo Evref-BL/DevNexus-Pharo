@@ -7,14 +7,14 @@ import {
   loadHomeConfig,
   saveHomeConfig,
   type NexusHomeConfig,
-} from "./config.js";
+} from "../../src/config.js";
 import {
   getVibeKanbanBackendStatus,
   loadVibeKanbanBackendState,
   startVibeKanbanBackend,
   stopVibeKanbanBackend,
   type VibeKanbanBackendCommandRunner,
-} from "./vibeKanbanBackendService.js";
+} from "../../src/vibeKanbanBackendService.js";
 
 const tempDirs: string[] = [];
 

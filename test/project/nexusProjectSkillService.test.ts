@@ -6,9 +6,9 @@ import {
   initNexusHome,
   saveProjectConfig,
   type NexusProjectConfig,
-} from "./config.js";
-import { devNexusPharoDevNexusPluginConfig } from "./devNexusPharoPlugin.js";
-import { refreshProjectSkills } from "./nexusProjectSkillService.js";
+} from "../../src/config.js";
+import { devNexusPharoDevNexusPluginConfig } from "../../src/devNexusPharoPlugin.js";
+import { refreshProjectSkills } from "../../src/nexusProjectSkillService.js";
 
 const tempDirs: string[] = [];
 

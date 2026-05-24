@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { readEnvValue, setEnvValue, stripUtf8Bom } from "./envFile.js";
+import { readEnvValue, setEnvValue, stripUtf8Bom } from "../../src/envFile.js";
 
 describe("env file helpers", () => {
   it("reads simple CRLF env values after removing an optional UTF-8 BOM", () => {

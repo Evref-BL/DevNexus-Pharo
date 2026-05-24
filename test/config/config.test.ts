@@ -30,11 +30,11 @@ import {
   saveProjectConfig,
   validateHomeConfig,
   validateProjectConfig,
-} from "./config.js";
+} from "../../src/config.js";
 import {
   devNexusPharoProjectExtensionConfigKey,
   projectPlexusConfigPath,
-} from "./devNexusPharoExtension.js";
+} from "../../src/devNexusPharoExtension.js";
 
 const tempDirs: string[] = [];
 
