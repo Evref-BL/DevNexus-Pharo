@@ -79,7 +79,10 @@ describe("Pharo project load workspace", () => {
     expect(fs.existsSync(result.scriptPath)).toBe(true);
     expect(fs.existsSync(result.metadataPath)).toBe(true);
     expect(result.scriptSource).toContain("baseline: 'PharoCompatibility';");
-    expect(result.scriptSource).toContain("onConflictUseLoaded;");
+    expect(result.scriptSource).toContain("onConflictUseIncoming;");
+    expect(result.scriptSource).toContain(
+      "onUpgrade: [ :ex :loaded :incoming | ex useIncoming ];",
+    );
     expect(result.scriptSource).toContain("load: #( 'Pharo13Surface' ).");
     expect(result.scriptSource).toContain("baseline: 'MCP';");
     expect(result.scriptSource).toContain("load: #( 'Core' ).");
