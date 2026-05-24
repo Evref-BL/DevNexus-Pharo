@@ -217,9 +217,10 @@ Use this skill when checking PLexus gateway status or route behavior.
 Use this skill when a task touches image creation, launch, or cleanup.
 
 1. Treat image launch as host mutation unless an isolated runner is documented.
-2. Use disposable image copies for smoke probes when available.
-3. Record image identity, filesystem paths, processes, and cleanup commands.
-4. Stop and report a blocker if cleanup or ownership is unclear.
+2. For mutable Pharo work, default to a fresh disposable image per issue, branch, chat, or experiment; images are cheap isolation boundaries.
+3. Treat shared or dev images as read-only unless this worker explicitly owns them; never share one writable image across parallel chats.
+4. Create a new image instead of reusing an existing one when ownership, branch, or cleanup is unclear.
+5. Record image identity, filesystem paths, processes, routes, and cleanup commands.
 `,
   ),
   devNexusPharoSkill(
@@ -233,9 +234,10 @@ Use this skill when validating in-image MCP tool reachability or routed calls.
 
 1. Prove transport reachability before assuming tool behavior is wrong.
 2. Use direct \`pharo\` MCP tools for Pharo code work; do not substitute file edits when the MCP surface is missing.
-3. Keep routed calls non-mutating until an isolated image boundary is explicit.
-4. Capture request shape, response payload, route id, and owning project.
-5. Add regression coverage at the lowest layer that owns the failure.
+3. Before mutating image-side code, verify the route targets a disposable image scoped to the current issue, branch, chat, or experiment.
+4. Keep routed calls non-mutating until an isolated image boundary is explicit; if ownership is unclear, create a new image before writes.
+5. Capture request shape, response payload, route id, image id, branch, and owning project.
+6. Add regression coverage at the lowest layer that owns the failure.
 `,
   ),
   ...mcpPharoDomainSkillPack,

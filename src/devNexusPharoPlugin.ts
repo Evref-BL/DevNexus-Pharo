@@ -149,7 +149,7 @@ export function devNexusPharoDevNexusPluginConfig(): NexusProjectPluginConfig {
         kind: "setup_obligation",
         id: "setup-scoped-pharo-image-profile",
         description:
-          "Blank projects may start with images: []; declare a scoped image profile before image create/start lifecycle work.",
+          "Blank projects may start with images: []; declare a scoped disposable image profile before image create/start lifecycle work.",
         required: false,
       },
       {
@@ -207,7 +207,7 @@ export function devNexusPharoDevNexusPluginConfig(): NexusProjectPluginConfig {
         kind: "agent_affordance",
         id: "affordance-scoped-image-lifecycle",
         description:
-          "Agents may inspect scoped image lifecycle state through PLexus; mutations require the approved runner boundary.",
+          "Agents may inspect scoped image lifecycle state through PLexus; mutable Pharo work should use a per-task disposable image and requires the approved runner boundary.",
       },
       {
         kind: "agent_affordance",
@@ -254,6 +254,7 @@ export function devNexusPharoDevNexusPluginConfig(): NexusProjectPluginConfig {
         title: "Pharo Agent Setup",
         body: [
           "Prefer scoped PLexus and gateway tools for image operations.",
+          "For mutable Pharo work, create a fresh disposable image per issue, branch, chat, or experiment; shared or dev images are read-only unless explicitly owned by the worker.",
           "Keep image lifecycle mutations inside the assigned project/workspace/target scope, record imageId and route identity in handoffs, and clean only resources owned by the worker.",
           "Do not run live images, Docker, PLexus open/close, or gateway live routes unless the selected work item documents the approved isolated runner and cleanup plan.",
         ].join(" "),
