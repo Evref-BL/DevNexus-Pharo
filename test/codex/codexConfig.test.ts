@@ -9,16 +9,16 @@ import {
   loadHomeConfig,
   saveProjectConfig,
   saveHomeConfig,
-} from "./config.js";
-import { devNexusPharoProjectExtensionConfigKey } from "./devNexusPharoExtension.js";
-import { devNexusPharoDevNexusPluginConfig } from "./devNexusPharoPlugin.js";
+} from "../../src/config.js";
+import { devNexusPharoProjectExtensionConfigKey } from "../../src/devNexusPharoExtension.js";
+import { devNexusPharoDevNexusPluginConfig } from "../../src/devNexusPharoPlugin.js";
 import {
   buildCodexMcpServers,
   codexConfigPath,
   doctorCodexWorkspace,
   initCodexWorkspace,
   mergeCodexMcpServersIntoToml,
-} from "./codexConfig.js";
+} from "../../src/codexConfig.js";
 
 const tempDirs: string[] = [];
 const servers: http.Server[] = [];
@@ -119,35 +119,6 @@ afterEach(async () => {
 });
 
 describe("Codex config", () => {
-  it.each([
-    {
-      platform: "win32" as NodeJS.Platform,
-      command: "cmd",
-      args: ["/c", "npx", "-y", "vibe-kanban@0.1.43", "--mcp"],
-    },
-    {
-      platform: "darwin" as NodeJS.Platform,
-      command: "npx",
-      args: ["-y", "vibe-kanban@0.1.43", "--mcp"],
-    },
-    {
-      platform: "linux" as NodeJS.Platform,
-      command: "npx",
-      args: ["-y", "vibe-kanban@0.1.43", "--mcp"],
-    },
-  ])("builds Codex MCP commands for $platform-shaped environments", (expected) => {
-    const homePath = makeTempDir("dev-nexus-pharo-home-");
-    const config = createDefaultHomeConfig(homePath);
-
-    expect(
-      buildCodexMcpServers(homePath, config, expected.platform).vibe_kanban,
-    ).toMatchObject({
-      command: expected.command,
-      args: expected.args,
-      defaultToolsApprovalMode: "approve",
-    });
-  });
-
   it("auto-approves DevNexus-Pharo-managed MCP tools by default", () => {
     const homePath = makeTempDir("dev-nexus-pharo-home-");
     const config = createDefaultHomeConfig(homePath);
@@ -157,9 +128,6 @@ describe("Codex config", () => {
         defaultToolsApprovalMode: "approve",
       },
       plexus: {
-        defaultToolsApprovalMode: "approve",
-      },
-      vibe_kanban: {
         defaultToolsApprovalMode: "approve",
       },
     });
@@ -200,33 +168,7 @@ describe("Codex config", () => {
     expect(merged).not.toContain("DEV_NEXUS_PHARO_HOME");
   });
 
-  it("preserves user-managed Vibe MCP entries while replacing the managed one", () => {
-    const merged = mergeCodexMcpServersIntoToml(
-      [
-        "[mcp_servers.vibe_custom]",
-        'command = "node"',
-        'args = ["custom-vibe.js", "--mcp"]',
-        "",
-        "[mcp_servers.vibe_kanban]",
-        'command = "old-vibe"',
-      ].join("\n"),
-      {
-        vibe_kanban: {
-          enabled: true,
-          command: "npx",
-          args: ["-y", "vibe-kanban@0.1.43", "--mcp"],
-        },
-      },
-    );
-
-    expect(merged).toContain("[mcp_servers.vibe_custom]");
-    expect(merged).toContain('args = ["custom-vibe.js", "--mcp"]');
-    expect(merged).toContain("[mcp_servers.vibe_kanban]");
-    expect(merged).toContain('command = "npx"');
-    expect(merged).not.toContain('command = "old-vibe"');
-  });
-
-  it("writes DevNexus-Pharo, PLexus, and Vibe Kanban MCP entries to a workspace", () => {
+  it("writes DevNexus-Pharo and PLexus MCP entries to a workspace", () => {
     const homePath = makeTempDir("dev-nexus-pharo-home-");
     initNexusHome({ homePath });
     const workspacePath = makeTempDir("dev-nexus-pharo-workspace-");
@@ -249,9 +191,7 @@ describe("Codex config", () => {
     expect(content).toContain('url = "http://127.0.0.1:7330/mcp"');
     expect(content).toContain("[mcp_servers.plexus]");
     expect(content).toContain('url = "http://127.0.0.1:7331/mcp"');
-    expect(content).toContain("[mcp_servers.vibe_kanban]");
-    expect(content.match(/default_tools_approval_mode = "approve"/gu)).toHaveLength(3);
-    expect(content).toContain('"--mcp"');
+    expect(content.match(/default_tools_approval_mode = "approve"/gu)).toHaveLength(2);
   });
 
   it("writes scoped PLexus gateway MCP entries for DevNexus-Pharo project workspaces", () => {
@@ -269,10 +209,6 @@ describe("Codex config", () => {
         defaultBranch: "main",
       },
       worktreesRoot: "worktrees",
-      kanban: {
-        provider: "vibe-kanban",
-        projectId: "vk-pharo-project",
-      },
       extensions: {
         [devNexusPharoProjectExtensionConfigKey]: {},
       },
@@ -435,9 +371,6 @@ describe("Codex config", () => {
         "",
         "[mcp_servers.pharo]",
         'command = "plexus-gateway"',
-        "",
-        "[mcp_servers.vibe_kanban]",
-        'command = "npx"',
       ].join("\n"),
       "utf8",
     );
@@ -483,7 +416,6 @@ describe("Codex config", () => {
     expect(result.content).not.toContain('command = "plexus-gateway"');
     expect(result.content).not.toContain("[mcp_servers.plexus]");
     expect(result.content).not.toContain("[mcp_servers.pharo]");
-    expect(result.content).not.toContain("[mcp_servers.vibe_kanban]");
     expect(result.plexusProjectConfigPath).toBe(
       path.join(projectRoot, "plexus.project.json"),
     );
@@ -577,9 +509,9 @@ describe("Codex config", () => {
     ).runtime.gateway.port;
 
     expect(firstPort).not.toBe(secondPort);
-    expect([homeConfig.ports.vibeKanban, homeConfig.ports.devNexusPharoMcp, homeConfig.ports.plexusMcp])
+    expect([homeConfig.ports.devNexusPharoMcp, homeConfig.ports.plexusMcp])
       .not.toContain(firstPort);
-    expect([homeConfig.ports.vibeKanban, homeConfig.ports.devNexusPharoMcp, homeConfig.ports.plexusMcp])
+    expect([homeConfig.ports.devNexusPharoMcp, homeConfig.ports.plexusMcp])
       .not.toContain(secondPort);
   });
 
@@ -616,7 +548,6 @@ describe("Codex config", () => {
       path.join(projectRoot, "plexus.project.json"),
       `${JSON.stringify({
         name: "Existing Runtime",
-        kanban: { provider: "vibe-kanban", projectId: "existing-runtime" },
         images: existingImages,
         imageExecution: existingImageExecution,
       }, null, 2)}\n`,
@@ -842,7 +773,6 @@ describe("Codex config", () => {
         expect.objectContaining({ name: "plexus:health", status: "ok" }),
         expect.objectContaining({ name: "plexus:initialize", status: "ok" }),
         expect.objectContaining({ name: "plexus:tools", status: "ok" }),
-        expect.objectContaining({ name: "vibe_kanban:command", status: "skipped" }),
       ]),
     );
   });
@@ -876,10 +806,6 @@ describe("Codex config", () => {
         defaultBranch: "main",
       },
       worktreesRoot: "worktrees",
-      kanban: {
-        provider: "vibe-kanban",
-        projectId: "vk-doctor-pharo",
-      },
       extensions: {
         [devNexusPharoProjectExtensionConfigKey]: {},
       },

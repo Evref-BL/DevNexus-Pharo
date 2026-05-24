@@ -6,7 +6,7 @@ import {
   preparePharoProjectLoadWorkspace,
   pharoTonelRepositoryUrl,
   PharoProjectLoadWorkspaceError,
-} from "./pharoProjectLoadWorkspace.js";
+} from "../../src/pharoProjectLoadWorkspace.js";
 
 const tempDirs: string[] = [];
 

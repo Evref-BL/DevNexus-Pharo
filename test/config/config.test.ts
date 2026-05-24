@@ -9,7 +9,6 @@ import {
   createControlProjectConfig,
   createDefaultHomeConfig,
   defaultNexusToolCommand,
-  defaultVibeKanbanToolCommand,
   ensureControlProject,
   initNexusHome,
   loadHomeConfig,
@@ -30,11 +29,11 @@ import {
   saveProjectConfig,
   validateHomeConfig,
   validateProjectConfig,
-} from "./config.js";
+} from "../../src/config.js";
 import {
   devNexusPharoProjectExtensionConfigKey,
   projectPlexusConfigPath,
-} from "./devNexusPharoExtension.js";
+} from "../../src/devNexusPharoExtension.js";
 
 const tempDirs: string[] = [];
 
@@ -66,12 +65,6 @@ describe("DevNexus-Pharo home config", () => {
   it("creates a default home config under the selected home", () => {
     const homePath = path.join("C:", "dev", "dev-nexus-pharo");
     const resolvedHomePath = path.resolve(homePath);
-    const remoteRoot = path.join(
-      resolvedHomePath,
-      "vibe-kanban",
-      "crates",
-      "remote",
-    );
 
     expect(createDefaultHomeConfig(homePath)).toEqual({
       version: 1,
@@ -81,7 +74,6 @@ describe("DevNexus-Pharo home config", () => {
         plexusStateRoot: path.join(resolvedHomePath, "state", "plexus"),
       },
       ports: {
-        vibeKanban: 3000,
         devNexusPharoMcp: 7330,
         plexusMcp: 7331,
       },
@@ -90,42 +82,15 @@ describe("DevNexus-Pharo home config", () => {
       },
       tools: {
         nexus: defaultNexusToolCommand(),
-        vibeKanban: defaultVibeKanbanToolCommand(),
         plexus: {
           command: "plexus-gateway",
           args: [],
-        },
-      },
-      integrations: {
-        vibeKanban: {
-          executor: "CODEX",
-          nexusMcpServerName: "dev_nexus_pharo",
-          plexusMcpServerName: "plexus",
-          installMcpOnStart: true,
-          openBrowserOnStart: true,
-          backend: {
-            mode: "docker",
-            sharedApiBase: "http://127.0.0.1:3100",
-            healthPath: "/v1/health",
-            sourceRepositoryUrl: "https://github.com/BloopAI/vibe-kanban.git",
-            autoBootstrap: true,
-            composeCommand: "auto",
-            composeArgs: [],
-            composeFile: path.join(remoteRoot, "docker-compose.yml"),
-            envFile: path.join(remoteRoot, ".env.remote"),
-            projectName: "dev-nexus-pharo-vibe",
-            workingDirectory: remoteRoot,
-            startOnDevNexusPharoStart: true,
-            stopOnDevNexusPharoStop: true,
-          },
         },
       },
       controlProject: {
         id: devNexusPharoControlProjectId,
         name: devNexusPharoControlProjectName,
         root: path.resolve(homePath, "DevNexus-Pharo"),
-        vibeKanbanProjectId: null,
-        vibeKanbanRepoId: null,
       },
       projects: [],
     });
@@ -164,10 +129,6 @@ describe("DevNexus-Pharo home config", () => {
         },
       ],
       worktreesRoot: nexusProjectWorktreesDirectoryName,
-      kanban: {
-        provider: "vibe-kanban",
-        projectId: null,
-      },
     });
   });
 
@@ -227,10 +188,6 @@ describe("DevNexus-Pharo home config", () => {
         defaultBranch: "main",
       },
       worktreesRoot: "worktrees",
-      kanban: {
-        provider: "vibe-kanban" as const,
-        projectId: "vk-project-1",
-      },
       agent: {
         executor: "CODEX",
         model: "gpt-5.3-codex",
@@ -267,18 +224,14 @@ describe("DevNexus-Pharo home config", () => {
         id: "agent-project",
         name: "Agent Project",
         home: null,
-        repo: {
-          kind: "local",
-          remoteUrl: null,
-          defaultBranch: null,
-        },
-        kanban: {
-          provider: "vibe-kanban",
-          projectId: null,
-        },
-        agent: {
-          model: "gpt-5.3-codex",
-        },
+      repo: {
+        kind: "local",
+        remoteUrl: null,
+        defaultBranch: null,
+      },
+      agent: {
+        model: "gpt-5.3-codex",
+      },
       }),
     ).toMatchObject({
       agent: {
@@ -295,9 +248,6 @@ describe("DevNexus-Pharo home config", () => {
           kind: "local",
           remoteUrl: null,
           defaultBranch: null,
-        },
-        kanban: {
-          provider: "vibe-kanban",
         },
         agent: {},
       }),
@@ -338,10 +288,6 @@ describe("DevNexus-Pharo home config", () => {
       version: 1,
       id: "local-tracked-project",
       name: "Local Tracked Project",
-      kanban: {
-        provider: "vibe-kanban",
-        projectId: null,
-      },
       workTracking: {
         provider: "local",
         storePath: ".dev-nexus-pharo/work-items.json",
@@ -359,10 +305,6 @@ describe("DevNexus-Pharo home config", () => {
       version: 1,
       id: "github-tracked-project",
       name: "GitHub Tracked Project",
-      kanban: {
-        provider: "vibe-kanban",
-        projectId: null,
-      },
       workTracking: {
         provider: "github",
         host: "https://github.com",
@@ -412,10 +354,6 @@ describe("DevNexus-Pharo home config", () => {
       version: 1,
       id: "jira-tracked-project",
       name: "Jira Tracked Project",
-      kanban: {
-        provider: "vibe-kanban",
-        projectId: null,
-      },
       workTracking: {
         provider: "jira",
         host: "example.atlassian.net",
@@ -452,10 +390,6 @@ describe("DevNexus-Pharo home config", () => {
         version: 1,
         id: "invalid-tracked-project",
         name: "Invalid Tracked Project",
-        kanban: {
-          provider: "vibe-kanban",
-          projectId: null,
-        },
         workTracking: {
           provider: "trello",
         },
@@ -467,10 +401,6 @@ describe("DevNexus-Pharo home config", () => {
         version: 1,
         id: "invalid-github-project",
         name: "Invalid GitHub Project",
-        kanban: {
-          provider: "vibe-kanban",
-          projectId: null,
-        },
         workTracking: {
           provider: "github",
           repository: {
@@ -494,10 +424,6 @@ describe("DevNexus-Pharo home config", () => {
         defaultBranch: null,
       },
       worktreesRoot: path.join(".nexus", "worktrees"),
-      kanban: {
-        provider: "vibe-kanban",
-        projectId: null,
-      },
       extensions: {
         [devNexusPharoProjectExtensionConfigKey]: {
           plexusProjectConfig: path.join("config", "plexus.project.json"),
@@ -516,13 +442,7 @@ describe("DevNexus-Pharo home config", () => {
   it("ensures the control project without overwriting an existing config", () => {
     const homePath = makeTempDir("dev-nexus-pharo-home-");
     const projectPath = controlProjectRootPath(homePath);
-    const existingConfig = {
-      ...createControlProjectConfig(),
-      kanban: {
-        provider: "vibe-kanban" as const,
-        projectId: "existing-kanban-project",
-      },
-    };
+    const existingConfig = createControlProjectConfig();
     saveProjectConfig(projectPath, existingConfig);
 
     expect(ensureControlProject(homePath)).toEqual({
@@ -541,16 +461,12 @@ describe("DevNexus-Pharo home config", () => {
       id: "custom-control",
       name: "Custom Control",
       root: path.join("nested", "control"),
-      vibeKanbanProjectId: "kanban-control",
-      vibeKanbanRepoId: "repo-control",
     };
 
     expect(validateHomeConfig(config, homePath).controlProject).toEqual({
       id: "custom-control",
       name: "Custom Control",
       root: path.join(homePath, "nested", "control"),
-      vibeKanbanProjectId: "kanban-control",
-      vibeKanbanRepoId: "repo-control",
     });
   });
 
@@ -566,36 +482,17 @@ describe("DevNexus-Pharo home config", () => {
     expect(fs.existsSync(obsoleteRoot)).toBe(false);
   });
 
-  it("defaults integrations and the control project when optional sections are absent", () => {
+  it("defaults the control project when optional sections are absent", () => {
     const homePath = makeTempDir("dev-nexus-pharo-home-");
     const config = createDefaultHomeConfig(homePath);
     const partialConfig = { ...config } as Partial<typeof config>;
-    delete partialConfig.integrations;
     delete partialConfig.controlProject;
 
     expect(validateHomeConfig(partialConfig, homePath)).toMatchObject({
-      integrations: {
-        vibeKanban: {
-          executor: "CODEX",
-          nexusMcpServerName: "dev_nexus_pharo",
-          plexusMcpServerName: "plexus",
-          installMcpOnStart: true,
-          openBrowserOnStart: true,
-          backend: {
-            mode: "docker",
-            sharedApiBase: "http://127.0.0.1:3100",
-            healthPath: "/v1/health",
-            sourceRepositoryUrl: "https://github.com/BloopAI/vibe-kanban.git",
-            autoBootstrap: true,
-          },
-        },
-      },
       controlProject: {
         id: devNexusPharoControlProjectId,
         name: devNexusPharoControlProjectName,
         root: controlProjectRootPath(homePath),
-        vibeKanbanProjectId: null,
-        vibeKanbanRepoId: null,
       },
     });
   });
@@ -613,106 +510,6 @@ describe("DevNexus-Pharo home config", () => {
       projectsRoot: path.join(path.resolve(homePath), "custom-projects"),
       workspacesRoot: path.join(path.resolve(homePath), "nested", "workspaces"),
       plexusStateRoot: path.join(path.resolve(homePath), ".state", "plexus"),
-    });
-  });
-
-  it("validates Vibe Kanban Docker, DinD, and external backend config", () => {
-    const homePath = makeTempDir("dev-nexus-pharo-home-");
-    const dockerConfig = createDefaultHomeConfig(homePath);
-    dockerConfig.integrations.vibeKanban.backend = {
-      mode: "docker",
-      sharedApiBase: "http://127.0.0.1:3100",
-      healthPath: "/v1/health",
-      sourceRepositoryUrl: "https://github.com/example/vibe-kanban.git",
-      autoBootstrap: false,
-      composeCommand: "docker",
-      composeArgs: ["--ansi", "never"],
-      composeFile: path.join("vibe", "docker-compose.yml"),
-      envFile: path.join("vibe", ".env.remote"),
-      projectName: "custom-vibe",
-      workingDirectory: "vibe",
-      startOnDevNexusPharoStart: false,
-      stopOnDevNexusPharoStop: false,
-    };
-
-    expect(validateHomeConfig(dockerConfig, homePath).integrations.vibeKanban.backend).toEqual({
-      mode: "docker",
-      sharedApiBase: "http://127.0.0.1:3100",
-      healthPath: "/v1/health",
-      sourceRepositoryUrl: "https://github.com/example/vibe-kanban.git",
-      autoBootstrap: false,
-      composeCommand: "docker",
-      composeArgs: ["--ansi", "never"],
-      composeFile: path.join(homePath, "vibe", "docker-compose.yml"),
-      envFile: path.join(homePath, "vibe", ".env.remote"),
-      projectName: "custom-vibe",
-      workingDirectory: path.join(homePath, "vibe"),
-      startOnDevNexusPharoStart: false,
-      stopOnDevNexusPharoStop: false,
-    });
-
-    const dindConfig = createDefaultHomeConfig(homePath);
-    dindConfig.integrations.vibeKanban.backend = {
-      mode: "dind",
-      sharedApiBase: "http://127.0.0.1:3101",
-      healthPath: "/v1/health",
-      sourceRepositoryUrl: "https://github.com/example/vibe-kanban.git",
-      sourceRoot: "vibe-source",
-      autoBootstrap: false,
-      dockerCommand: "docker",
-      dindImage: "docker:29-dind",
-      containerName: "custom-vibe-dind",
-      dataVolume: "custom-vibe-dind-data",
-      projectName: "custom-vibe",
-      composeFile: path.join("vibe-source", "crates", "remote", "docker-compose.yml"),
-      envFile: path.join("vibe-source", "crates", "remote", ".env.remote"),
-      workingDirectory: path.join("vibe-source", "crates", "remote"),
-      containerSourceRoot: "/workspace/custom-vibe",
-      containerWorkingDirectory: "/workspace/custom-vibe/crates/remote",
-      containerComposeFile: "/workspace/custom-vibe/crates/remote/docker-compose.yml",
-      containerEnvFile: "/workspace/custom-vibe/crates/remote/.env.remote",
-      startOnDevNexusPharoStart: false,
-      stopOnDevNexusPharoStop: false,
-    };
-
-    expect(validateHomeConfig(dindConfig, homePath).integrations.vibeKanban.backend).toEqual({
-      mode: "dind",
-      sharedApiBase: "http://127.0.0.1:3101",
-      healthPath: "/v1/health",
-      sourceRepositoryUrl: "https://github.com/example/vibe-kanban.git",
-      sourceRoot: path.join(homePath, "vibe-source"),
-      autoBootstrap: false,
-      dockerCommand: "docker",
-      dindImage: "docker:29-dind",
-      containerName: "custom-vibe-dind",
-      dataVolume: "custom-vibe-dind-data",
-      projectName: "custom-vibe",
-      composeFile: path.join(homePath, "vibe-source", "crates", "remote", "docker-compose.yml"),
-      envFile: path.join(homePath, "vibe-source", "crates", "remote", ".env.remote"),
-      workingDirectory: path.join(homePath, "vibe-source", "crates", "remote"),
-      containerSourceRoot: "/workspace/custom-vibe",
-      containerWorkingDirectory: "/workspace/custom-vibe/crates/remote",
-      containerComposeFile: "/workspace/custom-vibe/crates/remote/docker-compose.yml",
-      containerEnvFile: "/workspace/custom-vibe/crates/remote/.env.remote",
-      startOnDevNexusPharoStart: false,
-      stopOnDevNexusPharoStop: false,
-    });
-
-    const externalConfig = createDefaultHomeConfig(homePath);
-    externalConfig.integrations.vibeKanban.backend = {
-      mode: "external",
-      sharedApiBase: "https://kanban.example.com",
-      healthPath: "/v1/health",
-      startOnDevNexusPharoStart: false,
-      stopOnDevNexusPharoStop: false,
-    };
-
-    expect(validateHomeConfig(externalConfig, homePath).integrations.vibeKanban.backend).toEqual({
-      mode: "external",
-      sharedApiBase: "https://kanban.example.com",
-      healthPath: "/v1/health",
-      startOnDevNexusPharoStart: false,
-      stopOnDevNexusPharoStop: false,
     });
   });
 
@@ -739,20 +536,18 @@ describe("DevNexus-Pharo home config", () => {
     const validBoundaryConfig = createDefaultHomeConfig(
       makeTempDir("dev-nexus-pharo-home-"),
       {
-        vibeKanbanPort: 1,
         devNexusPharoMcpPort: 7330,
         plexusMcpPort: 65_535,
       },
     );
 
     expect(validateHomeConfig(validBoundaryConfig).ports).toEqual({
-      vibeKanban: 1,
       devNexusPharoMcp: 7330,
       plexusMcp: 65_535,
     });
 
     const config = createDefaultHomeConfig(makeTempDir("dev-nexus-pharo-home-"));
-    config.ports.vibeKanban = 7330;
+    config.ports.plexusMcp = 7330;
 
     expect(() => validateHomeConfig(config)).toThrow(NexusConfigError);
 
@@ -761,7 +556,7 @@ describe("DevNexus-Pharo home config", () => {
         makeTempDir("dev-nexus-pharo-home-"),
       ) as unknown as Record<string, unknown>;
       const ports = invalidConfig.ports as Record<string, unknown>;
-      ports.vibeKanban = invalidPort;
+      ports.plexusMcp = invalidPort;
 
       expect(() => validateHomeConfig(invalidConfig)).toThrow(
         NexusConfigError,
@@ -820,7 +615,6 @@ describe("DevNexus-Pharo home config", () => {
 
     const result = initNexusHome({
       homePath,
-      vibeKanbanPort: 3100,
       plexusMcpPort: 7332,
     });
 
@@ -850,13 +644,7 @@ describe("DevNexus-Pharo home config", () => {
 
   it("preserves an existing control project during init unless forced", () => {
     const homePath = makeTempDir("dev-nexus-pharo-home-");
-    const existingControlConfig = {
-      ...createControlProjectConfig(),
-      kanban: {
-        provider: "vibe-kanban" as const,
-        projectId: "existing-control-board",
-      },
-    };
+    const existingControlConfig = createControlProjectConfig();
     saveProjectConfig(controlProjectRootPath(homePath), existingControlConfig);
 
     initNexusHome({ homePath });
@@ -876,7 +664,6 @@ describe("DevNexus-Pharo home config", () => {
       projectsRoot: "projects-custom",
       workspacesRoot: "workspaces-custom",
       plexusStateRoot: path.join("state-custom", "plexus"),
-      vibeKanbanPort: 3100,
       plexusMcpPort: 7332,
     });
 
@@ -902,11 +689,10 @@ describe("DevNexus-Pharo home config", () => {
       initNexusHome({
         homePath,
         force: true,
-        vibeKanbanPort: 3100,
         plexusMcpPort: 7332,
       }),
     ).not.toThrow();
-    expect(loadHomeConfig(homePath).ports.vibeKanban).toBe(3100);
+    expect(loadHomeConfig(homePath).ports.plexusMcp).toBe(7332);
   });
 
   it("loads home config files that include a UTF-8 BOM", () => {

@@ -1,11 +1,11 @@
 import process from "node:process";
 import { describe, expect, it } from "vitest";
-import { devNexusPharoCliEntrypointPath } from "./config.js";
+import { devNexusPharoCliEntrypointPath } from "../../src/config.js";
 import {
   buildDevNexusPharoMcpServiceArgs,
   DevNexusPharoMcpServiceError,
   resolveDevNexusPharoMcpServiceCommand,
-} from "./devNexusPharoMcpService.js";
+} from "../../src/devNexusPharoMcpService.js";
 
 describe("DevNexus-Pharo MCP service", () => {
   it("uses explicit MCP mode for the DevNexus-Pharo CLI entrypoint", () => {

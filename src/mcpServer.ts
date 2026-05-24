@@ -483,8 +483,6 @@ function summarizeProjectStatus(project: NexusProjectStatus) {
     workTracking: project.workTracking
       ? { provider: project.workTracking.provider }
       : null,
-    vibeKanbanProjectId: project.vibeKanbanProjectId,
-    vibeKanbanRepoId: project.vibeKanbanRepoId,
     projectConfigPath: project.projectConfigPath,
     projectConfigExists: project.projectConfigExists,
     plexusProjectConfigPath: project.plexusProjectConfigPath,

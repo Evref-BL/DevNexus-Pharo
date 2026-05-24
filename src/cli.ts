@@ -55,17 +55,6 @@ import {
   runDevNexusPharoMcpServer,
   runDevNexusPharoMcpStdioServer,
 } from "./mcpServer.js";
-import { installDevNexusPharoAndPlexusMcpForExecutor } from "./vibeKanbanMcpConfig.js";
-import {
-  getVibeKanbanStatus,
-  startVibeKanban,
-  stopVibeKanban,
-} from "./vibeKanbanService.js";
-import {
-  getVibeKanbanBackendStatus,
-  startVibeKanbanBackend,
-  stopVibeKanbanBackend,
-} from "./vibeKanbanBackendService.js";
 
 export function usage(): string {
   return [
@@ -88,19 +77,11 @@ export function usage(): string {
     "  dev-nexus-pharo plexus-gateway start <home> [--force]",
     "  dev-nexus-pharo plexus-gateway status <home> [--check-health]",
     "  dev-nexus-pharo plexus-gateway stop <home> [--force]",
-    "  dev-nexus-pharo vibe-kanban start <home> [--force]",
-    "  dev-nexus-pharo vibe-kanban status <home> [--check-health]",
-    "  dev-nexus-pharo vibe-kanban stop <home> [--force]",
-    "  dev-nexus-pharo vibe-backend start <home> [--force]",
-    "  dev-nexus-pharo vibe-backend status <home> [--check-health]",
-    "  dev-nexus-pharo vibe-backend stop <home>",
-    "  dev-nexus-pharo vibe-kanban mcp-config install <home> --executor <name> [options]",
     "",
     "Options for init:",
     "  --projects-root <path>",
     "  --workspaces-root <path>",
     "  --plexus-state-root <path>",
-    "  --vibe-kanban-port <port>",
     "  --dev-nexus-pharo-mcp-port <port>",
     "  --plexus-mcp-port <port>",
     "  --interactive",
@@ -109,11 +90,6 @@ export function usage(): string {
     "",
     "Options for start:",
     "  --force",
-    "  --executor <name>",
-    "  --server-name <name>",
-    "  --skip-mcp-config",
-    "  --no-open-browser",
-    "  --vibe-health-timeout-ms <ms>",
     "",
     "Options for status:",
     "  --check-health",
@@ -156,13 +132,6 @@ export function usage(): string {
     "Options for project list/status:",
     "  --home <path>",
     "  --json",
-    "",
-    "Options for vibe-kanban mcp-config install:",
-    "  --executor <name>",
-    "  --server-name <name>",
-    "  --host <host>",
-    "  --port <port>",
-    "  --dry-run",
     "",
     "Planned commands:",
     "  dev-nexus-pharo config show",
@@ -224,9 +193,6 @@ function parseInitCommand(argv: string[]): ParsedInitCommand {
         break;
       case "--plexus-state-root":
         options.plexusStateRoot = next();
-        break;
-      case "--vibe-kanban-port":
-        options.vibeKanbanPort = parsePort(next(), arg);
         break;
       case "--dev-nexus-pharo-mcp-port":
         options.devNexusPharoMcpPort = parsePort(next(), arg);
@@ -299,7 +265,6 @@ async function promptInitCommand(
       projectsRoot: options.projectsRoot,
       workspacesRoot: options.workspacesRoot,
       plexusStateRoot: options.plexusStateRoot,
-      vibeKanbanPort: options.vibeKanbanPort,
       devNexusPharoMcpPort: options.devNexusPharoMcpPort,
       plexusMcpPort: options.plexusMcpPort,
     });
@@ -312,11 +277,6 @@ async function promptInitCommand(
       plexusStateRoot: await ask(
         "PLexus state root",
         defaults.paths.plexusStateRoot,
-      ),
-      vibeKanbanPort: await askPort(
-        "Vibe Kanban port",
-        defaults.ports.vibeKanban,
-        "--vibe-kanban-port",
       ),
       devNexusPharoMcpPort: await askPort(
         "DevNexus-Pharo MCP port",
@@ -364,7 +324,6 @@ function printInitResult(
   console.log(`    PLexus state: ${initResult.config.paths.plexusStateRoot}`);
   console.log(`    Control project: ${initResult.config.controlProject.root}`);
   console.log("  Ports:");
-  console.log(`    Vibe Kanban: ${initResult.config.ports.vibeKanban}`);
   console.log(`    DevNexus-Pharo MCP: ${initResult.config.ports.devNexusPharoMcp}`);
   console.log(`    PLexus MCP: ${initResult.config.ports.plexusMcp}`);
   console.log("");
@@ -605,14 +564,6 @@ export async function main(argv: string[], _context: CliContext = {}): Promise<n
     return handlePlexusGatewayCommand(argv);
   }
 
-  if (argv[0] === "vibe-kanban") {
-    return handleVibeKanbanCommand(argv);
-  }
-
-  if (argv[0] === "vibe-backend") {
-    return handleVibeKanbanBackendCommand(argv);
-  }
-
   console.error(`Unknown command: ${argv.join(" ")}`);
   console.error("");
   console.error(usage());
@@ -622,11 +573,6 @@ export async function main(argv: string[], _context: CliContext = {}): Promise<n
 interface ParsedStartCommand {
   homePath: string;
   force?: boolean;
-  executor?: string;
-  serverName?: string;
-  skipMcpConfig?: boolean;
-  openBrowser?: boolean;
-  vibeHealthTimeoutMs?: number;
 }
 
 function defaultHomePath(): string {
@@ -652,21 +598,6 @@ function parseStartCommand(argv: string[]): ParsedStartCommand {
     switch (arg) {
       case "--force":
         parsed.force = true;
-        break;
-      case "--executor":
-        parsed.executor = next();
-        break;
-      case "--server-name":
-        parsed.serverName = next();
-        break;
-      case "--skip-mcp-config":
-        parsed.skipMcpConfig = true;
-        break;
-      case "--no-open-browser":
-        parsed.openBrowser = false;
-        break;
-      case "--vibe-health-timeout-ms":
-        parsed.vibeHealthTimeoutMs = parsePositiveInteger(next(), arg);
         break;
       default:
         if (arg.startsWith("--")) {
@@ -1102,9 +1033,6 @@ function printProjectCreateResult(
   if (result.git.defaultBranch) {
     console.log(`  Default branch: ${result.git.defaultBranch}`);
   }
-  if (result.projectConfig.kanban?.projectId) {
-    console.log(`  Vibe Kanban project: ${result.projectConfig.kanban.projectId}`);
-  }
   console.log("");
   console.log("JSON:");
   console.log(JSON.stringify(payload, null, 2));
@@ -1135,9 +1063,6 @@ function printProjectImportResult(
   }
   if (result.git.defaultBranch) {
     console.log(`  Default branch: ${result.git.defaultBranch}`);
-  }
-  if (result.projectConfig.kanban?.projectId) {
-    console.log(`  Vibe Kanban project: ${result.projectConfig.kanban.projectId}`);
   }
   console.log("");
   console.log("JSON:");
@@ -1170,9 +1095,6 @@ function printNexusProjectCreateResult(
   if (result.git.defaultBranch) {
     console.log(`  Default branch: ${result.git.defaultBranch}`);
   }
-  if (result.projectConfig.kanban?.projectId) {
-    console.log(`  Vibe Kanban project: ${result.projectConfig.kanban.projectId}`);
-  }
   console.log("");
   console.log("JSON:");
   console.log(JSON.stringify(payload, null, 2));
@@ -1203,9 +1125,6 @@ function printNexusProjectImportResult(
   if (result.git.defaultBranch) {
     console.log(`  Default branch: ${result.git.defaultBranch}`);
   }
-  if (result.projectConfig.kanban?.projectId) {
-    console.log(`  Vibe Kanban project: ${result.projectConfig.kanban.projectId}`);
-  }
   console.log("");
   console.log("JSON:");
   console.log(JSON.stringify(payload, null, 2));
@@ -1220,12 +1139,6 @@ function printProjectStatus(project: NexusProjectStatus): void {
   );
   console.log(
     `    Work tracker: ${project.workTracking?.provider ?? "(not configured)"}`,
-  );
-  console.log(
-    `    Vibe Kanban project: ${project.vibeKanbanProjectId ?? "(unlinked)"}`,
-  );
-  console.log(
-    `    Vibe Kanban repo: ${project.vibeKanbanRepoId ?? "(unregistered)"}`,
   );
   console.log(`    PLexus config: ${project.plexusProjectConfigPath ?? "(not managed)"}`);
   console.log(`    Worktrees: ${project.worktreesRoot}`);
@@ -1428,192 +1341,6 @@ async function handlePlexusGatewayCommand(argv: string[]): Promise<number> {
     homePath,
     force: force ? true : undefined,
   });
-  console.log(JSON.stringify({ ok: true, ...result }, null, 2));
-  return 0;
-}
-
-interface ParsedVibeKanbanMcpInstallCommand {
-  homePath: string;
-  executor: string;
-  serverName?: string;
-  host?: string;
-  port?: number;
-  dryRun?: boolean;
-}
-
-function parseVibeKanbanMcpInstallCommand(
-  argv: string[],
-): ParsedVibeKanbanMcpInstallCommand {
-  const [, scope, command, homePath, ...rest] = argv;
-  if (scope !== "mcp-config" || command !== "install") {
-    throw new Error("vibe-kanban requires mcp-config install");
-  }
-
-  if (!homePath) {
-    throw new Error("vibe-kanban mcp-config install requires a home path");
-  }
-
-  const parsed: Partial<ParsedVibeKanbanMcpInstallCommand> = { homePath };
-  for (let index = 0; index < rest.length; index += 1) {
-    const arg = rest[index];
-    const next = (): string => {
-      index += 1;
-      if (index >= rest.length) {
-        throw new Error(`${arg} requires a value`);
-      }
-
-      return rest[index];
-    };
-
-    switch (arg) {
-      case "--executor":
-        parsed.executor = next();
-        break;
-      case "--server-name":
-        parsed.serverName = next();
-        break;
-      case "--host":
-        parsed.host = next();
-        break;
-      case "--port":
-        parsed.port = parsePort(next(), arg);
-        break;
-      case "--dry-run":
-        parsed.dryRun = true;
-        break;
-      default:
-        throw new Error(`Unknown vibe-kanban mcp-config option: ${arg}`);
-    }
-  }
-
-  if (!parsed.executor) {
-    throw new Error("--executor is required");
-  }
-
-  return parsed as ParsedVibeKanbanMcpInstallCommand;
-}
-
-async function handleVibeKanbanCommand(argv: string[]): Promise<number> {
-  if (
-    argv[1] === "start" ||
-    argv[1] === "status" ||
-    argv[1] === "stop"
-  ) {
-    return handleVibeKanbanServiceCommand(argv);
-  }
-
-  if (argv[1] !== "mcp-config") {
-    throw new Error(
-      "vibe-kanban requires start, status, stop, or mcp-config install",
-    );
-  }
-
-  const parsed = parseVibeKanbanMcpInstallCommand(argv);
-  const config = loadHomeConfig(parsed.homePath);
-  const result = await installDevNexusPharoAndPlexusMcpForExecutor({
-    homePath: parsed.homePath,
-    config,
-    executor: parsed.executor,
-    plexusServerName: parsed.serverName,
-    nexusServerName: config.integrations.vibeKanban.nexusMcpServerName,
-    host: parsed.host,
-    port: parsed.port ?? config.ports.vibeKanban,
-    dryRun: parsed.dryRun,
-  });
-
-  console.log(JSON.stringify({ ok: true, ...result }, null, 2));
-  return 0;
-}
-
-async function handleVibeKanbanServiceCommand(
-  argv: string[],
-): Promise<number> {
-  const [, command, homePath, ...rest] = argv;
-  if (
-    command !== "start" &&
-    command !== "status" &&
-    command !== "stop"
-  ) {
-    throw new Error(
-      "vibe-kanban requires start, status, stop, or mcp-config install",
-    );
-  }
-
-  if (!homePath) {
-    throw new Error(`vibe-kanban ${command} requires a home path`);
-  }
-
-  const force = rest.includes("--force");
-  const checkHealth = rest.includes("--check-health");
-  const unknownOption = rest.find(
-    (option) => option !== "--force" && option !== "--check-health",
-  );
-  if (unknownOption) {
-    throw new Error(`Unknown vibe-kanban option: ${unknownOption}`);
-  }
-
-  if (command === "start") {
-    const state = await startVibeKanban({ homePath, force });
-    console.log(JSON.stringify({ ok: true, state }, null, 2));
-    return 0;
-  }
-
-  if (command === "status") {
-    const status = await getVibeKanbanStatus({ homePath, checkHealth });
-    console.log(JSON.stringify({ ok: true, ...status }, null, 2));
-    return 0;
-  }
-
-  const result = await stopVibeKanban({
-    homePath,
-    force: force ? true : undefined,
-  });
-  console.log(JSON.stringify({ ok: true, ...result }, null, 2));
-  return 0;
-}
-
-async function handleVibeKanbanBackendCommand(
-  argv: string[],
-): Promise<number> {
-  const [, command, homePath, ...rest] = argv;
-  if (
-    command !== "start" &&
-    command !== "status" &&
-    command !== "stop"
-  ) {
-    throw new Error("vibe-backend requires start, status, or stop");
-  }
-
-  if (!homePath) {
-    throw new Error(`vibe-backend ${command} requires a home path`);
-  }
-
-  const force = rest.includes("--force");
-  const checkHealth = rest.includes("--check-health");
-  const unknownOption = rest.find(
-    (option) => option !== "--force" && option !== "--check-health",
-  );
-  if (unknownOption) {
-    throw new Error(`Unknown vibe-backend option: ${unknownOption}`);
-  }
-
-  if (command === "start") {
-    const state = await startVibeKanbanBackend({
-      homePath,
-      force,
-      progress: printProgress,
-    });
-    console.log(JSON.stringify({ ok: true, state }, null, 2));
-    return 0;
-  }
-
-  if (command === "status") {
-    const status = await getVibeKanbanBackendStatus({ homePath, checkHealth });
-    console.log(JSON.stringify({ ok: true, ...status }, null, 2));
-    return 0;
-  }
-
-  const result = await stopVibeKanbanBackend({ homePath });
   console.log(JSON.stringify({ ok: true, ...result }, null, 2));
   return 0;
 }
