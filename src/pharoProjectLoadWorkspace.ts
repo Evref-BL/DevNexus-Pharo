@@ -164,7 +164,8 @@ export function pharoMetacelloLoadSource(
         "Metacello new",
         `  baseline: ${smalltalkString(repository.baseline)};`,
         `  repository: ${smalltalkString(pharoTonelRepositoryUrl(repository.stagedSourceDirectory))};`,
-        "  onConflictUseLoaded;",
+        "  onConflictUseIncoming;",
+        "  onUpgrade: [ :ex :loaded :incoming | ex useIncoming ];",
       ];
       if (repository.loads.length > 0) {
         lines.push(`  load: ${smalltalkArray(repository.loads)}.`);
