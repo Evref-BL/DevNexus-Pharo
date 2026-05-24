@@ -48,6 +48,7 @@ export interface PlexusProjectGatewayConfig {
   mode: "project-local";
   host: string;
   port: number;
+  agentMcpServerName: string;
   agentMcpPath: string;
   routeControlMcpPath: string;
 }
@@ -62,6 +63,7 @@ export interface DevNexusPharoProjectFiles {
 export const plexusProjectConfigFileName = "plexus.project.json";
 export const devNexusPharoProjectExtensionConfigKey = "dev-nexus-pharo";
 export const defaultPlexusGatewayHost = "127.0.0.1";
+export const defaultPlexusGatewayAgentMcpServerName = "pharo_gateway";
 export const defaultPlexusGatewayAgentPath = "/mcp";
 export const defaultPlexusGatewayRouteControlPath = "/control-mcp";
 export const defaultPlexusProjectGatewayPortBase = 17_340;
@@ -512,6 +514,7 @@ export function buildPlexusProjectGatewayConfig(
     mode: "project-local",
     host: defaultPlexusGatewayHost,
     port: allocatePlexusProjectGatewayPort(projectId, reservedPorts),
+    agentMcpServerName: defaultPlexusGatewayAgentMcpServerName,
     agentMcpPath: defaultPlexusGatewayAgentPath,
     routeControlMcpPath: defaultPlexusGatewayRouteControlPath,
   };
@@ -570,6 +573,13 @@ function normalizeGatewayPath(value: unknown, fallback: string): string {
   return trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
 }
 
+function normalizeGatewayServerName(value: unknown, fallback: string): string {
+  if (typeof value !== "string" || value.trim().length === 0) {
+    return fallback;
+  }
+  return value.trim();
+}
+
 function maybeExistingGateway(
   value: Record<string, unknown>,
 ): PlexusProjectGatewayConfig | undefined {
@@ -599,6 +609,10 @@ function maybeExistingGateway(
         ? record.host.trim()
         : defaultPlexusGatewayHost,
     port,
+    agentMcpServerName: normalizeGatewayServerName(
+      record.agentMcpServerName ?? record.agentServerName ?? record.serverName,
+      defaultPlexusGatewayAgentMcpServerName,
+    ),
     agentMcpPath: normalizeGatewayPath(
       record.agentMcpPath ?? record.agentPath,
       defaultPlexusGatewayAgentPath,
