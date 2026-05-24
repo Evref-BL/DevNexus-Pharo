@@ -6,6 +6,7 @@ import {
   type VibeKanbanLocalAuthCredentials,
 } from "dev-nexus";
 import type { NexusHomeConfig, VibeKanbanBackendConfig } from "./config.js";
+import { readEnvValue, stripUtf8Bom } from "./envFile.js";
 
 export type {
   VibeKanbanAutoLoginResult,
@@ -16,15 +17,6 @@ export type {
 export interface EnsureVibeKanbanSelfHostedLoginOptions
   extends VibeKanbanApiOptions {
   config: NexusHomeConfig;
-}
-
-function readEnvValue(content: string, key: string): string | undefined {
-  const prefix = `${key}=`;
-  const line = content
-    .split(/\r?\n/u)
-    .find((entry) => entry.startsWith(prefix));
-
-  return line?.slice(prefix.length);
 }
 
 function managedBackendEnvFile(
@@ -43,7 +35,7 @@ export function readVibeKanbanLocalAuthCredentials(
     return undefined;
   }
 
-  const content = fs.readFileSync(envFile, "utf8").replace(/^\uFEFF/u, "");
+  const content = stripUtf8Bom(fs.readFileSync(envFile, "utf8"));
   const email = readEnvValue(content, "SELF_HOST_LOCAL_AUTH_EMAIL");
   const password = readEnvValue(content, "SELF_HOST_LOCAL_AUTH_PASSWORD");
   if (!email || !password) {

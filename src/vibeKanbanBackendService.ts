@@ -11,6 +11,7 @@ import {
   type VibeKanbanDindBackendConfig,
   type VibeKanbanDockerBackendConfig,
 } from "./config.js";
+import { readEnvValue, setEnvValue, stripUtf8Bom } from "./envFile.js";
 import { type HttpPortHealthCheckResult } from "dev-nexus";
 
 export const vibeKanbanBackendServiceName = "vibe-kanban-backend";
@@ -504,58 +505,12 @@ function defaultEnvRemoteContent(
   ].join("\n");
 }
 
-function readEnvValue(content: string, key: string): string | undefined {
-  const prefix = `${key}=`;
-  const line = content
-    .split(/\r?\n/u)
-    .find((entry) => entry.startsWith(prefix));
-
-  return line?.slice(prefix.length);
-}
-
-function setEnvValue(
-  content: string,
-  key: string,
-  value: string,
-): { content: string; changed: boolean } {
-  const lines = content.split(/\r?\n/u);
-  const prefix = `${key}=`;
-  let changed = false;
-  let found = false;
-
-  const updatedLines = lines.map((line) => {
-    if (!line.startsWith(prefix)) {
-      return line;
-    }
-
-    found = true;
-    const nextLine = `${prefix}${value}`;
-    if (line !== nextLine) {
-      changed = true;
-    }
-
-    return nextLine;
-  });
-
-  if (!found) {
-    const insertAt =
-      updatedLines.at(-1) === "" ? updatedLines.length - 1 : updatedLines.length;
-    updatedLines.splice(insertAt, 0, `${prefix}${value}`);
-    changed = true;
-  }
-
-  return {
-    content: updatedLines.join("\n"),
-    changed,
-  };
-}
-
 function syncAuthDefaultsIntoEnvFile(envFile: string): boolean {
   if (!fs.existsSync(envFile)) {
     return false;
   }
 
-  let content = fs.readFileSync(envFile, "utf8").replace(/^\uFEFF/u, "");
+  let content = stripUtf8Bom(fs.readFileSync(envFile, "utf8"));
   let changed = false;
   const githubOAuth = githubOAuthCredentials();
 
