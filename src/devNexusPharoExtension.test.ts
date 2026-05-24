@@ -319,6 +319,25 @@ describe("DevNexus-Pharo extension", () => {
     );
   });
 
+  it("teaches Pharo workers to use per-task disposable images for mutable work", () => {
+    const skillsById = new Map(
+      devNexusPharoSkillPack.map((skill) => [skill.manifest.id, skill]),
+    );
+
+    expect(skillsById.get("pharo-launcher-lifecycle")?.files["SKILL.md"]).toContain(
+      "fresh disposable image per issue, branch, chat, or experiment",
+    );
+    expect(skillsById.get("pharo-launcher-lifecycle")?.files["SKILL.md"]).toContain(
+      "never share one writable image across parallel chats",
+    );
+    expect(skillsById.get("mcp-pharo-execution")?.files["SKILL.md"]).toContain(
+      "disposable image scoped to the current issue, branch, chat, or experiment",
+    );
+    expect(skillsById.get("mcp-pharo-execution")?.files["SKILL.md"]).toContain(
+      "if ownership is unclear, create a new image before writes",
+    );
+  });
+
   it("bundles MCP-Pharo domain skills with copied upstream provenance", () => {
     const skillsById = new Map(
       devNexusPharoSkillPack.map((skill) => [skill.manifest.id, skill]),

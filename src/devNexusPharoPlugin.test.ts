@@ -300,6 +300,12 @@ describe("DevNexusPharo DevNexus plugin", () => {
     expect(briefingFragment.body).toContain(
       "Prefer scoped PLexus and gateway tools for image operations",
     );
+    expect(briefingFragment.body).toContain(
+      "fresh disposable image per issue, branch, chat, or experiment",
+    );
+    expect(briefingFragment.body).toContain(
+      "shared or dev images are read-only unless explicitly owned",
+    );
     expect(briefingFragment.body).toContain("Keep image lifecycle");
     expect(briefingFragment.body).toContain("record imageId and route identity");
     expect(briefingFragment.body).toContain("clean only resources owned by the worker");
