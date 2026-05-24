@@ -12,6 +12,28 @@ export const devNexusPharoPluginId = "dev-nexus-pharo";
 export const devNexusPharoPluginName = "DevNexus-Pharo";
 export const devNexusPharoPluginVersion = "0.1.0";
 
+type DevNexusPharoMcpExposure = "direct" | "gateway" | "hidden";
+type DevNexusPharoBaseCapability =
+  NexusProjectPluginConfig["capabilities"][number];
+type DevNexusPharoMcpServerCapability = Extract<
+  DevNexusPharoBaseCapability,
+  { kind: "mcp_server" }
+> & {
+  command?: string;
+  args?: string[];
+  targetAgents?: string[];
+  exposure?: DevNexusPharoMcpExposure;
+};
+type DevNexusPharoCapability =
+  | Exclude<DevNexusPharoBaseCapability, { kind: "mcp_server" }>
+  | DevNexusPharoMcpServerCapability;
+type DevNexusPharoProjectPluginConfig = Omit<
+  NexusProjectPluginConfig,
+  "capabilities"
+> & {
+  capabilities: DevNexusPharoCapability[];
+};
+
 const projectedSkillDescriptions: Record<string, string> = {
   "dev-nexus-pharo-workflow":
     "Project DevNexus-Pharo workflow guidance into Pharo-capable Codex workers.",
@@ -30,7 +52,7 @@ const projectedSkillDescriptions: Record<string, string> = {
     "Project MCP-Pharo PharoCompatibility and cross-version guidance.",
 };
 
-function projectedSkillCapabilities(): NexusProjectPluginConfig["capabilities"] {
+function projectedSkillCapabilities(): DevNexusPharoCapability[] {
   return devNexusPharoSkillPack.map((skill) => ({
     kind: "projected_skill",
     id: `skill-${skill.manifest.id}`,
@@ -42,7 +64,7 @@ function projectedSkillCapabilities(): NexusProjectPluginConfig["capabilities"] 
   }));
 }
 
-export function devNexusPharoDevNexusPluginConfig(): NexusProjectPluginConfig {
+export function devNexusPharoDevNexusPluginConfig(): DevNexusPharoProjectPluginConfig {
   return {
     id: devNexusPharoPluginId,
     name: devNexusPharoPluginName,
@@ -54,6 +76,10 @@ export function devNexusPharoDevNexusPluginConfig(): NexusProjectPluginConfig {
         kind: "mcp_server",
         id: "plexus-mcp",
         serverName: "plexus_project",
+        command: "plexus",
+        args: ["mcp", "project"],
+        targetAgents: ["codex"],
+        exposure: "gateway",
         description:
           "Scoped PLexus project and lifecycle surface; live open/close remains policy-gated.",
         tools: [
@@ -77,6 +103,10 @@ export function devNexusPharoDevNexusPluginConfig(): NexusProjectPluginConfig {
         kind: "mcp_server",
         id: "pharo-launcher-mcp",
         serverName: "pharo_launcher",
+        command: "plexus",
+        args: ["mcp", "pharo-launcher", "--project-path", "."],
+        targetAgents: ["codex"],
+        exposure: "gateway",
         description:
           "Scoped Pharo Launcher image lifecycle surface supplied through PLexus.",
         tools: [
