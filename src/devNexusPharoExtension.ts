@@ -4,15 +4,30 @@ import { fileURLToPath } from "node:url";
 import {
   defaultCoreSkillPack,
   type NexusExtension,
-  type NexusSkillDefinition,
 } from "dev-nexus";
 import {
   type NexusProjectConfig,
 } from "./config.js";
-import { mcpPharoDomainSkillPack } from "./mcpPharoDomainSkills.js";
 import type {
   NexusProjectStatusExtensionContribution,
 } from "./nexusProjectService.js";
+import { devNexusPharoSkillPack } from "./devNexusPharoSkillPack.js";
+import {
+  clonePlexusImageExecutionPolicy,
+  defaultPlexusImageExecutionPolicy,
+  resolvePlexusImageExecutionPolicy,
+  type PlexusImageExecutionPolicy,
+} from "./plexusImageExecutionPolicy.js";
+
+export { devNexusPharoSkillPack } from "./devNexusPharoSkillPack.js";
+export {
+  defaultPlexusImageExecutionPolicy,
+  resolvePlexusImageExecutionPolicy,
+  type PlexusImageExecutionDockerNetwork,
+  type PlexusImageExecutionDockerPolicy,
+  type PlexusImageExecutionMode,
+  type PlexusImageExecutionPolicy,
+} from "./plexusImageExecutionPolicy.js";
 
 export interface PlexusProjectConfig {
   id: string;
@@ -73,35 +88,6 @@ export const defaultPlexusPharoImageCreateProfileId = "pharo-13-default";
 export const defaultPlexusPharoImageTemplateName = "Pharo 13.0 - 64bit";
 export const defaultPlexusPharoImageTemplateCategory = "Official";
 
-export type PlexusImageExecutionMode = "disabled" | "docker";
-export type PlexusImageExecutionDockerNetwork = "none" | "bridge";
-
-export interface PlexusImageExecutionDockerPolicy {
-  image: string | null;
-  network: PlexusImageExecutionDockerNetwork;
-  autoRemove: boolean;
-  mountProjectReadOnly: boolean;
-}
-
-export interface PlexusImageExecutionPolicy {
-  mode: PlexusImageExecutionMode;
-  requireDisposableImage: boolean;
-  requireCleanupPlan: boolean;
-  docker: PlexusImageExecutionDockerPolicy;
-}
-
-export const defaultPlexusImageExecutionPolicy: PlexusImageExecutionPolicy = {
-  mode: "disabled",
-  requireDisposableImage: true,
-  requireCleanupPlan: true,
-  docker: {
-    image: null,
-    network: "none",
-    autoRemove: true,
-    mountProjectReadOnly: true,
-  },
-};
-
 export interface DevNexusPharoProjectExtensionConfig {
   plexusProjectConfig?: string;
   imageExecution?: PlexusImageExecutionPolicy;
@@ -130,113 +116,6 @@ export interface InstallDevNexusPharoProjectFilesOptions {
 }
 
 const suggestedFirstPromptFileName = "suggestedFirstPrompt.md";
-
-function skillMarkdown(name: string, description: string, body: string): string {
-  return [
-    "---",
-    `name: ${name}`,
-    `description: ${description}`,
-    "---",
-    "",
-    body.trim(),
-    "",
-  ].join("\n");
-}
-
-function devNexusPharoSkill(
-  id: string,
-  name: string,
-  description: string,
-  body: string,
-): NexusSkillDefinition {
-  return {
-    manifest: {
-      id,
-      name,
-      description,
-      version: "0.1.0",
-      license: "Apache-2.0",
-      source: {
-        type: "curated",
-        uri: "dev-nexus-pharo:specialization",
-      },
-      supportedAgents: ["codex"],
-      materialization: "copy",
-      sourceControl: "support",
-    },
-    files: {
-      "SKILL.md": skillMarkdown(name, description, body),
-    },
-  };
-}
-
-export const devNexusPharoSkillPack: readonly NexusSkillDefinition[] = [
-  devNexusPharoSkill(
-    "dev-nexus-pharo-workflow",
-    "dev-nexus-pharo-workflow",
-    "Workflow guidance for DevNexus-Pharo-managed projects, work trackers, worktrees, and publication decisions.",
-    `
-# DevNexus-Pharo Workflow
-
-Use this skill when working inside a DevNexus-Pharo-managed project.
-
-1. Identify whether the request belongs to the control project or an owning source project.
-2. Read local AGENTS.md, NOTES.md, and the project config before changing files.
-3. Use provider-neutral project and work-item tools where possible.
-4. Confirm direct \`pharo\` MCP tools are available before changing Pharo code; if not, report the MCP infrastructure blocker instead of editing Pharo files.
-5. Verify focused behavior before broader checks, then record commits and publication state.
-`,
-  ),
-  devNexusPharoSkill(
-    "plexus-diagnostics",
-    "plexus-diagnostics",
-    "Diagnostic workflow for PLexus gateway status, route health, and safe project-boundary probes.",
-    `
-# PLexus Diagnostics
-
-Use this skill when checking PLexus gateway status or route behavior.
-
-1. Prefer non-mutating status calls before live open or route probes.
-2. Name the project path, state root, workspace id, target id, and cleanup boundary before live checks.
-3. Do not launch images or Docker unless the selected task documents isolation and cleanup.
-4. Route findings to the owning project board with reproduction details and expected behavior.
-`,
-  ),
-  devNexusPharoSkill(
-    "pharo-launcher-lifecycle",
-    "pharo-launcher-lifecycle",
-    "Safety guidance for Pharo Launcher image creation, launch, inspection, and cleanup operations.",
-    `
-# Pharo Launcher Lifecycle
-
-Use this skill when a task touches image creation, launch, or cleanup.
-
-1. Treat image launch as host mutation unless an isolated runner is documented.
-2. For mutable Pharo work, default to a fresh disposable image per issue, branch, chat, or experiment; images are cheap isolation boundaries.
-3. Treat shared or dev images as read-only unless this worker explicitly owns them; never share one writable image across parallel chats.
-4. Create a new image instead of reusing an existing one when ownership, branch, or cleanup is unclear.
-5. Record image identity, filesystem paths, processes, routes, and cleanup commands.
-`,
-  ),
-  devNexusPharoSkill(
-    "mcp-pharo-execution",
-    "mcp-pharo-execution",
-    "Execution guidance for in-image MCP calls, JSON-RPC reachability, and routed Pharo tool checks.",
-    `
-# MCP Pharo Execution
-
-Use this skill when validating in-image MCP tool reachability or routed calls.
-
-1. Prove transport reachability before assuming tool behavior is wrong.
-2. Use direct \`pharo\` MCP tools for Pharo code work; do not substitute file edits when the MCP surface is missing.
-3. Before mutating image-side code, verify the route targets a disposable image scoped to the current issue, branch, chat, or experiment.
-4. Keep routed calls non-mutating until an isolated image boundary is explicit; if ownership is unclear, create a new image before writes.
-5. Capture request shape, response payload, route id, image id, branch, and owning project.
-6. Add regression coverage at the lowest layer that owns the failure.
-`,
-  ),
-  ...mcpPharoDomainSkillPack,
-];
 
 function packageRootPath(): string {
   return path.dirname(path.dirname(fileURLToPath(import.meta.url)));
@@ -308,57 +187,6 @@ export function projectPlexusImageExecutionPolicy(
     devNexusPharoProjectExtensionConfig(config).imageExecution ??
     clonePlexusImageExecutionPolicy(defaultPlexusImageExecutionPolicy)
   );
-}
-
-export function resolvePlexusImageExecutionPolicy(
-  value: unknown,
-  pathName = "imageExecution",
-): PlexusImageExecutionPolicy {
-  const record = value === undefined ? {} : assertRecord(value, pathName);
-  const dockerRecord =
-    record.docker === undefined
-      ? {}
-      : assertRecord(record.docker, `${pathName}.docker`);
-  const mode = imageExecutionMode(
-    record.mode,
-    `${pathName}.mode`,
-    defaultPlexusImageExecutionPolicy.mode,
-  );
-  const docker = {
-    image:
-      nullableString(dockerRecord.image, `${pathName}.docker.image`) ??
-      defaultPlexusImageExecutionPolicy.docker.image,
-    network: dockerNetwork(
-      dockerRecord.network,
-      `${pathName}.docker.network`,
-      defaultPlexusImageExecutionPolicy.docker.network,
-    ),
-    autoRemove:
-      optionalBoolean(dockerRecord.autoRemove, `${pathName}.docker.autoRemove`) ??
-      defaultPlexusImageExecutionPolicy.docker.autoRemove,
-    mountProjectReadOnly:
-      optionalBoolean(
-        dockerRecord.mountProjectReadOnly,
-        `${pathName}.docker.mountProjectReadOnly`,
-      ) ?? defaultPlexusImageExecutionPolicy.docker.mountProjectReadOnly,
-  };
-
-  if (mode === "docker" && !docker.image) {
-    throw new Error(`${pathName}.docker.image is required when mode is docker`);
-  }
-
-  return {
-    mode,
-    requireDisposableImage:
-      optionalBoolean(
-        record.requireDisposableImage,
-        `${pathName}.requireDisposableImage`,
-      ) ?? defaultPlexusImageExecutionPolicy.requireDisposableImage,
-    requireCleanupPlan:
-      optionalBoolean(record.requireCleanupPlan, `${pathName}.requireCleanupPlan`) ??
-      defaultPlexusImageExecutionPolicy.requireCleanupPlan,
-    docker,
-  };
 }
 
 export function projectPlexusConfigPath(
@@ -739,80 +567,6 @@ export const devNexusPharoExtension: NexusExtension<
     };
   },
 };
-
-function clonePlexusImageExecutionPolicy(
-  policy: PlexusImageExecutionPolicy,
-): PlexusImageExecutionPolicy {
-  return {
-    mode: policy.mode,
-    requireDisposableImage: policy.requireDisposableImage,
-    requireCleanupPlan: policy.requireCleanupPlan,
-    docker: { ...policy.docker },
-  };
-}
-
-function assertRecord(value: unknown, pathName: string): Record<string, unknown> {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new Error(`${pathName} must be an object`);
-  }
-
-  return value as Record<string, unknown>;
-}
-
-function imageExecutionMode(
-  value: unknown,
-  pathName: string,
-  fallback: PlexusImageExecutionMode,
-): PlexusImageExecutionMode {
-  if (value === undefined) {
-    return fallback;
-  }
-  if (value === "disabled" || value === "docker") {
-    return value;
-  }
-
-  throw new Error(`${pathName} must be disabled or docker`);
-}
-
-function dockerNetwork(
-  value: unknown,
-  pathName: string,
-  fallback: PlexusImageExecutionDockerNetwork,
-): PlexusImageExecutionDockerNetwork {
-  if (value === undefined) {
-    return fallback;
-  }
-  if (value === "none" || value === "bridge") {
-    return value;
-  }
-
-  throw new Error(`${pathName} must be none or bridge`);
-}
-
-function optionalBoolean(value: unknown, pathName: string): boolean | undefined {
-  if (value === undefined) {
-    return undefined;
-  }
-  if (typeof value === "boolean") {
-    return value;
-  }
-
-  throw new Error(`${pathName} must be a boolean`);
-}
-
-function nullableString(value: unknown, pathName: string): string | null | undefined {
-  if (value === undefined) {
-    return undefined;
-  }
-  if (value === null) {
-    return null;
-  }
-  if (typeof value === "string" && value.trim().length > 0) {
-    return value.trim();
-  }
-
-  throw new Error(`${pathName} must be a non-empty string or null`);
-}
 
 export function devNexusPharoProjectFilesFromExtensionResult(
   value: unknown,

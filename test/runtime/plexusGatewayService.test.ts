@@ -22,6 +22,9 @@ import {
 
 const tempDirs: string[] = [];
 const homePaths: string[] = [];
+const processLifecycleTestTimeoutMs = process.platform === "win32"
+  ? 15_000
+  : 5_000;
 
 function makeTempDir(prefix: string): string {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
@@ -213,7 +216,7 @@ describe("PLexus gateway service", () => {
     expect(loadPlexusGatewayState(homePath)).toMatchObject({
       status: "stopped",
     });
-  });
+  }, processLifecycleTestTimeoutMs);
 
   it("refuses to start a second gateway when the existing one is running", async () => {
     const homePath = initHomeWithGateway([
