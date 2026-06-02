@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { projectPluginCapabilityProjections } from "dev-nexus";
 import {
@@ -6,7 +8,10 @@ import {
   devNexusPharoPluginName,
   devNexusPharoPluginVersion,
 } from "../../src/devNexusPharoPlugin.js";
-import { devNexusPharoSkillPack } from "../../src/devNexusPharoExtension.js";
+import {
+  devNexusPharoSkillDefinitions,
+  devNexusPharoSkillPack,
+} from "../../src/devNexusPharoExtension.js";
 
 type DevNexusPharoCapability =
   ReturnType<typeof devNexusPharoDevNexusPluginConfig>["capabilities"][number];
@@ -25,6 +30,19 @@ function devNexusPharoSkillPackIds(): string[] {
 }
 
 describe("DevNexusPharo DevNexus plugin", () => {
+  it("exposes refresh-compatible plugin version and skill definitions", () => {
+    const packageRoot = path.resolve(import.meta.dirname, "../..");
+    const packageJson = JSON.parse(
+      fs.readFileSync(path.join(packageRoot, "package.json"), "utf8"),
+    ) as { version: string };
+
+    expect(devNexusPharoPluginVersion).toBe(packageJson.version);
+    expect(devNexusPharoDevNexusPluginConfig().version).toBe(packageJson.version);
+    expect(
+      devNexusPharoSkillDefinitions().map((definition) => definition.manifest.id),
+    ).toEqual(devNexusPharoSkillPackIds());
+  });
+
   it("declares a complete non-empty DevNexusPharo capability surface", () => {
     const config = devNexusPharoDevNexusPluginConfig();
 

@@ -107,3 +107,7 @@ Use this skill when validating in-image MCP tool reachability or routed calls.
   ),
   ...mcpPharoDomainSkillPack,
 ];
+
+export function devNexusPharoSkillDefinitions(): NexusSkillDefinition[] {
+  return [...devNexusPharoSkillPack];
+}

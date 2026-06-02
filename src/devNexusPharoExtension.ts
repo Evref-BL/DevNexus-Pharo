@@ -18,7 +18,10 @@ import {
   projectUsesDevNexusPharoExtension,
 } from "./plexusProjectConfig.js";
 
-export { devNexusPharoSkillPack } from "./devNexusPharoSkillPack.js";
+export {
+  devNexusPharoSkillDefinitions,
+  devNexusPharoSkillPack,
+} from "./devNexusPharoSkillPack.js";
 export {
   defaultPlexusImageExecutionPolicy,
   resolvePlexusImageExecutionPolicy,

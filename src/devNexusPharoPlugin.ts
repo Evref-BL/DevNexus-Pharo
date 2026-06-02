@@ -10,7 +10,7 @@ import {
 
 export const devNexusPharoPluginId = "dev-nexus-pharo";
 export const devNexusPharoPluginName = "DevNexus-Pharo";
-export const devNexusPharoPluginVersion = "0.1.0";
+export const devNexusPharoPluginVersion = "0.1.0-alpha.10";
 
 type DevNexusPharoMcpExposure = "direct" | "gateway" | "hidden";
 type DevNexusPharoBaseCapability =
