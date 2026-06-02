@@ -21,6 +21,9 @@ import {
   resolveCodexWorkspaceContext,
   workspaceProjectConfig,
 } from "./codexMcpServers.js";
+import {
+  inferPlexusRepositoryWorkspaceProjection,
+} from "./plexusRepositoryWorkspaceProjection.js";
 
 export {
   mergeCodexMcpServersIntoToml,
@@ -53,6 +56,25 @@ export interface InitCodexWorkspaceResult {
   content: string;
 }
 
+function worktreeRepositoryWorkspaceProjection(
+  projectConfig: NonNullable<ReturnType<typeof workspaceProjectConfig>>,
+  workspaceContext: ReturnType<typeof resolveCodexWorkspaceContext>,
+) {
+  const workerContext = workspaceContext.workerContext;
+  const worktree = workerContext?.worktree ?? workerContext?.ownership;
+  const componentId = worktree?.componentId ?? workerContext?.component?.id;
+  if (!workerContext || !componentId) {
+    return undefined;
+  }
+
+  return inferPlexusRepositoryWorkspaceProjection({
+    projectConfig,
+    workspaceSourcePath: workspaceContext.workspaceSourcePath,
+    componentId,
+    ...(worktree?.branchName ? { branchName: worktree.branchName } : {}),
+  });
+}
+
 export function initCodexWorkspace(
   options: InitCodexWorkspaceOptions,
 ): InitCodexWorkspaceResult {
@@ -74,6 +96,7 @@ export function initCodexWorkspace(
         projectConfig,
         config,
         options.dryRun,
+        worktreeRepositoryWorkspaceProjection(projectConfig, workspaceContext),
       )
     : undefined;
   const existingToml = fs.existsSync(configPath)

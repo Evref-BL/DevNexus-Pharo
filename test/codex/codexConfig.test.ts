@@ -77,6 +77,23 @@ function writeDevNexusWorkerContext(
   );
 }
 
+function writeBaselinePackage(
+  workspacePath: string,
+  baseline: string,
+): void {
+  const packagePath = path.join(
+    workspacePath,
+    "src",
+    `BaselineOf${baseline}`,
+  );
+  fs.mkdirSync(packagePath, { recursive: true });
+  fs.writeFileSync(
+    path.join(packagePath, `BaselineOf${baseline}.class.st`),
+    `Class { #name : 'BaselineOf${baseline}', #superclass : 'BaselineOf' }\n`,
+    "utf8",
+  );
+}
+
 function closeServer(server: http.Server): Promise<void> {
   return new Promise((resolve, reject) => {
     server.close((error) => {
@@ -305,16 +322,29 @@ describe("Codex config", () => {
     const worktreesRoot = path.join(projectRoot, "worktrees", "mcp-pharo");
     const worktreePath = path.join(worktreesRoot, "codex-mcp-pharo-github-42");
     fs.mkdirSync(worktreePath, { recursive: true });
+    writeBaselinePackage(worktreePath, "MCP");
     saveProjectConfig(projectRoot, {
       version: 1,
-      id: "shared-dogfood",
-      name: "Shared Dogfood",
+      id: "shared-pharo",
+      name: "Shared Pharo",
       home: null,
       repo: {
         kind: "git",
-        remoteUrl: "git@github.com:example/shared-dogfood.git",
+        remoteUrl: "git@github.com:example/shared-pharo.git",
         defaultBranch: "main",
       },
+      components: [
+        {
+          id: "mcp-pharo",
+          name: "MCP-Pharo",
+          kind: "git",
+          role: "primary",
+          remoteUrl: "git@github.com:example/mcp-pharo.git",
+          defaultBranch: "main",
+          sourceRoot: componentSourceRoot,
+          relationships: [],
+        },
+      ],
       worktreesRoot: "worktrees",
       mcp: {
         command: "dev-nexus",
@@ -330,8 +360,8 @@ describe("Codex config", () => {
     });
     writeDevNexusWorkerContext(worktreePath, {
       projectRoot,
-      projectId: "shared-dogfood",
-      projectName: "Shared Dogfood",
+      projectId: "shared-pharo",
+      projectName: "Shared Pharo",
       componentId: "mcp-pharo",
       sourceRoot: componentSourceRoot,
       worktreesRoot,
@@ -362,18 +392,18 @@ describe("Codex config", () => {
     expect(result.servers.plexus_project).toMatchObject({
       env: {
         PLEXUS_PROJECT_ROOT: path.resolve(projectRoot),
-        PLEXUS_PROJECT_ID: "shared-dogfood",
+        PLEXUS_PROJECT_ID: "shared-pharo",
         PLEXUS_WORKSPACE_ID: "mcp-pharo--github-42",
         PLEXUS_WORKSPACE_ROOT: path.resolve(worktreePath),
         PLEXUS_WORKSPACE_SOURCE_PATH: path.resolve(worktreePath),
-        PLEXUS_TARGET_ID: "shared-dogfood--mcp-pharo--github-42",
+        PLEXUS_TARGET_ID: "shared-pharo--mcp-pharo--github-42",
         PLEXUS_STATE_ROOT: path.join(homePath, "state", "plexus"),
       },
     });
     expect(result.servers.pharo_launcher).toMatchObject({
       env: {
         PLEXUS_WORKSPACE_SOURCE_PATH: path.resolve(worktreePath),
-        PLEXUS_IMAGE_LEASE_OWNER_ID: "shared-dogfood--mcp-pharo--github-42",
+        PLEXUS_IMAGE_LEASE_OWNER_ID: "shared-pharo--mcp-pharo--github-42",
         PLEXUS_IMAGE_LEASE_OWNER_KIND: "target",
         PLEXUS_IMAGE_LEASE_REPOSITORY_PATH: path.resolve(worktreePath),
         PLEXUS_IMAGE_LEASE_BRANCH: "codex/mcp-pharo/github-42",
@@ -382,6 +412,32 @@ describe("Codex config", () => {
     expect(result.servers.route_control).toBeUndefined();
     expect(result.content).not.toContain("[mcp_servers.route_control]");
     expect(result.content).toContain("[mcp_servers.keep]");
+
+    const plexusProjectConfig = JSON.parse(
+      fs.readFileSync(path.join(projectRoot, "plexus.project.json"), "utf8"),
+    );
+    expect(plexusProjectConfig.images).toEqual([
+      expect.objectContaining({
+        id: "dev",
+        repositoryWorkspace: {
+          repository: {
+            id: "mcp-pharo",
+            componentId: "mcp-pharo",
+            remoteUrl: "git@github.com:example/mcp-pharo.git",
+          },
+          sourceDirectory: "src",
+          baseline: "MCP",
+          branch: "codex/mcp-pharo/github-42",
+          baseBranch: "main",
+          materialization: {
+            strategy: "copy",
+          },
+        },
+      }),
+    ]);
+    expect(
+      plexusProjectConfig.images[0].repositoryWorkspace.repository.originPath,
+    ).toBeUndefined();
   });
 
   it("lets explicit PLexus workspace ids override DevNexus worktree-derived ids", () => {

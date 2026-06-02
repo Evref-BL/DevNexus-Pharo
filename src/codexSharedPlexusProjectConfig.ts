@@ -11,7 +11,11 @@ import {
   projectPlexusConfigPath,
   plexusProjectConfigFileName,
   type PlexusProjectConfig,
+  type PlexusRepositoryWorkspaceConfig,
 } from "./devNexusPharoExtension.js";
+import {
+  applyPlexusRepositoryWorkspaceProjection,
+} from "./plexusRepositoryWorkspaceProjection.js";
 
 export interface SharedPlexusProjectConfigCheck {
   name: string;
@@ -33,6 +37,7 @@ export function ensureSharedPlexusProjectConfig(
   projectConfig: NexusProjectConfig,
   homeConfig: NexusHomeConfig,
   dryRun: boolean | undefined,
+  repositoryWorkspaceProjection?: PlexusRepositoryWorkspaceConfig | undefined,
 ): { configPath: string; created: boolean; config: PlexusProjectConfig } {
   const configPath = sharedPlexusProjectConfigPath(workspacePath, projectConfig);
   const created = !fs.existsSync(configPath);
@@ -50,12 +55,15 @@ export function ensureSharedPlexusProjectConfig(
     : (JSON.parse(
         fs.readFileSync(configPath, "utf8").replace(/^\uFEFF/u, ""),
       ) as Record<string, unknown>);
-  const normalized = normalizePlexusProjectConfig(
-    existing,
-    projectConfig.name,
-    projectConfig.id,
-    undefined,
-    reservedGatewayPorts,
+  const normalized = applyPlexusRepositoryWorkspaceProjection(
+    normalizePlexusProjectConfig(
+      existing,
+      projectConfig.name,
+      projectConfig.id,
+      undefined,
+      reservedGatewayPorts,
+    ),
+    repositoryWorkspaceProjection,
   );
   const nextContent = `${JSON.stringify(normalized, null, 2)}\n`;
   const existingContent = created

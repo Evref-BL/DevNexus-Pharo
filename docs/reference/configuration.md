@@ -123,6 +123,14 @@ DevNexus-Pharo-managed projects:
 The project-local gateway port is allocated from a deterministic range and is
 kept separate from home-level MCP ports.
 
+When `codex init` runs in a prepared DevNexus worktree, DevNexus-Pharo can
+overlay the shared `plexus.project.json` with a setup-owned `dev` image profile.
+If the worktree source has exactly one `BaselineOf...` package under `src`, the
+profile receives a PLexus `repositoryWorkspace` with the component id, remote
+URL when known, `sourceDirectory`, `baseline`, branch, base branch, and `copy`
+materialization. The generated repository identity omits `originPath`; PLexus
+uses the per-open workspace source path for the concrete worktree checkout.
+
 ## Image execution policy
 
 The default image execution policy is disabled:
@@ -153,6 +161,7 @@ not grant permission to launch images or mutate a runtime.
 
 ## Pharo load workspaces
 
-Managed project setup may declare Pharo load workspaces through project-specific
-PLexus or skill material. DevNexus-Pharo keeps that metadata outside the image so
-agents can load, test, and export Pharo code through approved MCP routes.
+Managed project setup may declare Pharo load workspaces through generated PLexus
+repository workspaces or project-specific skill material. DevNexus-Pharo keeps
+that metadata outside the image so agents can load, test, and export Pharo code
+through approved MCP routes.

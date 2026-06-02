@@ -17,6 +17,37 @@ export interface PlexusProjectConfig {
   runtime: PlexusProjectRuntimeConfig;
 }
 
+export type PlexusRepositoryWorkspaceMaterializationStrategy =
+  | "copy"
+  | "git-worktree"
+  | "clone";
+
+export interface PlexusRepositoryIdentityConfig {
+  id: string;
+  componentId?: string;
+  remoteUrl?: string;
+  originPath?: string;
+}
+
+export interface PlexusRepositoryWorkspaceMaterializationConfig {
+  strategy: PlexusRepositoryWorkspaceMaterializationStrategy;
+  path?: string;
+}
+
+export interface PlexusRepositoryWorkspaceConfig {
+  repository: PlexusRepositoryIdentityConfig;
+  sourceDirectory: string;
+  baseline: string;
+  loadGroup?: string;
+  pharoVersion?: number;
+  templateName?: string;
+  templateCategory?: string;
+  branch?: string;
+  baseBranch?: string;
+  baseCommit?: string;
+  materialization: PlexusRepositoryWorkspaceMaterializationConfig;
+}
+
 export interface PlexusPharoImageProfile {
   id: string;
   imageName: string;
@@ -33,6 +64,7 @@ export interface PlexusPharoImageProfile {
   git: {
     transport: "https" | "ssh";
   };
+  repositoryWorkspace?: PlexusRepositoryWorkspaceConfig;
 }
 
 export interface PlexusProjectRuntimeConfig {
@@ -166,6 +198,7 @@ export function buildPlexusPharoImageProfile(
     id?: string;
     loadScript?: string | null;
     gitTransport?: "https" | "ssh";
+    repositoryWorkspace?: PlexusRepositoryWorkspaceConfig;
   } = {},
 ): PlexusPharoImageProfile {
   const id = safePlexusImageProfileId(
@@ -187,6 +220,9 @@ export function buildPlexusPharoImageProfile(
     git: {
       transport: options.gitTransport ?? "https",
     },
+    ...(options.repositoryWorkspace
+      ? { repositoryWorkspace: options.repositoryWorkspace }
+      : {}),
   };
 }
 

@@ -78,7 +78,7 @@ scoped entries for:
 - `plexus_project`
 - `pharo_launcher`
 - `route_control`
-- `gateway`
+- `pharo_gateway`
 
 When replacing managed entries, preserve unrelated user-managed TOML.
 
@@ -142,6 +142,11 @@ PLexus environment values: the owning DevNexus project root becomes
 `PLEXUS_PROJECT_ROOT`, the worktree path becomes both `PLEXUS_WORKSPACE_ROOT`
 and `PLEXUS_WORKSPACE_SOURCE_PATH`, and the PLexus workspace id is derived from
 the component id and work-item id unless an explicit workspace id is supplied.
+When the worktree source contains exactly one `BaselineOf...` package under
+`src`, `codex init` also projects that component into the shared
+`plexus.project.json` as the default `dev` image repository workspace. The
+projection does not write an `originPath`; PLexus resolves the concrete source
+checkout from the workspace source path at open time.
 Prepared worktree configs keep the agent-facing `pharo_gateway`, but they do
 not expose `route_control` to normal implementation agents. Runtime cleanup,
 handoff, and publication decisions remain DevNexus-Pharo responsibilities; the

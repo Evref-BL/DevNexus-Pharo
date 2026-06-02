@@ -49,7 +49,7 @@ args = ["mcp", "pharo-launcher", "--project-path", "<project>"]
 type = "http"
 url = "http://127.0.0.1:<project-port>/control-mcp"
 
-[mcp_servers.gateway]
+[mcp_servers.pharo_gateway]
 type = "http"
 url = "http://127.0.0.1:<project-port>/mcp"
 ```
@@ -61,6 +61,13 @@ root. When the workspace is a prepared DevNexus worktree, DevNexus-Pharo reads
 component and work-item ids, and passes the worktree path as
 `PLEXUS_WORKSPACE_SOURCE_PATH`. The scoped launcher entry also carries generic
 PLexus image-lease metadata for the target and repository branch.
+
+If the prepared worktree source contains exactly one `BaselineOf...` package
+under `src`, Codex initialization also updates the shared `plexus.project.json`
+with a setup-owned `dev` image `repositoryWorkspace`. That declaration records
+the component id, source directory, baseline, branch, base branch when known,
+and `copy` materialization, but leaves `originPath` unset so PLexus uses the
+current workspace source path.
 
 Prepared implementation worktrees receive the agent-facing `pharo_gateway`
 entry, but not `route_control`. Shared project roots may keep `route_control`
