@@ -249,6 +249,7 @@ describe("DevNexus-Pharo MCP server tools", () => {
       "pharo_project_status",
       "pharo_project_skill_status",
       "pharo_project_skill_refresh",
+      "pharo_workspace_handoff_summarize",
     ]);
     for (const toolName of [
       ...removedGenericDevNexusToolNames,
@@ -261,7 +262,7 @@ describe("DevNexus-Pharo MCP server tools", () => {
     ]) {
       expect(toolNames).not.toContain(toolName);
     }
-    for (const tool of tools) {
+    for (const tool of tools.filter((item) => item.name.startsWith("pharo_project_"))) {
       expect(tool.inputSchema).toMatchObject({
         properties: {
           detail: {
@@ -299,6 +300,82 @@ describe("DevNexus-Pharo MCP server tools", () => {
     );
 
     expect(issues).toEqual([]);
+  });
+
+  it("summarizes PLexus workspace runtime handoff through MCP", async () => {
+    const result = await callDevNexusPharoMcpTool(
+      "pharo_workspace_handoff_summarize",
+      {
+        plexusStatus: {
+          ok: true,
+          data: {
+            projectId: "project-123",
+            workspaceId: "workspace-a",
+            targetId: "project-123--workspace-a",
+            diagnostics: {
+              scope: {
+                projectRoot: "/work/project",
+                sourcePath: "/work/source",
+                stateRoot: "/work/state",
+                statePath: "/work/state/projects/project-123/workspaces/workspace-a/state.json",
+                projectId: "project-123",
+                workspaceId: "workspace-a",
+                targetId: "project-123--workspace-a",
+              },
+              imageMcpPorts: [
+                {
+                  imageId: "dev",
+                  imageName: "Project-dev",
+                  status: "running",
+                  port: 7100,
+                },
+              ],
+              repositoryWorkspaces: [
+                {
+                  imageId: "dev",
+                  imageName: "Project-dev",
+                  workspace: {
+                    repository: {
+                      id: "project",
+                    },
+                    path: "/image/iceberg/project",
+                    dirtyState: "dirty",
+                    loadState: "loaded",
+                    materializationState: "ready",
+                  },
+                },
+              ],
+            },
+          },
+        },
+      },
+    );
+
+    expect(result.isError).toBeUndefined();
+    expect(parseToolText(result)).toMatchObject({
+      ok: true,
+      summary: {
+        projectId: "project-123",
+        workspaceId: "workspace-a",
+        sourcePath: "/work/source",
+        cleanup: {
+          recommendation: "archive",
+        },
+        images: [
+          {
+            imageId: "dev",
+            port: 7100,
+          },
+        ],
+        repositories: [
+          {
+            repositoryId: "project",
+            dirtyState: "dirty",
+            recommendedCleanup: "archive",
+          },
+        ],
+      },
+    });
   });
 
   it("rejects invalid detail values", async () => {

@@ -19,6 +19,9 @@ import {
   summarizeSkillRefresh,
   summarizeSkillStatus,
 } from "./mcpProjectToolSummaries.js";
+import {
+  summarizePlexusWorkspaceHandoff,
+} from "./plexusWorkspaceHandoff.js";
 
 export interface McpTool {
   name: string;
@@ -122,6 +125,21 @@ const tools: McpTool[] = [
       additionalProperties: false,
     },
   },
+  {
+    name: "pharo_workspace_handoff_summarize",
+    description: "Summarize a PLexus workspace status result for provider-neutral Pharo runtime handoff.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        plexusStatus: {
+          type: "object",
+          additionalProperties: true,
+        },
+      },
+      required: ["plexusStatus"],
+      additionalProperties: false,
+    },
+  },
 ];
 
 function asRecord(value: unknown, pathName: string): Record<string, unknown> {
@@ -177,6 +195,14 @@ function requiredString(
   }
 
   return value;
+}
+
+function requiredRecord(
+  record: Record<string, unknown>,
+  key: string,
+  pathName: string,
+): Record<string, unknown> {
+  return asRecord(record[key], `${pathName}.${key}`);
 }
 
 function homePathFromArgs(args: Record<string, unknown>): string {
@@ -341,6 +367,13 @@ export async function callDevNexusPharoMcpTool(
               }),
         });
       }
+      case "pharo_workspace_handoff_summarize":
+        return toolResult({
+          ok: true,
+          summary: summarizePlexusWorkspaceHandoff(
+            requiredRecord(args, "plexusStatus", "arguments"),
+          ),
+        });
       default:
         return toolResult(
           {
