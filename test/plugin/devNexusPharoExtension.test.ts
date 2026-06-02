@@ -379,6 +379,13 @@ describe("DevNexus-Pharo extension", () => {
       expect(skill?.files["SKILL.md"]).toContain(`name: ${skillId}`);
     }
 
+    expect(
+      skillsById.get("pharo-image-git-handoff")?.files["SKILL.md"],
+    ).toContain("## Baseline Branch Handoff");
+    expect(
+      skillsById.get("pharo-image-git-handoff")?.files["SKILL.md"],
+    ).toContain("Record the resulting commit id as the new baseline");
+
     const ciSkill = skillsById.get("pharo-ci-repro");
     expect(ciSkill?.files["references/pharo-smalltalkci.md"]).toContain(
       "Pharo smalltalkCI Log Reading Notes",

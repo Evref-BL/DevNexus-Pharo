@@ -75,6 +75,27 @@ be archived or exported before close, unknown or failed repository workspace
 state should be preserved for review, and failed images should be rescued before
 raw cleanup.
 
+## Image-Side Git Handoff
+
+When image-side Pharo changes are exported and committed, treat the commit as a
+new baseline before continuing in the same image:
+
+1. Record image repository identity, path, branch, loaded commit/head, source
+   directory, package set, and dirty state before export.
+2. Export through the available Pharo MCP repository tool, then review and
+   commit only the intended Tonel/project changes.
+3. Record the commit id and refresh or adopt the image-side repository state to
+   that Git HEAD before doing more image-side work.
+4. Create any follow-up branch from that recorded baseline commit, then switch
+   or reload/adopt the image-side repository to the same branch.
+5. Verify that Iceberg/image repository state and disk Git report the same
+   branch/head and that a fresh `git diff` has no leftover changes from the
+   previous handoff.
+
+If no image-side repository tool can refresh, adopt, switch, or reload the
+committed state, report that as tooling friction instead of continuing in a
+stale or detached image repository.
+
 ## Tool ownership
 
 DevNexus-Pharo tools own:
