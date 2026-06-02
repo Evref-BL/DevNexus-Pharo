@@ -40,6 +40,7 @@ function writeDevNexusWorkerContext(
     worktreesRoot: string;
     branchName: string;
     workItemId?: string;
+    dependencyProjections?: Array<Record<string, unknown>>;
   },
 ): void {
   const contextDirectory = path.join(worktreePath, ".dev-nexus", "context");
@@ -69,6 +70,13 @@ function writeDevNexusWorkerContext(
             ? { workItem: { id: context.workItemId, title: "Mapped work" } }
             : {}),
         },
+        ...(context.dependencyProjections
+          ? {
+              dependencySupport: {
+                pluginDependencyProjections: context.dependencyProjections,
+              },
+            }
+          : {}),
       },
       null,
       2,
@@ -438,6 +446,140 @@ describe("Codex config", () => {
     expect(
       plexusProjectConfig.images[0].repositoryWorkspace.repository.originPath,
     ).toBeUndefined();
+  });
+
+  it("projects active source dependency worktrees to PLexus repository workspaces", () => {
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
+    initNexusHome({ homePath });
+    const projectRoot = makeTempDir("dev-nexus-pharo-shared-root-");
+    const primarySourceRoot = path.join(projectRoot, "sources", "mcp-pharo");
+    const dependencySourceRoot = path.join(projectRoot, "sources", "pharo-support");
+    const primaryWorktreesRoot = path.join(projectRoot, "worktrees", "mcp-pharo");
+    const dependencyWorktreesRoot = path.join(
+      projectRoot,
+      "worktrees",
+      "pharo-support",
+    );
+    const worktreePath = path.join(primaryWorktreesRoot, "codex-mcp-pharo-github-44");
+    const dependencyWorktreePath = path.join(
+      dependencyWorktreesRoot,
+      "codex-pharo-support-github-44",
+    );
+    fs.mkdirSync(worktreePath, { recursive: true });
+    fs.mkdirSync(dependencyWorktreePath, { recursive: true });
+    writeBaselinePackage(worktreePath, "MCP");
+    writeBaselinePackage(dependencyWorktreePath, "PharoSupport");
+    saveProjectConfig(projectRoot, {
+      version: 1,
+      id: "shared-pharo",
+      name: "Shared Pharo",
+      home: null,
+      repo: {
+        kind: "git",
+        remoteUrl: "git@github.com:example/shared-pharo.git",
+        defaultBranch: "main",
+      },
+      components: [
+        {
+          id: "mcp-pharo",
+          name: "MCP-Pharo",
+          kind: "git",
+          role: "primary",
+          remoteUrl: "git@github.com:example/mcp-pharo.git",
+          defaultBranch: "main",
+          sourceRoot: primarySourceRoot,
+          relationships: [{ kind: "related", componentId: "pharo-support" }],
+        },
+        {
+          id: "pharo-support",
+          name: "Pharo Support",
+          kind: "git",
+          role: "dependency",
+          remoteUrl: "git@github.com:example/pharo-support.git",
+          defaultBranch: "main",
+          sourceRoot: dependencySourceRoot,
+          relationships: [],
+        },
+      ],
+      worktreesRoot: "worktrees",
+      mcp: {
+        command: "dev-nexus",
+        args: ["mcp-stdio"],
+        agentTargets: [{ agent: "codex" }],
+      },
+      plugins: [devNexusPharoDevNexusPluginConfig()],
+    });
+    initCodexWorkspace({
+      homePath,
+      workspacePath: projectRoot,
+      config: loadHomeConfig(homePath),
+    });
+    writeDevNexusWorkerContext(worktreePath, {
+      projectRoot,
+      projectId: "shared-pharo",
+      projectName: "Shared Pharo",
+      componentId: "mcp-pharo",
+      sourceRoot: primarySourceRoot,
+      worktreesRoot: primaryWorktreesRoot,
+      branchName: "codex/mcp-pharo/github-44",
+      workItemId: "github-44",
+      dependencyProjections: [
+        {
+          id: "pharo-support-source",
+          sourceControl: "source",
+          sourcePath: dependencySourceRoot,
+          targetPath: dependencyWorktreePath,
+          status: "linked",
+          sourceComponent: {
+            id: "pharo-support",
+            sourceRoot: dependencySourceRoot,
+          },
+        },
+      ],
+    });
+
+    initCodexWorkspace({
+      homePath,
+      workspacePath: worktreePath,
+      config: loadHomeConfig(homePath),
+    });
+
+    const plexusProjectConfig = JSON.parse(
+      fs.readFileSync(path.join(projectRoot, "plexus.project.json"), "utf8"),
+    );
+    const repositoryWorkspaces =
+      plexusProjectConfig.images[0].repositoryWorkspaces;
+    expect(plexusProjectConfig.images[0].repositoryWorkspace).toBeUndefined();
+    expect(repositoryWorkspaces).toEqual([
+      {
+        repository: {
+          id: "mcp-pharo",
+          componentId: "mcp-pharo",
+          remoteUrl: "git@github.com:example/mcp-pharo.git",
+        },
+        sourceDirectory: "src",
+        baseline: "MCP",
+        branch: "codex/mcp-pharo/github-44",
+        baseBranch: "main",
+        materialization: {
+          strategy: "copy",
+        },
+      },
+      {
+        repository: {
+          id: "pharo-support",
+          componentId: "pharo-support",
+          remoteUrl: "git@github.com:example/pharo-support.git",
+          originPath: path.relative(worktreePath, dependencyWorktreePath),
+        },
+        sourceDirectory: "src",
+        baseline: "PharoSupport",
+        baseBranch: "main",
+        materialization: {
+          strategy: "copy",
+        },
+      },
+    ]);
   });
 
   it("lets explicit PLexus workspace ids override DevNexus worktree-derived ids", () => {

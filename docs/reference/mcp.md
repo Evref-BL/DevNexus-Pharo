@@ -64,10 +64,12 @@ PLexus image-lease metadata for the target and repository branch.
 
 If the prepared worktree source contains exactly one `BaselineOf...` package
 under `src`, Codex initialization also updates the shared `plexus.project.json`
-with a setup-owned `dev` image `repositoryWorkspace`. That declaration records
-the component id, source directory, baseline, branch, base branch when known,
-and `copy` materialization, but leaves `originPath` unset so PLexus uses the
-current workspace source path.
+with setup-owned `dev` image repository workspace metadata. Active
+source-controlled dependency projections with one baseline under `src` are
+projected as additional editable repository workspaces; ordinary dependencies
+remain PLexus shared-cache inputs. The primary declaration leaves `originPath`
+unset so PLexus uses the current workspace source path. Dependency origins are
+relative to that workspace source path.
 
 Prepared implementation worktrees receive the agent-facing `pharo_gateway`
 entry, but not `route_control`. Shared project roots may keep `route_control`

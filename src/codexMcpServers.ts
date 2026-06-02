@@ -100,6 +100,21 @@ interface DevNexusWorkerContext {
       title?: string;
     };
   };
+  dependencySupport?: {
+    pluginDependencyProjections?: DevNexusWorkerDependencyProjection[];
+  };
+}
+
+export interface DevNexusWorkerDependencyProjection {
+  id?: string;
+  sourceControl?: "support" | "source";
+  sourcePath?: string;
+  targetPath?: string;
+  status?: "linked" | "present" | "skipped";
+  sourceComponent?: {
+    id?: string;
+    sourceRoot?: string;
+  };
 }
 
 interface ResolvedCodexWorkspaceContext {
@@ -187,6 +202,64 @@ function optionalString(value: unknown): string | undefined {
     : undefined;
 }
 
+function optionalWorkerDependencyProjectionStatus(
+  value: unknown,
+): DevNexusWorkerDependencyProjection["status"] | undefined {
+  return value === "linked" || value === "present" || value === "skipped"
+    ? value
+    : undefined;
+}
+
+function optionalWorkerDependencyProjectionSourceControl(
+  value: unknown,
+): DevNexusWorkerDependencyProjection["sourceControl"] | undefined {
+  return value === "support" || value === "source" ? value : undefined;
+}
+
+function workerDependencyProjection(
+  value: unknown,
+): DevNexusWorkerDependencyProjection | undefined {
+  const projection = optionalRecord(value);
+  if (!projection) {
+    return undefined;
+  }
+
+  const sourceComponent = optionalRecord(projection.sourceComponent);
+  return {
+    id: optionalString(projection.id),
+    sourceControl: optionalWorkerDependencyProjectionSourceControl(
+      projection.sourceControl,
+    ),
+    sourcePath: optionalString(projection.sourcePath),
+    targetPath: optionalString(projection.targetPath),
+    status: optionalWorkerDependencyProjectionStatus(projection.status),
+    ...(sourceComponent
+      ? {
+          sourceComponent: {
+            id: optionalString(sourceComponent.id),
+            sourceRoot: optionalString(sourceComponent.sourceRoot),
+          },
+        }
+      : {}),
+  };
+}
+
+function workerDependencyProjections(
+  value: unknown,
+): DevNexusWorkerDependencyProjection[] | undefined {
+  const projections = Array.isArray(value)
+    ? value
+        .map((projection) => workerDependencyProjection(projection))
+        .filter(
+          (
+            projection,
+          ): projection is DevNexusWorkerDependencyProjection =>
+            projection !== undefined,
+        )
+    : undefined;
+  return projections && projections.length > 0 ? projections : undefined;
+}
+
 function readDevNexusWorkerContext(
   workspacePath: string | undefined,
 ): DevNexusWorkerContext | undefined {
@@ -213,8 +286,12 @@ function readDevNexusWorkerContext(
     const component = optionalRecord(parsed.component);
     const worktree = optionalRecord(parsed.worktree);
     const ownership = optionalRecord(parsed.ownership);
+    const dependencySupport = optionalRecord(parsed.dependencySupport);
     const worktreeWorkItem = optionalRecord(worktree?.workItem);
     const ownershipWorkItem = optionalRecord(ownership?.workItem);
+    const pluginDependencyProjections = workerDependencyProjections(
+      dependencySupport?.pluginDependencyProjections,
+    );
 
     const context = {
       projectRoot: optionalString(parsed.projectRoot),
@@ -270,6 +347,13 @@ function readDevNexusWorkerContext(
                     },
                   }
                 : {}),
+            },
+          }
+        : {}),
+      ...(pluginDependencyProjections
+        ? {
+            dependencySupport: {
+              pluginDependencyProjections,
             },
           }
         : {}),

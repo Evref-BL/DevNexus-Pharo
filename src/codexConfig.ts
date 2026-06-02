@@ -19,11 +19,15 @@ import {
   legacyGatewayCodexMcpServerName,
   projectUsesSharedDevNexusMcp,
   resolveCodexWorkspaceContext,
+  type DevNexusWorkerDependencyProjection,
   workspaceProjectConfig,
 } from "./codexMcpServers.js";
 import {
   inferPlexusRepositoryWorkspaceProjection,
 } from "./plexusRepositoryWorkspaceProjection.js";
+import type {
+  PlexusRepositoryWorkspaceConfig,
+} from "./plexusProjectConfig.js";
 
 export {
   mergeCodexMcpServersIntoToml,
@@ -59,7 +63,7 @@ export interface InitCodexWorkspaceResult {
 function worktreeRepositoryWorkspaceProjection(
   projectConfig: NonNullable<ReturnType<typeof workspaceProjectConfig>>,
   workspaceContext: ReturnType<typeof resolveCodexWorkspaceContext>,
-) {
+): PlexusRepositoryWorkspaceConfig | undefined {
   const workerContext = workspaceContext.workerContext;
   const worktree = workerContext?.worktree ?? workerContext?.ownership;
   const componentId = worktree?.componentId ?? workerContext?.component?.id;
@@ -73,6 +77,86 @@ function worktreeRepositoryWorkspaceProjection(
     componentId,
     ...(worktree?.branchName ? { branchName: worktree.branchName } : {}),
   });
+}
+
+function relativeOriginPath(
+  workspaceSourcePath: string,
+  originPath: string,
+): string {
+  const relativePath = path.relative(
+    path.resolve(workspaceSourcePath),
+    path.resolve(originPath),
+  );
+  return relativePath.length > 0 ? relativePath : ".";
+}
+
+function dependencyRepositoryWorkspaceProjection(
+  projectConfig: NonNullable<ReturnType<typeof workspaceProjectConfig>>,
+  workspaceContext: ReturnType<typeof resolveCodexWorkspaceContext>,
+  dependencyProjection: DevNexusWorkerDependencyProjection,
+  primaryComponentId: string | undefined,
+): PlexusRepositoryWorkspaceConfig | undefined {
+  if (
+    dependencyProjection.sourceControl !== "source" ||
+    dependencyProjection.status === "skipped"
+  ) {
+    return undefined;
+  }
+
+  const componentId = dependencyProjection.sourceComponent?.id;
+  const dependencyPath =
+    dependencyProjection.targetPath ?? dependencyProjection.sourcePath;
+  if (!componentId || !dependencyPath || componentId === primaryComponentId) {
+    return undefined;
+  }
+
+  return inferPlexusRepositoryWorkspaceProjection({
+    projectConfig,
+    workspaceSourcePath: dependencyPath,
+    componentId,
+    originPath: relativeOriginPath(
+      workspaceContext.workspaceSourcePath,
+      dependencyPath,
+    ),
+  });
+}
+
+function worktreeRepositoryWorkspaceProjections(
+  projectConfig: NonNullable<ReturnType<typeof workspaceProjectConfig>>,
+  workspaceContext: ReturnType<typeof resolveCodexWorkspaceContext>,
+): PlexusRepositoryWorkspaceConfig[] | undefined {
+  const workerContext = workspaceContext.workerContext;
+  const worktree = workerContext?.worktree ?? workerContext?.ownership;
+  const primaryComponentId = worktree?.componentId ?? workerContext?.component?.id;
+  const projections = [
+    worktreeRepositoryWorkspaceProjection(projectConfig, workspaceContext),
+    ...(
+      workerContext?.dependencySupport?.pluginDependencyProjections ?? []
+    ).map((dependencyProjection) =>
+      dependencyRepositoryWorkspaceProjection(
+        projectConfig,
+        workspaceContext,
+        dependencyProjection,
+        primaryComponentId,
+      ),
+    ),
+  ].filter(
+    (
+      projection,
+    ): projection is PlexusRepositoryWorkspaceConfig =>
+      projection !== undefined,
+  );
+
+  const seen = new Set<string>();
+  const uniqueProjections = projections.filter((projection) => {
+    const repositoryId = projection.repository.id;
+    if (seen.has(repositoryId)) {
+      return false;
+    }
+    seen.add(repositoryId);
+    return true;
+  });
+  return uniqueProjections.length > 0 ? uniqueProjections : undefined;
 }
 
 export function initCodexWorkspace(
@@ -96,7 +180,7 @@ export function initCodexWorkspace(
         projectConfig,
         config,
         options.dryRun,
-        worktreeRepositoryWorkspaceProjection(projectConfig, workspaceContext),
+        worktreeRepositoryWorkspaceProjections(projectConfig, workspaceContext),
       )
     : undefined;
   const existingToml = fs.existsSync(configPath)

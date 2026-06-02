@@ -16,6 +16,7 @@ export interface InferPlexusRepositoryWorkspaceProjectionOptions {
   workspaceSourcePath: string;
   componentId: string;
   branchName?: string;
+  originPath?: string;
 }
 
 const defaultPharoSourceDirectory = "src";
@@ -41,16 +42,18 @@ export function inferPlexusRepositoryWorkspaceProjection(
     (options.componentId === options.projectConfig.id
       ? options.projectConfig.repo?.remoteUrl ?? undefined
       : undefined);
+  const branchName = options.branchName ?? gitCurrentBranch(sourcePath);
 
   return {
     repository: {
       id: options.componentId,
       componentId: options.componentId,
       ...(remoteUrl ? { remoteUrl } : {}),
+      ...(options.originPath ? { originPath: options.originPath } : {}),
     },
     sourceDirectory: defaultPharoSourceDirectory,
     baseline,
-    ...(options.branchName ? { branch: options.branchName } : {}),
+    ...(branchName ? { branch: branchName } : {}),
     ...(baseBranch ? { baseBranch } : {}),
     ...(baseCommit ? { baseCommit } : {}),
     materialization: {
@@ -63,7 +66,18 @@ export function applyPlexusRepositoryWorkspaceProjection(
   config: PlexusProjectConfig,
   repositoryWorkspace: PlexusRepositoryWorkspaceConfig | undefined,
 ): PlexusProjectConfig {
-  if (!repositoryWorkspace) {
+  return applyPlexusRepositoryWorkspaceProjections(
+    config,
+    repositoryWorkspace ? [repositoryWorkspace] : [],
+  );
+}
+
+export function applyPlexusRepositoryWorkspaceProjections(
+  config: PlexusProjectConfig,
+  repositoryWorkspaces: readonly PlexusRepositoryWorkspaceConfig[] | undefined,
+): PlexusProjectConfig {
+  const projectedRepositoryWorkspaces = repositoryWorkspaces ?? [];
+  if (projectedRepositoryWorkspaces.length === 0) {
     return config;
   }
 
@@ -72,7 +86,7 @@ export function applyPlexusRepositoryWorkspaceProjection(
       ...config,
       images: [
         buildPlexusPharoImageProfile(config.id, {
-          repositoryWorkspace,
+          repositoryWorkspaces: projectedRepositoryWorkspaces,
         }),
       ],
     };
@@ -88,16 +102,24 @@ export function applyPlexusRepositoryWorkspaceProjection(
     return config;
   }
   if (
-    targetImage.repositoryWorkspace !== undefined &&
-    !canRefreshProjectedRepositoryWorkspace(targetImage, repositoryWorkspace)
+    imageRepositoryWorkspaces(targetImage).length > 0 &&
+    !canRefreshProjectedRepositoryWorkspaces(
+      targetImage,
+      projectedRepositoryWorkspaces,
+    )
   ) {
     return config;
   }
 
+  const {
+    repositoryWorkspace: _existingRepositoryWorkspace,
+    repositoryWorkspaces: _existingRepositoryWorkspaces,
+    ...targetImageWithoutRepositoryWorkspaces
+  } = targetImage;
   const images = [...config.images];
   images[targetIndex] = {
-    ...targetImage,
-    repositoryWorkspace,
+    ...targetImageWithoutRepositoryWorkspaces,
+    ...repositoryWorkspaceImageFields(projectedRepositoryWorkspaces),
   };
   return {
     ...config,
@@ -105,22 +127,52 @@ export function applyPlexusRepositoryWorkspaceProjection(
   };
 }
 
-function canRefreshProjectedRepositoryWorkspace(
+function repositoryWorkspaceImageFields(
+  repositoryWorkspaces: readonly PlexusRepositoryWorkspaceConfig[],
+): Record<string, unknown> {
+  if (repositoryWorkspaces.length === 1) {
+    return { repositoryWorkspace: repositoryWorkspaces[0] };
+  }
+
+  return { repositoryWorkspaces: [...repositoryWorkspaces] };
+}
+
+function canRefreshProjectedRepositoryWorkspaces(
   image: Record<string, unknown>,
-  repositoryWorkspace: PlexusRepositoryWorkspaceConfig,
+  repositoryWorkspaces: readonly PlexusRepositoryWorkspaceConfig[],
 ): boolean {
   if (image.id !== defaultPlexusPharoImageProfileId) {
     return false;
   }
-  const existingWorkspace = image.repositoryWorkspace;
-  if (!isRecord(existingWorkspace) || !isRecord(existingWorkspace.repository)) {
+  const existingWorkspaces = imageRepositoryWorkspaces(image);
+  if (existingWorkspaces.length === 0) {
     return false;
   }
+  const projectedComponentIds = new Set(
+    repositoryWorkspaces
+      .map((workspace) => workspace.repository.componentId)
+      .filter((componentId): componentId is string => componentId !== undefined),
+  );
 
+  return existingWorkspaces.every((existingWorkspace) => {
+    if (!isRecord(existingWorkspace.repository)) {
+      return false;
+    }
+    const originPath = existingWorkspace.repository.originPath;
+    return (
+      (originPath === undefined ||
+        (typeof originPath === "string" && !isAbsolutePathLike(originPath))) &&
+      typeof existingWorkspace.repository.componentId === "string" &&
+      projectedComponentIds.has(existingWorkspace.repository.componentId)
+    );
+  });
+}
+
+function isAbsolutePathLike(value: string): boolean {
   return (
-    existingWorkspace.repository.originPath === undefined &&
-    existingWorkspace.repository.componentId ===
-      repositoryWorkspace.repository.componentId
+    path.isAbsolute(value) ||
+    /^[A-Za-z]:[\\/]/u.test(value) ||
+    value.startsWith("\\")
   );
 }
 
@@ -134,6 +186,15 @@ function projectionTargetImageIndex(images: unknown[]): number {
     return defaultImageIndex;
   }
   return images.length === 1 ? 0 : -1;
+}
+
+function imageRepositoryWorkspaces(
+  image: Record<string, unknown>,
+): Array<Record<string, unknown>> {
+  if (Array.isArray(image.repositoryWorkspaces)) {
+    return image.repositoryWorkspaces.filter(isRecord);
+  }
+  return isRecord(image.repositoryWorkspace) ? [image.repositoryWorkspace] : [];
 }
 
 function inferBaselineName(
@@ -186,6 +247,15 @@ function gitMergeBase(sourcePath: string, baseBranch: string): string | undefine
   }
 
   return undefined;
+}
+
+function gitCurrentBranch(sourcePath: string): string | undefined {
+  if (!fs.existsSync(path.join(sourcePath, ".git"))) {
+    return undefined;
+  }
+
+  const branch = gitOutput(sourcePath, ["rev-parse", "--abbrev-ref", "HEAD"]);
+  return branch && branch !== "HEAD" ? branch : undefined;
 }
 
 function gitOutput(sourcePath: string, args: string[]): string | undefined {

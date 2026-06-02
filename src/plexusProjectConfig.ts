@@ -65,6 +65,7 @@ export interface PlexusPharoImageProfile {
     transport: "https" | "ssh";
   };
   repositoryWorkspace?: PlexusRepositoryWorkspaceConfig;
+  repositoryWorkspaces?: PlexusRepositoryWorkspaceConfig[];
 }
 
 export interface PlexusProjectRuntimeConfig {
@@ -199,11 +200,15 @@ export function buildPlexusPharoImageProfile(
     loadScript?: string | null;
     gitTransport?: "https" | "ssh";
     repositoryWorkspace?: PlexusRepositoryWorkspaceConfig;
+    repositoryWorkspaces?: readonly PlexusRepositoryWorkspaceConfig[];
   } = {},
 ): PlexusPharoImageProfile {
   const id = safePlexusImageProfileId(
     options.id ?? defaultPlexusPharoImageProfileId,
   );
+  const repositoryWorkspaces =
+    options.repositoryWorkspaces ??
+    (options.repositoryWorkspace ? [options.repositoryWorkspace] : []);
   return {
     id,
     imageName: `${safePlexusImageNameToken(projectId)}-{workspaceId}-${id}`,
@@ -220,8 +225,11 @@ export function buildPlexusPharoImageProfile(
     git: {
       transport: options.gitTransport ?? "https",
     },
-    ...(options.repositoryWorkspace
-      ? { repositoryWorkspace: options.repositoryWorkspace }
+    ...(repositoryWorkspaces.length === 1
+      ? { repositoryWorkspace: repositoryWorkspaces[0] }
+      : {}),
+    ...(repositoryWorkspaces.length > 1
+      ? { repositoryWorkspaces: [...repositoryWorkspaces] }
       : {}),
   };
 }

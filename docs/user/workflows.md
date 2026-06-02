@@ -82,7 +82,9 @@ For prepared implementation worktrees, `codex init` reads
 shared `plexus.project.json` as a PLexus repository workspace. The projection is
 created when the worktree has exactly one `BaselineOf...` package under `src`;
 it uses the worktree source path at runtime instead of storing a fixed
-`originPath` in shared config.
+`originPath` in shared config. Active source-controlled dependency projections
+with their own unambiguous baseline are projected as additional editable
+repository workspaces; ordinary dependencies remain PLexus shared-cache inputs.
 
 `codex doctor` checks generated entries and performs HTTP checks for home-level
 MCP services when applicable.

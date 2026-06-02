@@ -125,11 +125,18 @@ kept separate from home-level MCP ports.
 
 When `codex init` runs in a prepared DevNexus worktree, DevNexus-Pharo can
 overlay the shared `plexus.project.json` with a setup-owned `dev` image profile.
-If the worktree source has exactly one `BaselineOf...` package under `src`, the
-profile receives a PLexus `repositoryWorkspace` with the component id, remote
-URL when known, `sourceDirectory`, `baseline`, branch, base branch, and `copy`
-materialization. The generated repository identity omits `originPath`; PLexus
-uses the per-open workspace source path for the concrete worktree checkout.
+If the primary worktree source has exactly one `BaselineOf...` package under
+`src`, the profile receives PLexus repository workspace metadata with the
+component id, remote URL when known, `sourceDirectory`, `baseline`, branch,
+base branch, and `copy` materialization. Active source-controlled dependency
+projections with their own unambiguous baseline are added as additional
+repository workspaces. Ordinary dependencies remain PLexus shared-cache inputs.
+
+When one repository is projected, DevNexus-Pharo writes `repositoryWorkspace`.
+When several repositories are projected, it writes `repositoryWorkspaces`.
+Primary repository identities omit `originPath`; dependency repository origins
+are written relative to the prepared workspace source path so PLexus can resolve
+the concrete checkout at open time.
 
 ## Image execution policy
 

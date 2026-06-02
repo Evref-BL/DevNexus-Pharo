@@ -144,9 +144,12 @@ and `PLEXUS_WORKSPACE_SOURCE_PATH`, and the PLexus workspace id is derived from
 the component id and work-item id unless an explicit workspace id is supplied.
 When the worktree source contains exactly one `BaselineOf...` package under
 `src`, `codex init` also projects that component into the shared
-`plexus.project.json` as the default `dev` image repository workspace. The
-projection does not write an `originPath`; PLexus resolves the concrete source
-checkout from the workspace source path at open time.
+`plexus.project.json` as the default `dev` image repository workspace. Active
+source-controlled dependency projections with one baseline under `src` are
+projected as additional editable repository workspaces. Ordinary dependencies
+remain PLexus shared-cache inputs. The primary projection does not write an
+`originPath`; dependency origins are relative to the workspace source path so
+PLexus resolves concrete checkouts at open time.
 Prepared worktree configs keep the agent-facing `pharo_gateway`, but they do
 not expose `route_control` to normal implementation agents. Runtime cleanup,
 handoff, and publication decisions remain DevNexus-Pharo responsibilities; the
