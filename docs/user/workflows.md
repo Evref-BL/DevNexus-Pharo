@@ -76,6 +76,16 @@ For shared DevNexus plugin roots, `codex init` writes the root project surface:
 `dev_nexus`, `dev_nexus_pharo`, `plexus_project`, `pharo_launcher`,
 `route_control`, and the live `pharo_gateway` endpoint.
 
+For prepared implementation worktrees, `codex init` reads
+`.dev-nexus/context/context.json`, maps the worktree path to
+`PLEXUS_WORKSPACE_SOURCE_PATH`, and can project the worktree checkout into the
+shared `plexus.project.json` as a PLexus repository workspace. The projection is
+created when the worktree has exactly one `BaselineOf...` package under `src`;
+it uses the worktree source path at runtime instead of storing a fixed
+`originPath` in shared config. Active source-controlled dependency projections
+with their own unambiguous baseline are projected as additional editable
+repository workspaces; ordinary dependencies remain PLexus shared-cache inputs.
+
 `codex doctor` checks generated entries and performs HTTP checks for home-level
 MCP services when applicable.
 

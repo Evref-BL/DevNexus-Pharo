@@ -220,6 +220,42 @@ describe("DevNexus-Pharo extension", () => {
     });
   });
 
+  it("can attach a PLexus repository workspace to a setup-owned image profile", () => {
+    expect(
+      buildPlexusPharoImageProfile("MCP Pharo", {
+        repositoryWorkspace: {
+          repository: {
+            id: "mcp-pharo",
+            componentId: "mcp-pharo",
+          },
+          sourceDirectory: "src",
+          baseline: "MCP",
+          branch: "codex/mcp-pharo/github-42",
+          baseBranch: "main",
+          materialization: {
+            strategy: "copy",
+          },
+        },
+      }),
+    ).toMatchObject({
+      id: "dev",
+      imageName: "MCP-Pharo-{workspaceId}-dev",
+      repositoryWorkspace: {
+        repository: {
+          id: "mcp-pharo",
+          componentId: "mcp-pharo",
+        },
+        sourceDirectory: "src",
+        baseline: "MCP",
+        branch: "codex/mcp-pharo/github-42",
+        baseBranch: "main",
+        materialization: {
+          strategy: "copy",
+        },
+      },
+    });
+  });
+
   it("writes configured Docker image execution policy into PLexus metadata", () => {
     const homePath = makeTempDir("dev-nexus-pharo-home-");
     const projectRoot = path.join(makeTempDir("dev-nexus-pharo-project-"), "Project");
