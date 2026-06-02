@@ -55,7 +55,16 @@ url = "http://127.0.0.1:<project-port>/mcp"
 ```
 
 Project-scoped entries include PLexus environment variables that identify the
-project root, workspace root, target id, and PLexus state root.
+project root, workspace root, workspace source path, target id, and PLexus state
+root. When the workspace is a prepared DevNexus worktree, DevNexus-Pharo reads
+`.dev-nexus/context/context.json`, derives a stable PLexus workspace id from the
+component and work-item ids, and passes the worktree path as
+`PLEXUS_WORKSPACE_SOURCE_PATH`. The scoped launcher entry also carries generic
+PLexus image-lease metadata for the target and repository branch.
+
+Prepared implementation worktrees receive the agent-facing `pharo_gateway`
+entry, but not `route_control`. Shared project roots may keep `route_control`
+for setup and supervision workflows.
 
 ## Tool ownership
 

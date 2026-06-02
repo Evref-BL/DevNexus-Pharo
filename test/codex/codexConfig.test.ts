@@ -29,6 +29,54 @@ function makeTempDir(prefix: string): string {
   return tempDir;
 }
 
+function writeDevNexusWorkerContext(
+  worktreePath: string,
+  context: {
+    projectRoot: string;
+    projectId: string;
+    projectName: string;
+    componentId: string;
+    sourceRoot: string;
+    worktreesRoot: string;
+    branchName: string;
+    workItemId?: string;
+  },
+): void {
+  const contextDirectory = path.join(worktreePath, ".dev-nexus", "context");
+  fs.mkdirSync(contextDirectory, { recursive: true });
+  fs.writeFileSync(
+    path.join(contextDirectory, "context.json"),
+    `${JSON.stringify(
+      {
+        version: 1,
+        project: {
+          id: context.projectId,
+          name: context.projectName,
+          root: context.projectRoot,
+        },
+        projectRoot: context.projectRoot,
+        component: {
+          id: context.componentId,
+          sourceRoot: context.sourceRoot,
+        },
+        worktree: {
+          componentId: context.componentId,
+          sourceRoot: context.sourceRoot,
+          worktreesRoot: context.worktreesRoot,
+          worktreePath,
+          branchName: context.branchName,
+          ...(context.workItemId
+            ? { workItem: { id: context.workItemId, title: "Mapped work" } }
+            : {}),
+        },
+      },
+      null,
+      2,
+    )}\n`,
+    "utf8",
+  );
+}
+
 function closeServer(server: http.Server): Promise<void> {
   return new Promise((resolve, reject) => {
     server.close((error) => {
@@ -238,6 +286,7 @@ describe("Codex config", () => {
         PLEXUS_PROJECT_ID: "pharo-project",
         PLEXUS_WORKSPACE_ID: path.basename(projectRoot),
         PLEXUS_WORKSPACE_ROOT: path.resolve(projectRoot),
+        PLEXUS_WORKSPACE_SOURCE_PATH: path.resolve(projectRoot),
         PLEXUS_TARGET_ID: `pharo-project--${path.basename(projectRoot)}`,
         PLEXUS_STATE_ROOT: path.join(homePath, "state", "plexus"),
       },
@@ -246,6 +295,156 @@ describe("Codex config", () => {
     expect(result.content).toContain("[mcp_servers.route_control]");
     expect(result.content).not.toContain("[mcp_servers.gateway]");
     expect(result.content).not.toContain("[mcp_servers.pharo]");
+  });
+
+  it("maps prepared DevNexus worktrees to generic PLexus workspace context", () => {
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
+    initNexusHome({ homePath });
+    const projectRoot = makeTempDir("dev-nexus-pharo-shared-root-");
+    const componentSourceRoot = path.join(projectRoot, "sources", "mcp-pharo");
+    const worktreesRoot = path.join(projectRoot, "worktrees", "mcp-pharo");
+    const worktreePath = path.join(worktreesRoot, "codex-mcp-pharo-github-42");
+    fs.mkdirSync(worktreePath, { recursive: true });
+    saveProjectConfig(projectRoot, {
+      version: 1,
+      id: "shared-dogfood",
+      name: "Shared Dogfood",
+      home: null,
+      repo: {
+        kind: "git",
+        remoteUrl: "git@github.com:example/shared-dogfood.git",
+        defaultBranch: "main",
+      },
+      worktreesRoot: "worktrees",
+      mcp: {
+        command: "dev-nexus",
+        args: ["mcp-stdio"],
+        agentTargets: [{ agent: "codex" }],
+      },
+      plugins: [devNexusPharoDevNexusPluginConfig()],
+    });
+    initCodexWorkspace({
+      homePath,
+      workspacePath: projectRoot,
+      config: loadHomeConfig(homePath),
+    });
+    writeDevNexusWorkerContext(worktreePath, {
+      projectRoot,
+      projectId: "shared-dogfood",
+      projectName: "Shared Dogfood",
+      componentId: "mcp-pharo",
+      sourceRoot: componentSourceRoot,
+      worktreesRoot,
+      branchName: "codex/mcp-pharo/github-42",
+      workItemId: "github-42",
+    });
+    const configPath = codexConfigPath(worktreePath);
+    fs.mkdirSync(path.dirname(configPath), { recursive: true });
+    fs.writeFileSync(
+      configPath,
+      ["[mcp_servers.keep]", 'command = "node"'].join("\n"),
+      "utf8",
+    );
+
+    const result = initCodexWorkspace({
+      homePath,
+      workspacePath: worktreePath,
+      config: loadHomeConfig(homePath),
+    });
+
+    expect(Object.keys(result.servers)).toEqual([
+      "dev_nexus",
+      "dev_nexus_pharo",
+      "plexus_project",
+      "pharo_launcher",
+      "pharo_gateway",
+    ]);
+    expect(result.servers.plexus_project).toMatchObject({
+      env: {
+        PLEXUS_PROJECT_ROOT: path.resolve(projectRoot),
+        PLEXUS_PROJECT_ID: "shared-dogfood",
+        PLEXUS_WORKSPACE_ID: "mcp-pharo--github-42",
+        PLEXUS_WORKSPACE_ROOT: path.resolve(worktreePath),
+        PLEXUS_WORKSPACE_SOURCE_PATH: path.resolve(worktreePath),
+        PLEXUS_TARGET_ID: "shared-dogfood--mcp-pharo--github-42",
+        PLEXUS_STATE_ROOT: path.join(homePath, "state", "plexus"),
+      },
+    });
+    expect(result.servers.pharo_launcher).toMatchObject({
+      env: {
+        PLEXUS_WORKSPACE_SOURCE_PATH: path.resolve(worktreePath),
+        PLEXUS_IMAGE_LEASE_OWNER_ID: "shared-dogfood--mcp-pharo--github-42",
+        PLEXUS_IMAGE_LEASE_OWNER_KIND: "target",
+        PLEXUS_IMAGE_LEASE_REPOSITORY_PATH: path.resolve(worktreePath),
+        PLEXUS_IMAGE_LEASE_BRANCH: "codex/mcp-pharo/github-42",
+      },
+    });
+    expect(result.servers.route_control).toBeUndefined();
+    expect(result.content).not.toContain("[mcp_servers.route_control]");
+    expect(result.content).toContain("[mcp_servers.keep]");
+  });
+
+  it("lets explicit PLexus workspace ids override DevNexus worktree-derived ids", () => {
+    const homePath = makeTempDir("dev-nexus-pharo-home-");
+    initNexusHome({ homePath });
+    const projectRoot = makeTempDir("dev-nexus-pharo-shared-root-");
+    const worktreesRoot = path.join(projectRoot, "worktrees", "mcp-pharo");
+    const worktreePath = path.join(worktreesRoot, "codex-mcp-pharo-github-43");
+    fs.mkdirSync(worktreePath, { recursive: true });
+    saveProjectConfig(projectRoot, {
+      version: 1,
+      id: "shared-dogfood",
+      name: "Shared Dogfood",
+      home: null,
+      repo: {
+        kind: "git",
+        remoteUrl: "git@github.com:example/shared-dogfood.git",
+        defaultBranch: "main",
+      },
+      worktreesRoot: "worktrees",
+      mcp: {
+        command: "dev-nexus",
+        args: ["mcp-stdio"],
+        agentTargets: [{ agent: "codex" }],
+      },
+      plugins: [devNexusPharoDevNexusPluginConfig()],
+    });
+    initCodexWorkspace({
+      homePath,
+      workspacePath: projectRoot,
+      config: loadHomeConfig(homePath),
+    });
+    writeDevNexusWorkerContext(worktreePath, {
+      projectRoot,
+      projectId: "shared-dogfood",
+      projectName: "Shared Dogfood",
+      componentId: "mcp-pharo",
+      sourceRoot: path.join(projectRoot, "sources", "mcp-pharo"),
+      worktreesRoot,
+      branchName: "codex/mcp-pharo/github-43",
+      workItemId: "github-43",
+    });
+
+    const result = initCodexWorkspace({
+      homePath,
+      workspacePath: worktreePath,
+      workspaceId: "manual-runtime",
+      config: loadHomeConfig(homePath),
+    });
+
+    expect(result.servers.plexus_project).toMatchObject({
+      env: {
+        PLEXUS_WORKSPACE_ID: "manual-runtime",
+        PLEXUS_WORKSPACE_SOURCE_PATH: path.resolve(worktreePath),
+        PLEXUS_TARGET_ID: "shared-dogfood--manual-runtime",
+      },
+    });
+    expect(result.servers.pharo_launcher).toMatchObject({
+      env: {
+        PLEXUS_IMAGE_LEASE_OWNER_ID: "shared-dogfood--manual-runtime",
+        PLEXUS_IMAGE_LEASE_REPOSITORY_PATH: path.resolve(worktreePath),
+      },
+    });
   });
 
   it("preserves configured legacy PLexus gateway MCP server names", () => {
