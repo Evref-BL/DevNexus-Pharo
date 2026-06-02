@@ -66,6 +66,15 @@ Prepared implementation worktrees receive the agent-facing `pharo_gateway`
 entry, but not `route_control`. Shared project roots may keep `route_control`
 for setup and supervision workflows.
 
+`pharo_workspace_handoff_summarize` accepts an existing
+`plexus_project_status` result and returns a provider-neutral handoff summary.
+It reports the project/workspace/target ids, source path, runtime health,
+image ids, image-local repository state, recovery actions, and cleanup guidance.
+Clean workspaces are closeable, dirty image-local repository workspaces should
+be archived or exported before close, unknown or failed repository workspace
+state should be preserved for review, and failed images should be rescued before
+raw cleanup.
+
 ## Tool ownership
 
 DevNexus-Pharo tools own:
