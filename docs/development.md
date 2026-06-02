@@ -136,6 +136,18 @@ Shared roots also include the generic `dev_nexus` server. Use `dev_nexus`, not
 `dev_nexus_pharo`, for generic `project_*`, `work_item_*`,
 `automation_status`, `target_cycle_*`, and `target_report`.
 
+Prepared DevNexus worktrees are detected through
+`.dev-nexus/context/context.json`. DevNexus-Pharo maps that context to generic
+PLexus environment values: the owning DevNexus project root becomes
+`PLEXUS_PROJECT_ROOT`, the worktree path becomes both `PLEXUS_WORKSPACE_ROOT`
+and `PLEXUS_WORKSPACE_SOURCE_PATH`, and the PLexus workspace id is derived from
+the component id and work-item id unless an explicit workspace id is supplied.
+Prepared worktree configs keep the agent-facing `pharo_gateway`, but they do
+not expose `route_control` to normal implementation agents. Runtime cleanup,
+handoff, and publication decisions remain DevNexus-Pharo responsibilities; the
+PLexus boundary receives only project, workspace, target, state-root, source,
+and image-lease environment values.
+
 `codex doctor` validates managed config sections, endpoint health, MCP
 `initialize`, `tools/list`, and expected tool names. For project-local
 `pharo_gateway` and `route_control` entries it performs only a read-only config check,

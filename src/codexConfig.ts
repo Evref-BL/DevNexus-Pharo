@@ -18,6 +18,7 @@ import {
   defaultPharoCodexMcpServerName,
   legacyGatewayCodexMcpServerName,
   projectUsesSharedDevNexusMcp,
+  resolveCodexWorkspaceContext,
   workspaceProjectConfig,
 } from "./codexMcpServers.js";
 
@@ -59,10 +60,14 @@ export function initCodexWorkspace(
   const homePath = resolveNexusHome(options.homePath);
   const config = options.config ?? loadHomeConfig(homePath);
   const configPath = codexConfigPath(workspacePath);
+  const workspaceContext = resolveCodexWorkspaceContext({
+    workspacePath,
+    projectRoot: options.projectRoot,
+  });
   const projectConfig =
     workspaceProjectConfig(workspacePath) ??
     workspaceProjectConfig(options.projectRoot);
-  const plexusProjectRoot = options.projectRoot ?? workspacePath;
+  const plexusProjectRoot = workspaceContext.projectRoot;
   const plexusProjectConfig = projectUsesSharedDevNexusMcp(projectConfig)
     ? ensureSharedPlexusProjectConfig(
         plexusProjectRoot,
