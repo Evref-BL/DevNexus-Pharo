@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
     paths:
+      - .github/workflows/publish.yml
       - package.json
       - package-lock.json
   workflow_dispatch:
@@ -44,6 +45,11 @@ jobs:
           node-version: 22
           registry-url: https://registry.npmjs.org
           package-manager-cache: false
+
+      - name: Set up npm for trusted publishing
+        run: |
+          npm install -g npm@^11.5.1
+          npm --version
 
       - name: Read package metadata
         id: package
