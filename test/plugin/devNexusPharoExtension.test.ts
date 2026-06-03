@@ -188,6 +188,26 @@ describe("DevNexus-Pharo extension", () => {
         mountProjectReadOnly: true,
       },
     });
+    expect(
+      resolvePlexusImageExecutionPolicy({
+        mode: "scoped-project-local",
+        storage: {
+          mode: "project-state",
+          defaultStateRoot: ".plexus",
+        },
+        requireProjectOwnedProfile: true,
+      }),
+    ).toEqual({
+      mode: "scoped-project-local",
+      requireDisposableImage: true,
+      requireCleanupPlan: true,
+      docker: {
+        image: null,
+        network: "none",
+        autoRemove: true,
+        mountProjectReadOnly: true,
+      },
+    });
     expect(() =>
       resolvePlexusImageExecutionPolicy({
         mode: "docker",
@@ -198,9 +218,7 @@ describe("DevNexus-Pharo extension", () => {
 
   it("builds a setup-owned default Pharo image profile without enabling images by default", () => {
     expect(
-      buildPlexusPharoImageProfile("DevNexus MCP-Pharo", {
-        loadScript: "pharo/load-mcp.st",
-      }),
+      buildPlexusPharoImageProfile("DevNexus MCP-Pharo"),
     ).toEqual({
       id: "dev",
       imageName: "DevNexus-MCP-Pharo-{workspaceId}-dev",
@@ -211,8 +229,7 @@ describe("DevNexus-Pharo extension", () => {
       create: {
         kind: "template",
         profileId: "pharo-13-default",
-        templateName: "Pharo 13.0 - 64bit",
-        templateCategory: "Official",
+        templateName: "Pharo 13.0 - 64bit (stable)",
       },
       git: {
         transport: "https",

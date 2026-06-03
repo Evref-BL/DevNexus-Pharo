@@ -85,9 +85,9 @@ When replacing managed entries, preserve unrelated user-managed TOML.
 ## PLexus metadata
 
 `plexus.project.json` stores project-local gateway and image execution policy.
-Default image execution is disabled. When Docker execution is enabled,
-`docker.image` must be set and the runtime still needs an explicit task
-boundary before images are launched.
+Default image execution is disabled. Scoped project-local execution is used by
+approved local runner work, and Docker execution requires `docker.image`. The
+runtime still needs an explicit task boundary before images are launched.
 
 ## Release notes for contributors
 
@@ -98,7 +98,8 @@ extension, not by the generic project config loader.
 
 `plexus.project.json` also contains the DevNexus-Pharo-authored `imageExecution`
 policy consumed by future PLexus image work. Its default mode is `disabled`;
-Docker mode requires an explicit runner image and keeps
+scoped project-local mode matches PLexus local runner work, and Docker mode
+requires an explicit runner image. The safety flags keep
 `requireDisposableImage`, `requireCleanupPlan`, `autoRemove`, and
 `mountProjectReadOnly` enabled by default.
 
