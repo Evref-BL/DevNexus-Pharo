@@ -6,7 +6,11 @@ import {
 } from "./config.js";
 import {
   buildPlexusPharoImageProfile,
+  defaultPlexusPharoImageCreateProfileId,
+  defaultPlexusPharoImageLoadScript,
   defaultPlexusPharoImageProfileId,
+  defaultPlexusPharoImageTemplateCategory,
+  defaultPlexusPharoImageTemplateName,
   type PlexusProjectConfig,
   type PlexusRepositoryWorkspaceConfig,
 } from "./plexusProjectConfig.js";
@@ -119,11 +123,71 @@ export function applyPlexusRepositoryWorkspaceProjections(
   const images = [...config.images];
   images[targetIndex] = {
     ...targetImageWithoutRepositoryWorkspaces,
+    ...defaultGeneratedImageProfileFields(targetImageWithoutRepositoryWorkspaces),
     ...repositoryWorkspaceImageFields(projectedRepositoryWorkspaces),
   };
   return {
     ...config,
     images,
+  };
+}
+
+function defaultGeneratedImageProfileFields(
+  image: Record<string, unknown>,
+): Record<string, unknown> {
+  if (image.id !== defaultPlexusPharoImageProfileId) {
+    return {};
+  }
+  const fields: Record<string, unknown> = {};
+  if (
+    !isRecord(image.mcp) ||
+    typeof image.mcp.loadScript !== "string" ||
+    image.mcp.loadScript.trim().length === 0
+  ) {
+    fields.mcp = {
+      ...(isRecord(image.mcp) ? image.mcp : {}),
+      loadScript: defaultPlexusPharoImageLoadScript,
+    };
+  }
+
+  if (!defaultGeneratedImageCreateIsCurrent(image.create)) {
+    fields.create = defaultGeneratedImageCreate(image.create);
+  }
+
+  return fields;
+}
+
+function defaultGeneratedImageCreateIsCurrent(value: unknown): boolean {
+  if (!isRecord(value)) {
+    return false;
+  }
+  return (
+    value.kind === "template" &&
+    value.profileId === defaultPlexusPharoImageCreateProfileId &&
+    value.templateName === defaultPlexusPharoImageTemplateName &&
+    value.templateCategory === defaultPlexusPharoImageTemplateCategory
+  );
+}
+
+function defaultGeneratedImageCreate(
+  value: unknown,
+): Record<string, unknown> {
+  const record = isRecord(value) ? value : {};
+  const {
+    kind: _kind,
+    profileId: _profileId,
+    templateName: _templateName,
+    templateCategory: _templateCategory,
+    ...rest
+  } = record;
+  return {
+    ...rest,
+    kind: "template",
+    profileId: defaultPlexusPharoImageCreateProfileId,
+    templateName: defaultPlexusPharoImageTemplateName,
+    ...(defaultPlexusPharoImageTemplateCategory
+      ? { templateCategory: defaultPlexusPharoImageTemplateCategory }
+      : {}),
   };
 }
 

@@ -1,4 +1,7 @@
-export type PlexusImageExecutionMode = "disabled" | "docker";
+export type PlexusImageExecutionMode =
+  | "disabled"
+  | "docker"
+  | "scoped-project-local";
 export type PlexusImageExecutionDockerNetwork = "none" | "bridge";
 
 export interface PlexusImageExecutionDockerPolicy {
@@ -107,11 +110,15 @@ function imageExecutionMode(
   if (value === undefined) {
     return fallback;
   }
-  if (value === "disabled" || value === "docker") {
+  if (
+    value === "disabled" ||
+    value === "docker" ||
+    value === "scoped-project-local"
+  ) {
     return value;
   }
 
-  throw new Error(`${pathName} must be disabled or docker`);
+  throw new Error(`${pathName} must be disabled, docker, or scoped-project-local`);
 }
 
 function dockerNetwork(

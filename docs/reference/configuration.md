@@ -156,7 +156,7 @@ The default image execution policy is disabled:
 }
 ```
 
-Projects may opt into Docker-backed image execution through
+Projects may opt into scoped project-local or Docker-backed image execution through
 `extensions.dev-nexus-pharo.imageExecution` or through the generated PLexus
 project config. When `mode` is `docker`, `docker.image` is required.
 

@@ -366,6 +366,54 @@ describe("Codex config", () => {
       workspacePath: projectRoot,
       config: loadHomeConfig(homePath),
     });
+    fs.writeFileSync(
+      path.join(projectRoot, "plexus.project.json"),
+      `${JSON.stringify(
+        {
+          id: "shared-pharo",
+          name: "Shared Pharo",
+          images: [
+            {
+              id: "dev",
+              imageName: "shared-pharo-{workspaceId}-dev",
+              active: true,
+              mcp: { loadScript: null },
+              create: {
+                kind: "template",
+                profileId: "pharo-13-default",
+                templateName: "Pharo 13.0 - 64bit",
+                templateCategory: "Official",
+              },
+              git: { transport: "https" },
+            },
+          ],
+          imageExecution: {
+            mode: "scoped-project-local",
+            requireDisposableImage: true,
+            requireCleanupPlan: true,
+            docker: {
+              image: null,
+              network: "none",
+              autoRemove: true,
+              mountProjectReadOnly: true,
+            },
+          },
+          runtime: {
+            gateway: {
+              mode: "project-local",
+              host: "127.0.0.1",
+              port: 17577,
+              agentMcpServerName: "pharo_gateway",
+              agentMcpPath: "/mcp",
+              routeControlMcpPath: "/control-mcp",
+            },
+          },
+        },
+        null,
+        2,
+      )}\n`,
+      "utf8",
+    );
     writeDevNexusWorkerContext(worktreePath, {
       projectRoot,
       projectId: "shared-pharo",
@@ -427,6 +475,14 @@ describe("Codex config", () => {
     expect(plexusProjectConfig.images).toEqual([
       expect.objectContaining({
         id: "dev",
+        mcp: {
+          loadScript: "pharo/load-mcp.st",
+        },
+        create: {
+          kind: "template",
+          profileId: "pharo-13-default",
+          templateName: "Pharo 13.0 - 64bit (stable)",
+        },
         repositoryWorkspace: {
           repository: {
             id: "mcp-pharo",
@@ -931,14 +987,20 @@ describe("Codex config", () => {
     });
     const existingImages = [{ id: "image-1", template: "Pharo 12" }];
     const existingImageExecution = {
-      mode: "docker",
+      mode: "scoped-project-local",
+      storage: {
+        mode: "project-state",
+        defaultStateRoot: ".plexus",
+      },
+      requireProjectOwnedProfile: true,
       requireDisposableImage: false,
       requireCleanupPlan: false,
       docker: {
-        image: "ghcr.io/example/pharo:test",
+        image: null,
         network: "bridge",
         autoRemove: false,
         mountProjectReadOnly: false,
+        runnerHint: "preserve-me",
       },
     };
     fs.writeFileSync(

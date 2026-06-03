@@ -53,13 +53,13 @@ export interface PlexusPharoImageProfile {
   imageName: string;
   active: boolean;
   mcp: {
-    loadScript: string | null;
+    loadScript: string;
   };
   create: {
     kind: "template";
     profileId: string;
     templateName: string;
-    templateCategory: string;
+    templateCategory?: string;
   };
   git: {
     transport: "https" | "ssh";
@@ -96,8 +96,11 @@ export const defaultPlexusProjectGatewayPortBase = 17_340;
 export const defaultPlexusProjectGatewayPortSpan = 1_000;
 export const defaultPlexusPharoImageProfileId = "dev";
 export const defaultPlexusPharoImageCreateProfileId = "pharo-13-default";
-export const defaultPlexusPharoImageTemplateName = "Pharo 13.0 - 64bit";
-export const defaultPlexusPharoImageTemplateCategory = "Official";
+export const defaultPlexusPharoImageTemplateName =
+  "Pharo 13.0 - 64bit (stable)";
+export const defaultPlexusPharoImageTemplateCategory: string | undefined =
+  undefined;
+export const defaultPlexusPharoImageLoadScript = "pharo/load-mcp.st";
 
 export function devNexusPharoProjectExtensionEntry(
   config: DevNexusPharoProjectExtensionConfig = {},
@@ -197,7 +200,7 @@ export function buildPlexusPharoImageProfile(
   projectId: string,
   options: {
     id?: string;
-    loadScript?: string | null;
+    loadScript?: string;
     gitTransport?: "https" | "ssh";
     repositoryWorkspace?: PlexusRepositoryWorkspaceConfig;
     repositoryWorkspaces?: readonly PlexusRepositoryWorkspaceConfig[];
@@ -214,13 +217,15 @@ export function buildPlexusPharoImageProfile(
     imageName: `${safePlexusImageNameToken(projectId)}-{workspaceId}-${id}`,
     active: true,
     mcp: {
-      loadScript: options.loadScript ?? null,
+      loadScript: options.loadScript ?? defaultPlexusPharoImageLoadScript,
     },
     create: {
       kind: "template",
       profileId: defaultPlexusPharoImageCreateProfileId,
       templateName: defaultPlexusPharoImageTemplateName,
-      templateCategory: defaultPlexusPharoImageTemplateCategory,
+      ...(defaultPlexusPharoImageTemplateCategory
+        ? { templateCategory: defaultPlexusPharoImageTemplateCategory }
+        : {}),
     },
     git: {
       transport: options.gitTransport ?? "https",
@@ -378,14 +383,36 @@ export function normalizePlexusProjectConfig(
     imageExecution:
       existing.imageExecution === undefined
         ? clonePlexusImageExecutionPolicy(imageExecutionPolicy)
-        : resolvePlexusImageExecutionPolicy(
-            existing.imageExecution,
-            "plexus.project.imageExecution",
-          ),
+        : normalizeExistingPlexusImageExecution(existing.imageExecution),
     runtime: {
       gateway:
         gateway ??
         buildPlexusProjectGatewayConfig(projectId, reservedGatewayPorts),
     },
   } as PlexusProjectConfig;
+}
+
+function normalizeExistingPlexusImageExecution(
+  value: unknown,
+): PlexusImageExecutionPolicy {
+  const normalized = resolvePlexusImageExecutionPolicy(
+    value,
+    "plexus.project.imageExecution",
+  );
+  if (!isRecord(value)) {
+    return normalized;
+  }
+
+  return {
+    ...value,
+    ...normalized,
+    docker: {
+      ...(isRecord(value.docker) ? value.docker : {}),
+      ...normalized.docker,
+    },
+  } as PlexusImageExecutionPolicy;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value));
 }
