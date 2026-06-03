@@ -1,6 +1,6 @@
 {
   "name": "@evref-bl/dev-nexus-pharo",
-  "version": "0.1.0-alpha.10",
+  "version": "0.1.0-alpha.11",
   "private": false,
   "description": "Pharo specialization layer for DevNexus, PLexus, and Pharo project workspaces.",
   "license": "Apache-2.0",
@@ -31,7 +31,7 @@
     "access": "public"
   },
   "engines": {
-    "node": ">=24"
+    "node": ">=22"
   },
   "scripts": {
     "build": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\" && tsc -p tsconfig.json && node -e \"require('node:fs').chmodSync('dist/cli.js', 0o755)\"",
@@ -42,7 +42,7 @@
     "dev-nexus": "npm:@evref-bl/dev-nexus@0.1.0-alpha.16"
   },
   "devDependencies": {
-    "@types/node": "^24.0.0",
+    "@types/node": "^22.19.19",
     "typescript": "^5.9.0",
     "vitest": "^4.0.0"
   }

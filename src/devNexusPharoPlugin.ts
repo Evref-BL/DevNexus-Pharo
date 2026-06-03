@@ -10,7 +10,7 @@ import {
 
 export const devNexusPharoPluginId = "dev-nexus-pharo";
 export const devNexusPharoPluginName = "DevNexus-Pharo";
-export const devNexusPharoPluginVersion = "0.1.0-alpha.10";
+export const devNexusPharoPluginVersion = "0.1.0-alpha.11";
 
 type DevNexusPharoMcpExposure = "direct" | "gateway" | "hidden";
 type DevNexusPharoBaseCapability =
@@ -265,7 +265,7 @@ export function devNexusPharoDevNexusPluginConfig(): DevNexusPharoProjectPluginC
           "If that surface is missing or unreachable, report the infrastructure blocker instead of editing Smalltalk source files from disk as a substitute.",
         ].join(" "),
         targetAgents: ["codex", "claude"],
-        provenance: "DevNexus dogfood Pharo plugin plan",
+        provenance: "DevNexus-Pharo plugin plan",
       },
       {
         kind: "worker_context_fragment",
@@ -279,7 +279,7 @@ export function devNexusPharoDevNexusPluginConfig(): DevNexusPharoProjectPluginC
           "The live-runtime template is approval-gated and must not be used as implicit approval to launch Pharo images, PLexus services, Docker, or GUI-adjacent automation.",
         ].join(" "),
         targetAgents: ["codex", "claude"],
-        provenance: "DevNexus dogfood remote-host execution plan",
+        provenance: "DevNexus-Pharo remote-host execution plan",
       },
       {
         kind: "worker_briefing_fragment",
@@ -292,7 +292,7 @@ export function devNexusPharoDevNexusPluginConfig(): DevNexusPharoProjectPluginC
           "Do not run live images, Docker, PLexus open/close, or gateway live routes unless the selected work item documents the approved isolated runner and cleanup plan.",
         ].join(" "),
         targetAgents: ["codex", "claude"],
-        provenance: "DevNexus dogfood Pharo plugin plan",
+        provenance: "DevNexus-Pharo plugin plan",
       },
     ],
   };

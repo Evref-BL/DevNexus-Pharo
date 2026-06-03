@@ -1,16 +1,21 @@
 name: Publish to npm
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - package.json
+      - package-lock.json
   workflow_dispatch:
     inputs:
       dist_tag:
         description: npm dist-tag to publish under
         required: true
-        default: dogfood
+        default: latest
         type: choice
         options:
-          - dogfood
           - latest
+          - alpha
 
 permissions:
   contents: read
@@ -36,7 +41,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: 24
+          node-version: 22
           registry-url: https://registry.npmjs.org
           package-manager-cache: false
 
@@ -47,22 +52,29 @@ jobs:
           echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
 
       - name: Check package version is not published
+        id: version
         run: |
           if npm view "${{ steps.package.outputs.name }}@${{ steps.package.outputs.version }}" version --json > /tmp/npm-version.json 2>/dev/null; then
-            echo "::error::${{ steps.package.outputs.name }}@${{ steps.package.outputs.version }} is already published"
-            exit 1
+            echo "::notice::${{ steps.package.outputs.name }}@${{ steps.package.outputs.version }} is already published; skipping publish"
+            echo "published=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "published=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Install dependencies
+        if: steps.version.outputs.published != 'true'
         run: npm ci
 
       - name: Run checks
+        if: steps.version.outputs.published != 'true'
         run: npm run check
 
       - name: Verify package contents
+        if: steps.version.outputs.published != 'true'
         run: npm pack --dry-run
 
       - name: Publish to npm
+        if: steps.version.outputs.published != 'true'
         env:
-          NPM_DIST_TAG: ${{ inputs.dist_tag }}
+          NPM_DIST_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.dist_tag || 'latest' }}
         run: npm publish --access public --tag "$NPM_DIST_TAG"
