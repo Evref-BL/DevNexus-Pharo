@@ -36,7 +36,7 @@
   "scripts": {
     "build": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\" && tsc -p tsconfig.json && node -e \"require('node:fs').chmodSync('dist/cli.js', 0o755)\"",
     "test": "vitest run --no-file-parallelism",
-    "coverage": "vitest run --no-file-parallelism --coverage",
+    "coverage": "vitest run --no-file-parallelism --coverage --coverage.reporter=text --coverage.reporter=lcov",
     "check": "npm run build && npm test"
   },
   "dependencies": {
