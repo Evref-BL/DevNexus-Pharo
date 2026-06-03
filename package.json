@@ -36,6 +36,7 @@
   "scripts": {
     "build": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\" && tsc -p tsconfig.json && node -e \"require('node:fs').chmodSync('dist/cli.js', 0o755)\"",
     "test": "vitest run --no-file-parallelism",
+    "coverage": "vitest run --no-file-parallelism --coverage",
     "check": "npm run build && npm test"
   },
   "dependencies": {
@@ -43,6 +44,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.19.19",
+    "@vitest/coverage-v8": "^4.0.0",
     "typescript": "^5.9.0",
     "vitest": "^4.0.0"
   }
