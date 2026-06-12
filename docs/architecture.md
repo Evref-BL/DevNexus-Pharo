@@ -1,109 +1,51 @@
 # Architecture
 
-DevNexus-Pharo is a specialization layer. It adds Pharo-aware setup and runtime
-projection to DevNexus without taking ownership of generic DevNexus workflow
-features or Pharo image internals.
-
-## Component boundaries
+DevNexus-Pharo is a bridge plugin. It contributes Pharo-specific knowledge to
+DevNexus and points DevNexus at PLexus-owned runtime surfaces.
 
 ```text
-DevNexus
-  -> project registry, work tracking, worktrees, targets, publication
-
-DevNexus-Pharo
-  -> Pharo project setup, support skills, Codex projection, home services
-
-PLexus
-  -> project-local runtime routing and policy
-
-pharo-launcher-mcp
-  -> Pharo Launcher image lifecycle
-
-MCP-Pharo
-  -> image-local Pharo tools
+DevNexus project
+  -> DevNexus-Pharo plugin metadata
+  -> PLexus project/runtime context
+  -> Pharo Launcher and image-local MCP-Pharo tools
 ```
 
-DevNexus-Pharo should depend on published DevNexus APIs and PLexus command/MCP
-surfaces. It should not reach into Pharo images directly.
+## Ownership
 
-## Home model
+DevNexus owns generic orchestration:
 
-The home is host-local state. It contains:
+- workspace and component metadata
+- work items and coordination
+- worktrees and worker context
+- target cycles and publication policy
+- generic MCP and setup infrastructure
 
-- `dev-nexus.home.json`
-- service logs
-- service state files
-- the reserved control project
-- registered managed projects
+DevNexus-Pharo owns plugin bridge data:
 
-The control project is for environment management only. Product work belongs in
-the managed project root or the owning DevNexus component.
+- Pharo support skills
+- PLexus project config defaults
+- host capability hints
+- runner profile templates
+- worker context and briefing fragments
+- documentation for Pharo runtime boundaries
 
-## Project model
+PLexus owns runtime behavior:
 
-A managed Pharo project can have a project root that differs from its source Git
-checkout. This lets DevNexus-Pharo store generated support files without writing
-into an existing source repository.
+- project lifecycle
+- Pharo Launcher access
+- gateway routing
+- `plexus_project`, `pharo_launcher`, `route_control`, and `pharo_gateway`
+  MCP surfaces
 
-Generated project files include:
+## Non-Goals
 
-- `dev-nexus.project.json`
-- `plexus.project.json`
-- `AGENTS.md`
-- `suggestedFirstPrompt.md`
-- `.dev-nexus/skills`
-- `.codex/config.toml`
+DevNexus-Pharo does not provide:
 
-The DevNexus project config remains the source of truth for project identity,
-repository facts, worktree roots, extensions, plugins, and provider-neutral work
-tracking.
+- a standalone `dev-nexus-pharo` command
+- DevNexus-Pharo-owned MCP tools
+- generic project creation or work tracking
+- home-level service start/stop/status commands
+- image-local Pharo code tools
 
-## Runtime model
-
-The live service graph has two home-level services:
-
-- DevNexus-Pharo MCP
-- PLexus gateway
-
-`dev-nexus-pharo start` ensures the control project exists, starts PLexus, starts
-DevNexus-Pharo MCP, and waits for DevNexus-Pharo MCP health. `stop` shuts down
-DevNexus-Pharo MCP before PLexus.
-
-Project-local runtime routing is represented in `plexus.project.json`. Codex
-uses scoped MCP entries to reach project-local PLexus surfaces when a shared
-DevNexus project enables the DevNexus-Pharo plugin.
-
-## Codex projection
-
-Home-level workspaces receive HTTP entries for DevNexus-Pharo MCP and PLexus.
-Shared project roots receive command entries for DevNexus, DevNexus-Pharo, and
-PLexus project tools plus HTTP entries for the scoped route-control and gateway
-surfaces.
-
-`codex init` replaces only managed entries and preserves unrelated user-managed
-TOML. `codex doctor` verifies generated entries and performs live HTTP checks
-only for home-level services.
-
-## Image execution
-
-DevNexus-Pharo records image execution policy but does not launch images during
-static setup. The default policy disables image execution and requires disposable
-images and cleanup planning when a project opts into runtime image work.
-
-Live image operations belong behind PLexus policy and must have an explicit
-project, workspace, target, and cleanup boundary.
-
-## Work tracking
-
-Work tracking is provider-neutral and owned by DevNexus core. DevNexus-Pharo
-reads work tracking facts for status and MCP context, but it does not define a
-tracker-specific schema.
-
-## Design constraints
-
-- Keep generic workflow logic in DevNexus core.
-- Keep Pharo image lifecycle logic in pharo-launcher-mcp and PLexus.
-- Keep image-local code execution inside MCP-Pharo routes.
-- Keep generated support files out of source checkouts unless the checkout is
-  explicitly the managed project root.
-- Keep runtime mutation separate from static projection.
+When a required capability fits one of those areas, add it to DevNexus, PLexus,
+or MCP-Pharo instead of reintroducing it here.

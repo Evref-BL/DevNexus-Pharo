@@ -9,9 +9,6 @@
     "url": "git+https://github.com/Evref-BL/DevNexus-Pharo.git"
   },
   "type": "module",
-  "bin": {
-    "dev-nexus-pharo": "dist/cli.js"
-  },
   "main": "./dist/index.js",
   "exports": {
     ".": {
@@ -34,7 +31,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "build": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\" && tsc -p tsconfig.json && node -e \"require('node:fs').chmodSync('dist/cli.js', 0o755)\"",
+    "build": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\" && tsc -p tsconfig.json",
     "test": "vitest run --no-file-parallelism",
     "coverage": "vitest run --no-file-parallelism --coverage --coverage.reporter=text --coverage.reporter=lcov",
     "check": "npm run build && npm test"

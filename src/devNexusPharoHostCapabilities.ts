@@ -3,7 +3,6 @@ export type DevNexusPharoHostCapabilityTag =
   | "pharo-launcher"
   | "plexus"
   | "mcp"
-  | "dev-nexus-pharo"
   | "gui-adjacent";
 
 export type DevNexusPharoStaticProbeStatus =
@@ -15,13 +14,14 @@ export type DevNexusPharoStaticProbeEffect = "none";
 
 export type DevNexusPharoCommandProbeName =
   | "pharo"
-  | "dev-nexus-pharo"
+  | "plexus"
   | "plexus-gateway";
 
 export type DevNexusPharoMcpServerProbeName =
-  | "dev_nexus_pharo"
   | "plexus_project"
-  | "pharo_launcher";
+  | "pharo_launcher"
+  | "route_control"
+  | "pharo_gateway";
 
 export type DevNexusPharoRunnerOperationClass =
   | "read_only"
@@ -56,19 +56,12 @@ export interface DevNexusPharoStaticHostProbeFacts {
   guiAdjacentAvailable?: boolean;
 }
 
-export interface DevNexusPharoHostCapabilityProbe {
+export interface DevNexusPharoStaticHostCapabilityProbe {
   id: string;
   capability: DevNexusPharoHostCapabilityTag;
   status: DevNexusPharoStaticProbeStatus;
-  summary: string;
-  nextAction: string | null;
   effect: DevNexusPharoStaticProbeEffect;
-}
-
-export interface DevNexusPharoHostCapabilityContribution {
-  capability: DevNexusPharoHostCapabilityTag;
-  description: string;
-  staticProbeIds: string[];
+  nextAction: string;
 }
 
 export interface DevNexusPharoStaticHostCapabilityResult {
@@ -76,44 +69,35 @@ export interface DevNexusPharoStaticHostCapabilityResult {
   presentCapabilities: DevNexusPharoHostCapabilityTag[];
   missingCapabilities: DevNexusPharoHostCapabilityTag[];
   unknownCapabilities: DevNexusPharoHostCapabilityTag[];
-  probes: DevNexusPharoHostCapabilityProbe[];
-}
-
-export interface DevNexusPharoRunnerProfileLimitsTemplate {
-  timeoutMs: number | null;
-  outputLineLimit: number | null;
-  outputByteLimit: number | null;
-}
-
-export interface DevNexusPharoRunnerArtifactRetentionTemplate {
-  mode: DevNexusPharoRunnerArtifactRetentionMode;
-  ttlDays: number | null;
-}
-
-export interface DevNexusPharoRunnerCredentialIdentityTemplate {
-  kind: DevNexusPharoRunnerCredentialIdentityKind;
-  identityRef: string | null;
-}
-
-export interface DevNexusPharoRunnerApprovalTemplate {
-  required: boolean;
-  policyGateIds: string[];
-  approvalRef: string | null;
-  reason: string | null;
+  probes: DevNexusPharoStaticHostCapabilityProbe[];
 }
 
 export interface DevNexusPharoRunnerProfileTemplate {
   id: string;
-  displayName: string;
-  enabled: true;
+  name: string;
   requiredCapabilities: DevNexusPharoHostCapabilityTag[];
   allowedOperationClasses: DevNexusPharoRunnerOperationClass[];
   commandProfileRefs: string[];
-  limits: DevNexusPharoRunnerProfileLimitsTemplate;
-  artifactRetention: DevNexusPharoRunnerArtifactRetentionTemplate;
-  credentialIdentity: DevNexusPharoRunnerCredentialIdentityTemplate;
   mutationClass: DevNexusPharoRunnerMutationClass;
-  approval: DevNexusPharoRunnerApprovalTemplate;
+  artifactRetention: {
+    mode: DevNexusPharoRunnerArtifactRetentionMode;
+    ttlDays: number | null;
+  };
+  limits: {
+    timeoutMs: number;
+    outputLineLimit: number;
+    outputByteLimit: number;
+  };
+  credentialIdentity: {
+    kind: DevNexusPharoRunnerCredentialIdentityKind;
+  };
+  approval: {
+    required: boolean;
+    policyGateIds: string[];
+    approvalRef: string | null;
+    reason: string | null;
+  };
+  enabled: boolean;
 }
 
 export const devNexusPharoHostCapabilityTags: DevNexusPharoHostCapabilityTag[] = [
@@ -121,158 +105,214 @@ export const devNexusPharoHostCapabilityTags: DevNexusPharoHostCapabilityTag[] =
   "pharo-launcher",
   "plexus",
   "mcp",
-  "dev-nexus-pharo",
   "gui-adjacent",
 ];
 
-const readOnlyEffect: DevNexusPharoStaticProbeEffect = "none";
+const capabilityDescriptions: Record<DevNexusPharoHostCapabilityTag, string> = {
+  pharo: "Pharo command-line tooling is visible to the host.",
+  "pharo-launcher": "Pharo Launcher is installed for image lifecycle work.",
+  plexus: "PLexus tooling is visible to the host.",
+  mcp: "PLexus-owned MCP surfaces are configured for the worker.",
+  "gui-adjacent":
+    "The host can perform GUI-adjacent setup checks when explicitly approved.",
+};
 
-export const devNexusPharoHostCapabilityContributions: DevNexusPharoHostCapabilityContribution[] =
-  [
-    {
-      capability: "pharo",
-      description: "Pharo command-line tooling is visible to the host.",
-      staticProbeIds: ["command:pharo"],
-    },
-    {
-      capability: "pharo-launcher",
-      description: "Pharo Launcher is installed for image lifecycle inspection.",
-      staticProbeIds: ["pharo-launcher:installation"],
-    },
-    {
-      capability: "plexus",
-      description: "PLexus gateway tooling is visible to the host.",
-      staticProbeIds: ["command:plexus-gateway", "mcp-config:plexus_project"],
-    },
-    {
-      capability: "mcp",
-      description: "DevNexus-Pharo, PLexus, or Pharo Launcher MCP entries are configured.",
-      staticProbeIds: [
-        "mcp-config:dev_nexus_pharo",
-        "mcp-config:plexus_project",
-        "mcp-config:pharo_launcher",
-      ],
-    },
-    {
-      capability: "dev-nexus-pharo",
-      description: "DevNexus-Pharo command-line tooling is visible to the host.",
-      staticProbeIds: ["command:dev-nexus-pharo"],
-    },
-    {
-      capability: "gui-adjacent",
-      description: "The host can perform GUI-adjacent setup checks when explicitly approved.",
-      staticProbeIds: ["host:gui-adjacent"],
-    },
-  ];
+const capabilityProbeIds: Record<DevNexusPharoHostCapabilityTag, string[]> = {
+  pharo: ["command:pharo"],
+  "pharo-launcher": ["pharo-launcher:installation"],
+  plexus: ["command:plexus", "command:plexus-gateway"],
+  mcp: [
+    "mcp-config:plexus_project",
+    "mcp-config:pharo_launcher",
+    "mcp-config:route_control",
+    "mcp-config:pharo_gateway",
+  ],
+  "gui-adjacent": ["host:gui-adjacent"],
+};
 
-export const devNexusPharoRunnerProfileTemplates: DevNexusPharoRunnerProfileTemplate[] =
-  [
-    runnerProfileTemplate({
-      id: "pharo-read-only-status",
-      displayName: "Pharo Read-Only Status",
-      requiredCapabilities: ["dev-nexus-pharo"],
-      allowedOperationClasses: ["read_only"],
-      commandProfileRefs: ["dev-nexus-pharo-status"],
-      mutationClass: "none",
-    }),
-    runnerProfileTemplate({
-      id: "pharo-mcp-tool-list",
-      displayName: "Pharo MCP Tool List",
-      requiredCapabilities: ["mcp", "dev-nexus-pharo"],
-      allowedOperationClasses: ["read_only"],
-      commandProfileRefs: ["dev-nexus-pharo-mcp-tool-list"],
-      mutationClass: "none",
-    }),
-    runnerProfileTemplate({
-      id: "pharo-verification",
-      displayName: "Pharo Verification",
-      requiredCapabilities: [
-        "pharo",
-        "pharo-launcher",
-        "plexus",
-        "mcp",
-        "dev-nexus-pharo",
-      ],
-      allowedOperationClasses: ["read_only", "verification"],
-      commandProfileRefs: ["dev-nexus-pharo-verify"],
-      mutationClass: "verification",
-      artifactRetention: {
-        mode: "logs",
-        ttlDays: 7,
-      },
-      limits: {
-        timeoutMs: 300_000,
-        outputLineLimit: 2_000,
-        outputByteLimit: 1_000_000,
-      },
-    }),
-    runnerProfileTemplate({
-      id: "pharo-live-runtime",
-      displayName: "Pharo Live Runtime",
-      requiredCapabilities: [
-        "pharo",
-        "pharo-launcher",
-        "plexus",
-        "mcp",
-        "dev-nexus-pharo",
-        "gui-adjacent",
-      ],
-      allowedOperationClasses: ["read_only", "live_runtime"],
-      commandProfileRefs: ["dev-nexus-pharo-live-runtime-smoke"],
-      mutationClass: "live_runtime",
-      artifactRetention: {
-        mode: "summary",
-        ttlDays: 30,
-      },
-      approval: {
-        required: true,
-        policyGateIds: ["runner.dev-nexus-pharo.live-runtime.approved"],
-        approvalRef: null,
-        reason:
-          "Live Pharo image, PLexus route, Docker, or GUI-adjacent runtime work requires an explicit bounded runner approval.",
-      },
-    }),
-  ];
+export const devNexusPharoCapabilityDescriptors = devNexusPharoHostCapabilityTags.map(
+  (capability) => ({
+    capability,
+    description: capabilityDescriptions[capability],
+    staticProbeIds: capabilityProbeIds[capability],
+  }),
+);
+
+export const devNexusPharoRunnerProfileTemplates: DevNexusPharoRunnerProfileTemplate[] = [
+  runnerProfileTemplate({
+    id: "pharo-read-only-status",
+    name: "Pharo Read-Only Status",
+    requiredCapabilities: ["pharo"],
+    allowedOperationClasses: ["read_only"],
+    commandProfileRefs: ["pharo-status"],
+    mutationClass: "none",
+  }),
+  runnerProfileTemplate({
+    id: "pharo-mcp-tool-list",
+    name: "Pharo MCP Tool List",
+    requiredCapabilities: ["mcp", "plexus"],
+    allowedOperationClasses: ["read_only"],
+    commandProfileRefs: ["plexus-mcp-tool-list"],
+    mutationClass: "none",
+  }),
+  runnerProfileTemplate({
+    id: "pharo-verification",
+    name: "Pharo Verification",
+    requiredCapabilities: ["pharo", "pharo-launcher", "plexus", "mcp"],
+    allowedOperationClasses: ["read_only", "verification"],
+    commandProfileRefs: ["pharo-verify"],
+    mutationClass: "verification",
+    artifactRetention: { mode: "logs", ttlDays: 7 },
+    limits: {
+      timeoutMs: 300_000,
+      outputLineLimit: 2_000,
+      outputByteLimit: 1_000_000,
+    },
+  }),
+  runnerProfileTemplate({
+    id: "pharo-live-runtime",
+    name: "Pharo Live Runtime",
+    requiredCapabilities: [
+      "pharo",
+      "pharo-launcher",
+      "plexus",
+      "mcp",
+      "gui-adjacent",
+    ],
+    allowedOperationClasses: ["read_only", "live_runtime"],
+    commandProfileRefs: ["pharo-live-runtime-smoke"],
+    mutationClass: "live_runtime",
+    artifactRetention: { mode: "artifacts", ttlDays: 30 },
+    approval: {
+      required: true,
+      policyGateIds: ["runner.dev-nexus-pharo.live-runtime.approved"],
+      approvalRef: null,
+      reason:
+        "Live Pharo image, PLexus route, Docker, or GUI-adjacent runtime work requires an explicit bounded runner approval.",
+    },
+  }),
+];
 
 export function evaluateDevNexusPharoStaticHostCapabilities(
   facts: DevNexusPharoStaticHostProbeFacts,
 ): DevNexusPharoStaticHostCapabilityResult {
-  const probes: DevNexusPharoHostCapabilityProbe[] = [
+  const probes = [
     commandProbe("pharo", "pharo", facts.commands?.pharo),
-    commandProbe(
-      "dev-nexus-pharo",
-      "dev-nexus-pharo",
-      facts.commands?.["dev-nexus-pharo"],
-    ),
+    commandProbe("plexus", "plexus", facts.commands?.plexus),
     commandProbe("plexus-gateway", "plexus", facts.commands?.["plexus-gateway"]),
-    mcpProbe("dev_nexus_pharo", facts.mcpServers?.dev_nexus_pharo),
     mcpProbe("plexus_project", facts.mcpServers?.plexus_project),
     mcpProbe("pharo_launcher", facts.mcpServers?.pharo_launcher),
+    mcpProbe("route_control", facts.mcpServers?.route_control),
+    mcpProbe("pharo_gateway", facts.mcpServers?.pharo_gateway),
     booleanProbe({
       id: "pharo-launcher:installation",
       capability: "pharo-launcher",
       value: facts.pharoLauncherInstalled,
-      presentSummary: "Pharo Launcher installation is configured.",
-      missingSummary: "Pharo Launcher installation is missing.",
+      presentAction: "Pharo Launcher installation was reported present.",
+      missingAction: "Install or expose Pharo Launcher before image lifecycle work.",
       unknownAction: "Configure the static Pharo Launcher installation probe.",
     }),
     booleanProbe({
       id: "host:gui-adjacent",
       capability: "gui-adjacent",
       value: facts.guiAdjacentAvailable,
-      presentSummary: "GUI-adjacent host checks are available.",
-      missingSummary: "GUI-adjacent host checks are unavailable.",
-      unknownAction: "Configure the static GUI-adjacent host probe.",
+      presentAction: "GUI-adjacent automation was explicitly reported available.",
+      missingAction:
+        "Use a host or runner profile that allows GUI-adjacent automation.",
+      unknownAction: "Configure the static GUI-adjacent capability probe.",
     }),
   ];
 
   return {
     mode: "static-read-only",
-    presentCapabilities: capabilityTagsWithStatus(probes, "present"),
-    missingCapabilities: missingCapabilityTags(probes),
-    unknownCapabilities: unknownCapabilityTags(probes),
+    presentCapabilities: capabilitiesWithStatus(probes, "present"),
+    missingCapabilities: capabilitiesWithStatus(probes, "missing"),
+    unknownCapabilities: capabilitiesWithStatus(probes, "unknown"),
     probes,
   };
+}
+
+function commandProbe(
+  command: DevNexusPharoCommandProbeName,
+  capability: DevNexusPharoHostCapabilityTag,
+  value: boolean | undefined,
+): DevNexusPharoStaticHostCapabilityProbe {
+  return booleanProbe({
+    id: `command:${command}`,
+    capability,
+    value,
+    presentAction: `${command} command is visible to the host.`,
+    missingAction: `Install or expose ${command} before selecting this host.`,
+    unknownAction: `Configure the static command probe for ${command}.`,
+  });
+}
+
+function mcpProbe(
+  serverName: DevNexusPharoMcpServerProbeName,
+  value: boolean | undefined,
+): DevNexusPharoStaticHostCapabilityProbe {
+  return booleanProbe({
+    id: `mcp-config:${serverName}`,
+    capability: "mcp",
+    value,
+    presentAction: `${serverName} MCP server is configured.`,
+    missingAction: `Project the PLexus-owned ${serverName} MCP server before MCP work.`,
+    unknownAction: `Configure the static MCP probe for ${serverName}.`,
+  });
+}
+
+function booleanProbe(options: {
+  id: string;
+  capability: DevNexusPharoHostCapabilityTag;
+  value: boolean | undefined;
+  presentAction: string;
+  missingAction: string;
+  unknownAction: string;
+}): DevNexusPharoStaticHostCapabilityProbe {
+  const status =
+    options.value === undefined
+      ? "unknown"
+      : options.value
+        ? "present"
+        : "missing";
+
+  return {
+    id: options.id,
+    capability: options.capability,
+    status,
+    effect: "none",
+    nextAction:
+      status === "present"
+        ? options.presentAction
+        : status === "missing"
+          ? options.missingAction
+          : options.unknownAction,
+  };
+}
+
+function capabilitiesWithStatus(
+  probes: DevNexusPharoStaticHostCapabilityProbe[],
+  status: DevNexusPharoStaticProbeStatus,
+): DevNexusPharoHostCapabilityTag[] {
+  return devNexusPharoHostCapabilityTags.filter((capability) => {
+    const relevantProbes = probes.filter((probe) => probe.capability === capability);
+    if (relevantProbes.length === 0) {
+      return status === "unknown";
+    }
+
+    if (status === "present") {
+      return relevantProbes.some((probe) => probe.status === "present");
+    }
+
+    if (status === "missing") {
+      return (
+        relevantProbes.every((probe) => probe.status !== "present") &&
+        relevantProbes.some((probe) => probe.status === "missing")
+      );
+    }
+
+    return relevantProbes.every((probe) => probe.status === "unknown");
+  });
 }
 
 function runnerProfileTemplate(
@@ -288,139 +328,31 @@ function runnerProfileTemplate(
     >,
 ): DevNexusPharoRunnerProfileTemplate {
   return {
-    ...profile,
     enabled: true,
-    limits: profile.limits ?? {
-      timeoutMs: null,
-      outputLineLimit: null,
-      outputByteLimit: null,
+    limits: {
+      timeoutMs: 120_000,
+      outputLineLimit: 1_000,
+      outputByteLimit: 500_000,
+      ...profile.limits,
     },
-    artifactRetention: profile.artifactRetention ?? {
-      mode: "none",
-      ttlDays: null,
+    artifactRetention: {
+      mode: "summary",
+      ttlDays: 1,
+      ...profile.artifactRetention,
     },
-    credentialIdentity: profile.credentialIdentity ?? {
+    credentialIdentity: {
       kind: "none",
-      identityRef: null,
+      ...profile.credentialIdentity,
     },
-    approval: profile.approval ?? {
+    approval: {
       required: false,
       policyGateIds: [],
       approvalRef: null,
       reason: null,
+      ...profile.approval,
     },
+    ...profile,
   };
 }
 
-function commandProbe(
-  command: DevNexusPharoCommandProbeName,
-  capability: DevNexusPharoHostCapabilityTag,
-  value: boolean | undefined,
-): DevNexusPharoHostCapabilityProbe {
-  return booleanProbe({
-    id: `command:${command}`,
-    capability,
-    value,
-    presentSummary: `Found ${command} command.`,
-    missingSummary: `Missing ${command} command.`,
-    unknownAction: `Configure the static command probe for ${command}.`,
-  });
-}
-
-function mcpProbe(
-  serverName: DevNexusPharoMcpServerProbeName,
-  value: boolean | undefined,
-): DevNexusPharoHostCapabilityProbe {
-  return booleanProbe({
-    id: `mcp-config:${serverName}`,
-    capability: "mcp",
-    value,
-    presentSummary: `Found MCP server config ${serverName}.`,
-    missingSummary: `Missing MCP server config ${serverName}.`,
-    unknownAction: `Configure the static MCP config probe for ${serverName}.`,
-  });
-}
-
-function booleanProbe(options: {
-  id: string;
-  capability: DevNexusPharoHostCapabilityTag;
-  value: boolean | undefined;
-  presentSummary: string;
-  missingSummary: string;
-  unknownAction: string;
-}): DevNexusPharoHostCapabilityProbe {
-  if (options.value === undefined) {
-    return {
-      id: options.id,
-      capability: options.capability,
-      status: "unknown",
-      summary: "Static probe fact was not provided.",
-      nextAction: options.unknownAction,
-      effect: readOnlyEffect,
-    };
-  }
-
-  return {
-    id: options.id,
-    capability: options.capability,
-    status: options.value ? "present" : "missing",
-    summary: options.value ? options.presentSummary : options.missingSummary,
-    nextAction: options.value ? null : missingNextAction(options.id),
-    effect: readOnlyEffect,
-  };
-}
-
-function missingNextAction(probeId: string): string {
-  if (probeId.startsWith("command:")) {
-    return "Install or add the command to the host-local runner path.";
-  }
-  if (probeId.startsWith("mcp-config:")) {
-    return "Add or refresh the host-local MCP server configuration.";
-  }
-  if (probeId === "pharo-launcher:installation") {
-    return "Install Pharo Launcher or mark this host as not supporting pharo-launcher.";
-  }
-  return "Mark this host as not supporting gui-adjacent checks or configure the capability.";
-}
-
-function capabilityTagsWithStatus(
-  probes: readonly DevNexusPharoHostCapabilityProbe[],
-  status: DevNexusPharoStaticProbeStatus,
-): DevNexusPharoHostCapabilityTag[] {
-  const capabilities = new Set(
-    probes
-      .filter((probe) => probe.status === status)
-      .map((probe) => probe.capability),
-  );
-  return devNexusPharoHostCapabilityTags.filter((capability) =>
-    capabilities.has(capability),
-  );
-}
-
-function missingCapabilityTags(
-  probes: readonly DevNexusPharoHostCapabilityProbe[],
-): DevNexusPharoHostCapabilityTag[] {
-  return devNexusPharoHostCapabilityTags.filter(
-    (capability) =>
-      probes.some(
-        (probe) =>
-          probe.capability === capability && probe.status === "missing",
-      ) &&
-      !probes.some(
-        (probe) =>
-          probe.capability === capability && probe.status === "present",
-      ),
-  );
-}
-
-function unknownCapabilityTags(
-  probes: readonly DevNexusPharoHostCapabilityProbe[],
-): DevNexusPharoHostCapabilityTag[] {
-  return devNexusPharoHostCapabilityTags.filter(
-    (capability) =>
-      !probes.some(
-        (probe) =>
-          probe.capability === capability && probe.status !== "unknown",
-      ),
-  );
-}
+export default devNexusPharoHostCapabilityTags;

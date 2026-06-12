@@ -1,163 +1,44 @@
 # Development
 
-This page is for contributors working on DevNexus-Pharo source.
-
-## Local checks
+Use Node.js 22 or newer.
 
 ```bash
+npm install
 npm run build
 npm test
 npm run check
 ```
 
-Use focused Vitest runs while iterating:
+Focused checks:
 
 ```bash
-npx vitest run test/config/config.test.ts --no-file-parallelism
-npx vitest run test/runtime/devNexusPharoRuntime.test.ts --no-file-parallelism
+npx vitest run test/plugin/devNexusPharoPlugin.test.ts --no-file-parallelism
+npx vitest run test/plugin/devNexusPharoExtension.test.ts --no-file-parallelism
+npx vitest run test/plugin/devNexusPharoHostCapabilities.test.ts --no-file-parallelism
 ```
 
-`npm run check` is the final local gate for this package.
+## Source Layout
 
-## Source layout
+- `src/devNexusPharoPlugin.ts`: DevNexus plugin capability declaration
+- `src/devNexusPharoExtension.ts`: project file extension hook
+- `src/devNexusPharoProjectFiles.ts`: generated project support files
+- `src/plexusProjectConfig.ts`: PLexus project config defaults and validation
+- `src/devNexusPharoHostCapabilities.ts`: host capability hints and runner
+  profile templates
+- `src/mcpPharoDomainSkills*`: projected Pharo support skills
+- `src/pharoProjectLoadWorkspace.ts`: Pharo load workspace inference helpers
+- `src/plexusWorkspaceHandoff.ts`: PLexus status handoff summarization
 
-- `src/config.ts`: home config, control project setup, and config validation
-- `src/devNexusPharoProjectService.ts`: Pharo-specific create/import orchestration
-- `src/nexusProjectService.ts`: wrappers around DevNexus core project services
-- `src/codexConfig.ts`: Codex MCP projection and doctor checks
-- `src/devNexusPharoRuntime.ts`: home-level service start/status/stop
-- `src/devNexusPharoExtension.ts`: project files, PLexus metadata, skill pack
-- `src/mcpServer.ts`: MCP tool surface
-- `test/`: Vitest coverage grouped by owning module or workflow
+There should be no CLI entrypoint and no DevNexus-Pharo-owned MCP server.
 
-## Runtime services
+## Boundary Rule
 
-`dev-nexus-pharo start` owns two home-level services:
+Before adding a feature, identify the owner:
 
-- DevNexus-Pharo MCP
-- PLexus gateway
+- generic DevNexus behavior belongs in DevNexus core
+- runtime lifecycle and MCP routing belong in PLexus
+- image-local Pharo code tools belong in MCP-Pharo
+- Pharo-specific DevNexus setup knowledge belongs in DevNexus-Pharo
 
-Both are long-lived local processes. Their state files live under
-`<home>/state/services`; logs live under `<home>/logs`.
-
-The runtime start path:
-
-1. loads the home config
-2. ensures the reserved control project exists
-3. starts PLexus gateway if needed
-4. starts DevNexus-Pharo MCP if needed
-5. waits for DevNexus-Pharo MCP health
-
-Stop shuts down DevNexus-Pharo MCP first, then PLexus gateway.
-
-## Project setup
-
-Managed Pharo project creation/import uses DevNexus core for project registry
-and Git behavior. DevNexus-Pharo adds:
-
-- the `dev-nexus-pharo` extension entry
-- the packaged DevNexus-Pharo plugin entry
-- `plexus.project.json`
-- default `AGENTS.md`
-- projected skills
-- Codex MCP config
-
-Generic projects created through this package do not receive Pharo-specific
-files.
-
-## Codex MCP projection
-
-For normal home workspaces, Codex config receives HTTP entries for
-`dev_nexus_pharo` and `plexus`.
-
-For shared DevNexus project roots with the plugin enabled, Codex config receives
-scoped entries for:
-
-- `dev_nexus`
-- `dev_nexus_pharo`
-- `plexus_project`
-- `pharo_launcher`
-- `route_control`
-- `pharo_gateway`
-
-When replacing managed entries, preserve unrelated user-managed TOML.
-
-## PLexus metadata
-
-`plexus.project.json` stores project-local gateway and image execution policy.
-Default image execution is disabled. Scoped project-local execution is used by
-approved local runner work, and Docker execution requires `docker.image`. The
-runtime still needs an explicit task boundary before images are launched.
-
-## Release notes for contributors
-
-Generic relative paths such as `worktreesRoot` resolve from the directory
-containing `dev-nexus.project.json`. Pharo/PLexus-specific paths such as
-`extensions.dev-nexus-pharo.plexusProjectConfig` are interpreted by the DevNexus-Pharo
-extension, not by the generic project config loader.
-
-`plexus.project.json` also contains the DevNexus-Pharo-authored `imageExecution`
-policy consumed by future PLexus image work. Its default mode is `disabled`;
-scoped project-local mode matches PLexus local runner work, and Docker mode
-requires an explicit runner image. The safety flags keep
-`requireDisposableImage`, `requireCleanupPlan`, `autoRemove`, and
-`mountProjectReadOnly` enabled by default.
-
-For imported or cloned source repositories, `repo.sourceRoot` points from the
-managed project root to the source checkout. The source checkout should not
-receive DevNexus-Pharo metadata unless it is already a managed DevNexus-Pharo project.
-
-Keep commits focused. Update tests with behavior changes and update active docs
-when commands, config shape, or runtime ownership changes. Historical design
-notes should not contradict the active README or references.
-
-## Codex Config Generation
-
-`dev-nexus-pharo codex init <workspace>` updates
-`<workspace>\.codex\config.toml`. It preserves unrelated settings and replaces
-only the managed MCP server entries:
-
-```text
-dev_nexus_pharo
-plexus_project
-pharo_launcher
-route_control
-pharo_gateway
-```
-
-Treat `.codex\config.toml` as local workspace state generated by this command,
-not as source-controlled repository configuration.
-
-Shared DevNexus-Pharo project roots emit command-based `plexus_project` and
-`pharo_launcher` entries plus separate URL MCP entries for `route_control` and
-the agent-facing `pharo_gateway`. The gateway URLs come from the project-local PLexus
-runtime policy in `plexus.project.json`; obsolete home-scoped `plexus`,
-`vibe_kanban`, and `pharo` entries are removed during regeneration.
-Shared roots also include the generic `dev_nexus` server. Use `dev_nexus`, not
-`dev_nexus_pharo`, for generic `project_*`, `work_item_*`,
-`automation_status`, `target_cycle_*`, and `target_report`.
-
-Prepared DevNexus worktrees are detected through
-`.dev-nexus/context/context.json`. DevNexus-Pharo maps that context to generic
-PLexus environment values: the owning DevNexus project root becomes
-`PLEXUS_PROJECT_ROOT`, the worktree path becomes both `PLEXUS_WORKSPACE_ROOT`
-and `PLEXUS_WORKSPACE_SOURCE_PATH`, and the PLexus workspace id is derived from
-the component id and work-item id unless an explicit workspace id is supplied.
-When the worktree source contains exactly one `BaselineOf...` package under
-`src`, `codex init` also projects that component into the shared
-`plexus.project.json` as the default `dev` image repository workspace. Active
-source-controlled dependency projections with one baseline under `src` are
-projected as additional editable repository workspaces. Ordinary dependencies
-remain PLexus shared-cache inputs. The primary projection does not write an
-`originPath`; dependency origins are relative to the workspace source path so
-PLexus resolves concrete checkouts at open time.
-Prepared worktree configs keep the agent-facing `pharo_gateway`, but they do
-not expose `route_control` to normal implementation agents. Runtime cleanup,
-handoff, and publication decisions remain DevNexus-Pharo responsibilities; the
-PLexus boundary receives only project, workspace, target, state-root, source,
-and image-lease environment values.
-
-`codex doctor` validates managed config sections, endpoint health, MCP
-`initialize`, `tools/list`, and expected tool names. For project-local
-`pharo_gateway` and `route_control` entries it performs only a read-only config check,
-so the check does not launch images or open PLexus routes.
+Keep changes in DevNexus-Pharo limited to plugin metadata, setup guidance,
+PLexus config defaults, and projected skills.
