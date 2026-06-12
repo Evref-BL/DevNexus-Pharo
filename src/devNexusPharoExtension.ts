@@ -1,13 +1,5 @@
 import fs from "node:fs";
-import {
-  type NexusExtension,
-} from "dev-nexus";
-import {
-  type NexusProjectConfig,
-} from "./config.js";
-import type {
-  NexusProjectStatusExtensionContribution,
-} from "./nexusProjectService.js";
+import type { NexusExtension, NexusProjectConfig } from "dev-nexus";
 import { devNexusPharoSkillPack } from "./devNexusPharoSkillPack.js";
 import {
   installDevNexusPharoProjectFiles,
@@ -17,6 +9,11 @@ import {
   projectPlexusConfigPath,
   projectUsesDevNexusPharoExtension,
 } from "./plexusProjectConfig.js";
+
+export interface NexusProjectStatusExtensionContribution {
+  plexusProjectConfigPath?: string;
+  plexusProjectConfigExists?: boolean;
+}
 
 export {
   devNexusPharoSkillDefinitions,

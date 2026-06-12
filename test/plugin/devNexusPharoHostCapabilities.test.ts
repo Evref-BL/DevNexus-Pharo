@@ -6,28 +6,18 @@ import {
 } from "../../src/devNexusPharoHostCapabilities.js";
 
 describe("DevNexus-Pharo host capability contributions", () => {
-  it("declares Pharo-domain capability tags for generic DevNexus host matching", () => {
-    expect(devNexusPharoHostCapabilityTags).toEqual([
-      "pharo",
-      "pharo-launcher",
-      "plexus",
-      "mcp",
-      "dev-nexus-pharo",
-      "gui-adjacent",
-    ]);
-  });
-
-  it("evaluates static host probes without launching Pharo, PLexus, Docker, GUI, or SSH", () => {
+  it("evaluates static PLexus and Pharo host probes without DevNexus-Pharo commands", () => {
     const result = evaluateDevNexusPharoStaticHostCapabilities({
       commands: {
         pharo: true,
-        "dev-nexus-pharo": true,
+        plexus: true,
         "plexus-gateway": false,
       },
       mcpServers: {
-        dev_nexus_pharo: true,
-        plexus_project: false,
+        plexus_project: true,
         pharo_launcher: false,
+        route_control: true,
+        pharo_gateway: true,
       },
       pharoLauncherInstalled: false,
       guiAdjacentAvailable: true,
@@ -36,11 +26,12 @@ describe("DevNexus-Pharo host capability contributions", () => {
     expect(result.mode).toBe("static-read-only");
     expect(result.presentCapabilities).toEqual([
       "pharo",
+      "plexus",
       "mcp",
-      "dev-nexus-pharo",
       "gui-adjacent",
     ]);
-    expect(result.missingCapabilities).toEqual(["pharo-launcher", "plexus"]);
+    expect(result.missingCapabilities).toEqual(["pharo-launcher"]);
+    expect(result.unknownCapabilities).toEqual([]);
     expect(result.probes).toMatchObject([
       {
         id: "command:pharo",
@@ -48,8 +39,8 @@ describe("DevNexus-Pharo host capability contributions", () => {
         status: "present",
       },
       {
-        id: "command:dev-nexus-pharo",
-        capability: "dev-nexus-pharo",
+        id: "command:plexus",
+        capability: "plexus",
         status: "present",
       },
       {
@@ -58,19 +49,24 @@ describe("DevNexus-Pharo host capability contributions", () => {
         status: "missing",
       },
       {
-        id: "mcp-config:dev_nexus_pharo",
-        capability: "mcp",
-        status: "present",
-      },
-      {
         id: "mcp-config:plexus_project",
         capability: "mcp",
-        status: "missing",
+        status: "present",
       },
       {
         id: "mcp-config:pharo_launcher",
         capability: "mcp",
         status: "missing",
+      },
+      {
+        id: "mcp-config:route_control",
+        capability: "mcp",
+        status: "present",
+      },
+      {
+        id: "mcp-config:pharo_gateway",
+        capability: "mcp",
+        status: "present",
       },
       {
         id: "pharo-launcher:installation",
@@ -90,17 +86,14 @@ describe("DevNexus-Pharo host capability contributions", () => {
 
   it("keeps unknown static probe facts out of present and missing host tags", () => {
     const result = evaluateDevNexusPharoStaticHostCapabilities({
-      commands: {
-        "dev-nexus-pharo": true,
-      },
+      commands: { plexus: true },
     });
 
-    expect(result.presentCapabilities).toEqual(["dev-nexus-pharo"]);
+    expect(result.presentCapabilities).toEqual(["plexus"]);
     expect(result.missingCapabilities).toEqual([]);
     expect(result.unknownCapabilities).toEqual([
       "pharo",
       "pharo-launcher",
-      "plexus",
       "mcp",
       "gui-adjacent",
     ]);
@@ -110,7 +103,14 @@ describe("DevNexus-Pharo host capability contributions", () => {
     });
   });
 
-  it("publishes runner profile templates for read-only, MCP, verification, and gated runtime work", () => {
+  it("publishes runner profile templates for PLexus-backed Pharo work", () => {
+    expect(devNexusPharoHostCapabilityTags).toEqual([
+      "pharo",
+      "pharo-launcher",
+      "plexus",
+      "mcp",
+      "gui-adjacent",
+    ]);
     expect(
       devNexusPharoRunnerProfileTemplates.map((profile) => ({
         id: profile.id,
@@ -123,9 +123,9 @@ describe("DevNexus-Pharo host capability contributions", () => {
     ).toEqual([
       {
         id: "pharo-read-only-status",
-        requiredCapabilities: ["dev-nexus-pharo"],
+        requiredCapabilities: ["pharo"],
         allowedOperationClasses: ["read_only"],
-        commandProfileRefs: ["dev-nexus-pharo-status"],
+        commandProfileRefs: ["pharo-status"],
         mutationClass: "none",
         approval: {
           required: false,
@@ -136,9 +136,9 @@ describe("DevNexus-Pharo host capability contributions", () => {
       },
       {
         id: "pharo-mcp-tool-list",
-        requiredCapabilities: ["mcp", "dev-nexus-pharo"],
+        requiredCapabilities: ["mcp", "plexus"],
         allowedOperationClasses: ["read_only"],
-        commandProfileRefs: ["dev-nexus-pharo-mcp-tool-list"],
+        commandProfileRefs: ["plexus-mcp-tool-list"],
         mutationClass: "none",
         approval: {
           required: false,
@@ -149,15 +149,9 @@ describe("DevNexus-Pharo host capability contributions", () => {
       },
       {
         id: "pharo-verification",
-        requiredCapabilities: [
-          "pharo",
-          "pharo-launcher",
-          "plexus",
-          "mcp",
-          "dev-nexus-pharo",
-        ],
+        requiredCapabilities: ["pharo", "pharo-launcher", "plexus", "mcp"],
         allowedOperationClasses: ["read_only", "verification"],
-        commandProfileRefs: ["dev-nexus-pharo-verify"],
+        commandProfileRefs: ["pharo-verify"],
         mutationClass: "verification",
         approval: {
           required: false,
@@ -173,11 +167,10 @@ describe("DevNexus-Pharo host capability contributions", () => {
           "pharo-launcher",
           "plexus",
           "mcp",
-          "dev-nexus-pharo",
           "gui-adjacent",
         ],
         allowedOperationClasses: ["read_only", "live_runtime"],
-        commandProfileRefs: ["dev-nexus-pharo-live-runtime-smoke"],
+        commandProfileRefs: ["pharo-live-runtime-smoke"],
         mutationClass: "live_runtime",
         approval: {
           required: true,
