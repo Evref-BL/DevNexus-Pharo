@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { safePathToken } from "./pathTokens.js";
 
 export type PharoLoadRepositoryRole = "project" | "dependency";
 
@@ -81,12 +82,6 @@ function requiredNonEmpty(value: string, pathName: string): string {
   return trimmed;
 }
 
-function safePathToken(value: string): string {
-  const safe = value.trim().replace(/[^A-Za-z0-9_-]+/gu, "-");
-  const compact = safe.replace(/^-+|-+$/gu, "");
-  return compact.length > 0 ? compact : "repository";
-}
-
 function assertInside(parent: string, child: string, pathName: string): void {
   const relative = path.relative(parent, child);
   if (relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative))) {
@@ -115,7 +110,7 @@ function normalizeRepositorySpec(
   const sourceDirectory = spec.sourceDirectory
     ? requiredNonEmpty(spec.sourceDirectory, `${role}.sourceDirectory`)
     : defaultSourceDirectory;
-  const id = safePathToken(spec.id ?? baseline);
+  const id = safePathToken(spec.id ?? baseline, { fallback: "repository" });
   const baselinePath = path.join(
     sourceRoot,
     sourceDirectory,

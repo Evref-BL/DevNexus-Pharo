@@ -247,142 +247,178 @@ export function listDevNexusPharoMcpTools(): McpTool[] {
   return providerCompatibleMcpTools(tools);
 }
 
+type McpToolCallResult = {
+  content: Array<{ type: "text"; text: string }>;
+  isError?: boolean;
+};
+
+type McpToolHandler = (
+  args: Record<string, unknown>,
+  context: DevNexusPharoMcpToolContext,
+) => McpToolCallResult;
+
+function callProjectCreateTool(
+  args: Record<string, unknown>,
+  context: DevNexusPharoMcpToolContext,
+): McpToolCallResult {
+  const detail = mcpDetailFromArgs(args);
+  const homePath = homePathFromArgs(args);
+  const created = createDevNexusPharoProject({
+    homePath,
+    name: requiredString(args, "name", "arguments"),
+    root: optionalString(args, "root", "arguments"),
+    from: remoteUrlFromCreateArgs(args),
+    gitInit: optionalBoolean(args, "gitInit", "arguments"),
+    gitRunner: context.gitRunner,
+  });
+
+  return toolResult({
+    ok: true,
+    detail,
+    ...(detail === "full" ? created : summarizeProjectSetupResult(created)),
+  });
+}
+
+function callProjectImportTool(
+  args: Record<string, unknown>,
+  context: DevNexusPharoMcpToolContext,
+): McpToolCallResult {
+  const detail = mcpDetailFromArgs(args);
+  const homePath = homePathFromArgs(args);
+  const imported = importDevNexusPharoProject({
+    homePath,
+    root: requiredString(args, "root", "arguments"),
+    projectRoot: optionalString(args, "projectRoot", "arguments"),
+    name: optionalString(args, "name", "arguments"),
+    gitRunner: context.gitRunner,
+  });
+
+  return toolResult({
+    ok: true,
+    detail,
+    ...(detail === "full" ? imported : summarizeProjectSetupResult(imported)),
+  });
+}
+
+function callProjectListTool(args: Record<string, unknown>): McpToolCallResult {
+  const detail = mcpDetailFromArgs(args);
+  const result = listNexusProjects({
+    homePath: homePathFromArgs(args),
+  });
+
+  return toolResult({
+    ok: true,
+    detail,
+    ...(detail === "full"
+      ? result
+      : {
+          homePath: result.homePath,
+          projectCount: result.projects.length,
+          projects: result.projects.map(summarizeProjectStatus),
+        }),
+  });
+}
+
+function callProjectStatusTool(args: Record<string, unknown>): McpToolCallResult {
+  const detail = mcpDetailFromArgs(args);
+  const result = getNexusProjectStatus({
+    homePath: homePathFromArgs(args),
+    project: requiredString(args, "project", "arguments"),
+  });
+
+  return toolResult({
+    ok: true,
+    detail,
+    ...(detail === "full"
+      ? result
+      : {
+          homePath: result.homePath,
+          project: summarizeProjectStatus(result.project),
+        }),
+  });
+}
+
+function callProjectSkillStatusTool(args: Record<string, unknown>): McpToolCallResult {
+  const detail = mcpDetailFromArgs(args);
+  const result = getProjectSkillStatus({
+    homePath: homePathFromArgs(args),
+    project: requiredString(args, "project", "arguments"),
+  });
+
+  return toolResult({
+    ok: true,
+    detail,
+    ...(detail === "full"
+      ? result
+      : {
+          homePath: result.homePath,
+          project: summarizeProjectStatus(result.project),
+          skillStatus: summarizeSkillStatus(result.skillStatus),
+        }),
+  });
+}
+
+function callProjectSkillRefreshTool(
+  args: Record<string, unknown>,
+): McpToolCallResult {
+  const detail = mcpDetailFromArgs(args);
+  const result = refreshProjectSkills({
+    homePath: homePathFromArgs(args),
+    project: requiredString(args, "project", "arguments"),
+  });
+
+  return toolResult({
+    ok: true,
+    detail,
+    ...(detail === "full"
+      ? result
+      : {
+          homePath: result.homePath,
+          project: summarizeProjectStatus(result.project),
+          refresh: summarizeSkillRefresh(result.refresh),
+        }),
+  });
+}
+
+function callWorkspaceHandoffSummarizeTool(
+  args: Record<string, unknown>,
+): McpToolCallResult {
+  return toolResult({
+    ok: true,
+    summary: summarizePlexusWorkspaceHandoff(
+      requiredRecord(args, "plexusStatus", "arguments"),
+    ),
+  });
+}
+
+const mcpToolHandlers: Record<string, McpToolHandler> = {
+  pharo_project_create: callProjectCreateTool,
+  pharo_project_import: callProjectImportTool,
+  pharo_project_list: callProjectListTool,
+  pharo_project_status: callProjectStatusTool,
+  pharo_project_skill_status: callProjectSkillStatusTool,
+  pharo_project_skill_refresh: callProjectSkillRefreshTool,
+  pharo_workspace_handoff_summarize: callWorkspaceHandoffSummarizeTool,
+};
+
+function unknownToolResult(name: string): McpToolCallResult {
+  return toolResult(
+    {
+      ok: false,
+      error: `Unknown DevNexus-Pharo MCP tool: ${name}`,
+    },
+    true,
+  );
+}
+
 export async function callDevNexusPharoMcpTool(
   name: string,
   argsValue: unknown,
   context: DevNexusPharoMcpToolContext = {},
-): Promise<{
-  content: Array<{ type: "text"; text: string }>;
-  isError?: boolean;
-}> {
+): Promise<McpToolCallResult> {
   try {
     const args = argsValue === undefined ? {} : asRecord(argsValue, "arguments");
-    switch (name) {
-      case "pharo_project_create": {
-        const detail = mcpDetailFromArgs(args);
-        const homePath = homePathFromArgs(args);
-        const created = createDevNexusPharoProject({
-          homePath,
-          name: requiredString(args, "name", "arguments"),
-          root: optionalString(args, "root", "arguments"),
-          from: remoteUrlFromCreateArgs(args),
-          gitInit: optionalBoolean(args, "gitInit", "arguments"),
-          gitRunner: context.gitRunner,
-        });
-
-        return toolResult({
-          ok: true,
-          detail,
-          ...(detail === "full"
-            ? created
-            : summarizeProjectSetupResult(created)),
-        });
-      }
-      case "pharo_project_import": {
-        const detail = mcpDetailFromArgs(args);
-        const homePath = homePathFromArgs(args);
-        const imported = importDevNexusPharoProject({
-          homePath,
-          root: requiredString(args, "root", "arguments"),
-          projectRoot: optionalString(args, "projectRoot", "arguments"),
-          name: optionalString(args, "name", "arguments"),
-          gitRunner: context.gitRunner,
-        });
-
-        return toolResult({
-          ok: true,
-          detail,
-          ...(detail === "full"
-            ? imported
-            : summarizeProjectSetupResult(imported)),
-        });
-      }
-      case "pharo_project_list": {
-        const detail = mcpDetailFromArgs(args);
-        const result = listNexusProjects({
-          homePath: homePathFromArgs(args),
-        });
-        return toolResult({
-          ok: true,
-          detail,
-          ...(detail === "full"
-            ? result
-            : {
-                homePath: result.homePath,
-                projectCount: result.projects.length,
-                projects: result.projects.map(summarizeProjectStatus),
-              }),
-        });
-      }
-      case "pharo_project_status": {
-        const detail = mcpDetailFromArgs(args);
-        const result = getNexusProjectStatus({
-          homePath: homePathFromArgs(args),
-          project: requiredString(args, "project", "arguments"),
-        });
-        return toolResult({
-          ok: true,
-          detail,
-          ...(detail === "full"
-            ? result
-            : {
-                homePath: result.homePath,
-                project: summarizeProjectStatus(result.project),
-              }),
-        });
-      }
-      case "pharo_project_skill_status": {
-        const detail = mcpDetailFromArgs(args);
-        const result = getProjectSkillStatus({
-          homePath: homePathFromArgs(args),
-          project: requiredString(args, "project", "arguments"),
-        });
-        return toolResult({
-          ok: true,
-          detail,
-          ...(detail === "full"
-            ? result
-            : {
-                homePath: result.homePath,
-                project: summarizeProjectStatus(result.project),
-                skillStatus: summarizeSkillStatus(result.skillStatus),
-              }),
-        });
-      }
-      case "pharo_project_skill_refresh": {
-        const detail = mcpDetailFromArgs(args);
-        const result = refreshProjectSkills({
-          homePath: homePathFromArgs(args),
-          project: requiredString(args, "project", "arguments"),
-        });
-        return toolResult({
-          ok: true,
-          detail,
-          ...(detail === "full"
-            ? result
-            : {
-                homePath: result.homePath,
-                project: summarizeProjectStatus(result.project),
-                refresh: summarizeSkillRefresh(result.refresh),
-              }),
-        });
-      }
-      case "pharo_workspace_handoff_summarize":
-        return toolResult({
-          ok: true,
-          summary: summarizePlexusWorkspaceHandoff(
-            requiredRecord(args, "plexusStatus", "arguments"),
-          ),
-        });
-      default:
-        return toolResult(
-          {
-            ok: false,
-            error: `Unknown DevNexus-Pharo MCP tool: ${name}`,
-          },
-          true,
-        );
-    }
+    return mcpToolHandlers[name]?.(args, context) ?? unknownToolResult(name);
   } catch (error) {
     return toolResult(
       {

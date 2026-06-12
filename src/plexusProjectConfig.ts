@@ -8,6 +8,7 @@ import {
   resolvePlexusImageExecutionPolicy,
   type PlexusImageExecutionPolicy,
 } from "./plexusImageExecutionPolicy.js";
+import { safePathToken } from "./pathTokens.js";
 
 export interface PlexusProjectConfig {
   id: string;
@@ -274,9 +275,12 @@ export function allocatePlexusProjectGatewayPort(
   throw new Error("No project-local PLexus gateway port is available in the configured policy range");
 }
 
+function safePlexusToken(value: string, lowercase: boolean): string {
+  return safePathToken(value, { lowercase });
+}
+
 function safePlexusImageProfileId(value: string): string {
-  const safe = value.trim().toLowerCase().replace(/[^a-z0-9_-]+/gu, "-");
-  const compact = safe.replace(/^-+|-+$/gu, "");
+  const compact = safePlexusToken(value, true);
   if (compact.length === 0) {
     throw new Error("Plexus image profile id must contain at least one safe character");
   }
@@ -285,8 +289,7 @@ function safePlexusImageProfileId(value: string): string {
 }
 
 function safePlexusImageNameToken(value: string): string {
-  const safe = value.trim().replace(/[^A-Za-z0-9_-]+/gu, "-");
-  const compact = safe.replace(/^-+|-+$/gu, "");
+  const compact = safePlexusToken(value, false);
   return compact.length > 0 ? compact : "PharoProject";
 }
 
