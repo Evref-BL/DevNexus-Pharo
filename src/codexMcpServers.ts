@@ -18,6 +18,7 @@ import { devNexusPharoPluginId } from "./devNexusPharoPlugin.js";
 import type {
   CodexMcpServerConfig,
 } from "./codexConfigToml.js";
+import { safePathToken } from "./pathTokens.js";
 
 export const defaultDevNexusCodexMcpServerName = "dev_nexus";
 export const defaultDevNexusPharoCodexMcpServerName = "dev_nexus_pharo";
@@ -180,8 +181,7 @@ function plexusCoreCommandFromConfiguredPlexusCommand(command: string): string {
 }
 
 function sanitizeRuntimeId(value: string): string {
-  const sanitized = value.trim().replace(/[^A-Za-z0-9._-]+/gu, "-");
-  return sanitized.replace(/^-+|-+$/gu, "") || "default";
+  return safePathToken(value, { allowDot: true, fallback: "default" });
 }
 
 function defaultTargetId(projectId: string, workspaceId: string): string {

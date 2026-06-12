@@ -100,6 +100,19 @@ function writeEmptyResponse(
   response.end();
 }
 
+function closeHttpServer(server: http.Server): Promise<void> {
+  return new Promise((resolve, reject) => {
+    server.close((error) => {
+      if (error) {
+        reject(error);
+        return;
+      }
+
+      resolve();
+    });
+  });
+}
+
 function isLoopbackHostname(hostname: string): boolean {
   const normalized = hostname.toLowerCase();
   return (
@@ -394,17 +407,7 @@ export function startDevNexusPharoMcpHttpServer(
         healthPath,
         url: devNexusPharoMcpServerUrl(host, options.port, endpointPath),
         healthUrl: devNexusPharoMcpServerUrl(host, options.port, healthPath),
-        close: () =>
-          new Promise<void>((closeResolve, closeReject) => {
-            server.close((error) => {
-              if (error) {
-                closeReject(error);
-                return;
-              }
-
-              closeResolve();
-            });
-          }),
+        close: () => closeHttpServer(server),
       });
     });
   });
